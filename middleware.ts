@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient } from "@supabase/ssr";
+import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-const STAFF_PREFIXES = ["/nurse", "/doctor", "/owner"];
+const STAFF_PREFIXES = ["/nurse", "/doctor", "/owner", "/staff"];
+
+type CookieToSet = { name: string; value: string; options: CookieOptions };
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -18,7 +20,7 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet: CookieToSet[]) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
           response = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
@@ -44,5 +46,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/nurse/:path*", "/doctor/:path*", "/owner/:path*"],
+  matcher: ["/nurse/:path*", "/doctor/:path*", "/owner/:path*", "/staff/:path*"],
 };
