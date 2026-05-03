@@ -26,18 +26,27 @@ button { font-family: inherit; }
   @apply w-full min-w-0 px-3 py-2.5 text-sm border border-stone-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
 }
 
-/* Allow grid/flex items to shrink below intrinsic size of their content
-   (fixes <input type="date"> and long native controls overflowing on mobile). */
-.input,
+/* Native inputs (especially <input type="date">) carry an intrinsic
+   minimum width that ignores `width: 100%`. Force them to obey their
+   container so they can't overflow. */
 input,
 select,
 textarea {
+  min-width: 0 !important;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Grid + flex children should be allowed to shrink below their content's
+   natural width. Otherwise an input can stretch its column past 1fr. */
+.grid > *,
+.flex > * {
   min-width: 0;
 }
 
-/* Grid containers used for form rows: ensure columns can shrink. */
-form .grid > * {
-  min-width: 0;
+/* Floor: never let the page itself horizontal-scroll. */
+html, body {
+  overflow-x: hidden;
 }
 .label {
   @apply block text-xs font-medium text-stone-600 mb-1.5;
