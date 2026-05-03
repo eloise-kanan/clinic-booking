@@ -203,14 +203,14 @@ export default function BookingForm() {
               key={t.value}
               type="button"
               onClick={() => setReqType(t.value)}
-              className={`p-3 text-center rounded-md border transition-colors ${
+              className={`p-2 sm:p-3 text-center rounded-md border transition-colors leading-tight ${
                 reqType === t.value
                   ? "border-brand bg-brand text-white"
                   : "border-stone-200 hover:border-stone-300"
               }`}
             >
-              <div className="text-sm font-medium">{t.label}</div>
-              <div className={`text-[11px] mt-0.5 ${reqType === t.value ? "text-brand-50" : "text-stone-500"}`}>
+              <div className="text-xs sm:text-sm font-medium break-words">{t.label}</div>
+              <div className={`text-[10px] sm:text-[11px] mt-0.5 break-words ${reqType === t.value ? "text-brand-50" : "text-stone-500"}`}>
                 {t.description}
               </div>
             </button>
@@ -348,7 +348,7 @@ export default function BookingForm() {
             <button
               type="button"
               onClick={() => setKeepSameDoctor(true)}
-              className={`p-3 rounded-md border text-sm ${
+              className={`p-2 sm:p-3 rounded-md border text-xs sm:text-sm break-words leading-tight ${
                 keepSameDoctor === true ? "border-brand bg-brand text-white" : "border-stone-200"
               }`}
             >
@@ -357,7 +357,7 @@ export default function BookingForm() {
             <button
               type="button"
               onClick={() => setKeepSameDoctor(false)}
-              className={`p-3 rounded-md border text-sm ${
+              className={`p-2 sm:p-3 rounded-md border text-xs sm:text-sm break-words leading-tight ${
                 keepSameDoctor === false ? "border-brand bg-brand text-white" : "border-stone-200"
               }`}
             >
