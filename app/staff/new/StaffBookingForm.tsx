@@ -202,7 +202,7 @@ export default function StaffBookingForm({
     <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-6" autoComplete="off">
       {/* Patient identity */}
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="label">Nationality</label>
             <select
@@ -328,7 +328,7 @@ export default function StaffBookingForm({
       {/* Doctor + slot */}
       {treatmentReady && (
         <div className="border-t border-stone-200 pt-5 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="label">Doctor</label>
               <select

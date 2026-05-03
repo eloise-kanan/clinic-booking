@@ -249,7 +249,7 @@ export default function BookingForm() {
           </select>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className="label">{idType === "ic" ? "IC number" : "Passport number"}</label>
             <input
@@ -410,7 +410,7 @@ export default function BookingForm() {
       {/* Doctor + slot picker — only after treatment is set */}
       {treatmentReady && (
         <div className="border-t border-stone-200 pt-5 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="label">Doctor</label>
               <select

@@ -139,7 +139,7 @@ export default function DutyManager({
             Submitted shifts are <strong>pending</strong> until the owner approves.
           </p>
         )}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="label">Date</label>
             <input
