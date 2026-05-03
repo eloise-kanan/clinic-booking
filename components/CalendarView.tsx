@@ -10,6 +10,7 @@ type Booking = {
   slot_end: string;
   status: string;
   type: string;
+  visit_reason: string | null;
   patient: { full_name: string } | null;
 };
 
@@ -204,6 +205,7 @@ function DaySection({
                               ? "bg-green-50 text-green-800 border-l-2 border-green-500"
                               : "bg-amber-50 text-amber-800 border-l-2 border-amber-500"
                           }`}
+                          title={b.visit_reason || undefined}
                         >
                           <div className="font-medium">
                             {new Date(b.slot_start).toLocaleTimeString("en-MY", {
@@ -213,6 +215,11 @@ function DaySection({
                             })}
                           </div>
                           <div className="truncate">{b.patient?.full_name || "Patient"}</div>
+                          {b.visit_reason && (
+                            <div className="truncate text-[10px] opacity-80 mt-0.5">
+                              {b.visit_reason}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </td>

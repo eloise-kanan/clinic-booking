@@ -5,6 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 const DEFAULT_START = "09:00";
 const DEFAULT_END = "21:00";
 
+type ViewMode = "week" | "month";
+
 type StaffMember = { id: string; full_name: string; role: string };
 
 type Shift = {
@@ -25,39 +27,65 @@ type LeaveRow = {
   profile: { full_name: string; role: string } | { full_name: string; role: string }[] | null;
 };
 
-function ymToDateRange(year: number, month0: number) {
+function dateStr(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Monday of the week containing d
+function startOfWeek(d: Date) {
+  const x = new Date(d);
+  const offset = (x.getDay() + 6) % 7; // 0 = Mon
+  x.setDate(x.getDate() - offset);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function monthRange(year: number, month0: number) {
   const first = new Date(year, month0, 1);
   const last = new Date(year, month0 + 1, 0);
-  const fmt = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  return { from: fmt(first), to: fmt(last), first, last };
+  return { from: dateStr(first), to: dateStr(last), first, last };
+}
+
+function weekRange(anchor: Date) {
+  const first = startOfWeek(anchor);
+  const last = new Date(first);
+  last.setDate(first.getDate() + 6);
+  return { from: dateStr(first), to: dateStr(last), first, last };
 }
 
 function monthLabel(year: number, month0: number) {
   return new Date(year, month0, 1).toLocaleDateString("en-MY", { month: "long", year: "numeric" });
 }
 
-function dateStr(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+function weekLabel(first: Date, last: Date) {
+  const sameMonth = first.getMonth() === last.getMonth();
+  const fmt = (d: Date, opts: Intl.DateTimeFormatOptions) => d.toLocaleDateString("en-MY", opts);
+  if (sameMonth) {
+    return `${first.getDate()}–${last.getDate()} ${fmt(first, { month: "short", year: "numeric" })}`;
+  }
+  return `${fmt(first, { day: "numeric", month: "short" })} – ${fmt(last, { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
 export default function DutyCalendar() {
-  const [year, setYear] = useState<number | null>(null);
-  const [month, setMonth] = useState<number | null>(null);
+  const [view, setView] = useState<ViewMode | null>(null);
+  const [anchor, setAnchor] = useState<Date | null>(null);
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
   const [leaves, setLeaves] = useState<LeaveRow[]>([]);
 
+  // On mount: default view = week if narrow viewport, else month. Anchor = today.
   useEffect(() => {
-    const now = new Date();
-    setYear(now.getFullYear());
-    setMonth(now.getMonth());
+    const isNarrow = typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches;
+    setView(isNarrow ? "week" : "month");
+    setAnchor(new Date());
   }, []);
 
   const range = useMemo(() => {
-    if (year === null || month === null) return null;
-    return ymToDateRange(year, month);
-  }, [year, month]);
+    if (!anchor || !view) return null;
+    return view === "week"
+      ? weekRange(anchor)
+      : monthRange(anchor.getFullYear(), anchor.getMonth());
+  }, [anchor, view]);
 
   async function load() {
     if (!range) return;
@@ -79,19 +107,17 @@ export default function DutyCalendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [range?.from, range?.to]);
 
-  function shiftMonth(delta: number) {
-    if (year === null || month === null) return;
-    const next = new Date(year, month + delta, 1);
-    setYear(next.getFullYear());
-    setMonth(next.getMonth());
+  function shift(direction: 1 | -1) {
+    if (!anchor || !view) return;
+    const next = new Date(anchor);
+    if (view === "week") next.setDate(anchor.getDate() + 7 * direction);
+    else next.setMonth(anchor.getMonth() + direction);
+    setAnchor(next);
   }
   function jumpToToday() {
-    const now = new Date();
-    setYear(now.getFullYear());
-    setMonth(now.getMonth());
+    setAnchor(new Date());
   }
 
-  // Index leaves by profile_id → set of date strings on leave
   const leaveByProfile = useMemo(() => {
     const map = new Map<string, Set<string>>();
     for (const lr of leaves) {
@@ -106,7 +132,6 @@ export default function DutyCalendar() {
     return map;
   }, [leaves]);
 
-  // Index explicit overrides: profile_id → date → shift
   const shiftByPersonDay = useMemo(() => {
     const map = new Map<string, Map<string, Shift>>();
     for (const s of shifts) {
@@ -117,9 +142,18 @@ export default function DutyCalendar() {
   }, [shifts]);
 
   const grid = useMemo(() => {
-    if (!range) return [];
-    const { first, last } = range;
+    if (!range || !view || !anchor) return [];
     const cells: { date: string; inMonth: boolean }[] = [];
+    if (view === "week") {
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(range.first);
+        d.setDate(range.first.getDate() + i);
+        cells.push({ date: dateStr(d), inMonth: true });
+      }
+      return cells;
+    }
+    // Month view
+    const { first, last } = range;
     const firstWeekdayMon = (first.getDay() + 6) % 7;
     for (let i = 0; i < firstWeekdayMon; i++) {
       const d = new Date(first);
@@ -127,7 +161,7 @@ export default function DutyCalendar() {
       cells.push({ date: dateStr(d), inMonth: false });
     }
     for (let day = 1; day <= last.getDate(); day++) {
-      const d = new Date(year as number, month as number, day);
+      const d = new Date(anchor.getFullYear(), anchor.getMonth(), day);
       cells.push({ date: dateStr(d), inMonth: true });
     }
     while (cells.length % 7 !== 0) {
@@ -136,36 +170,60 @@ export default function DutyCalendar() {
       cells.push({ date: dateStr(last2), inMonth: false });
     }
     return cells;
-  }, [range, year, month]);
+  }, [range, view, anchor]);
 
-  if (year === null || month === null) {
+  if (!view || !anchor || !range) {
     return <p className="text-sm text-stone-500">Loading…</p>;
   }
 
   const todayKey = dateStr(new Date());
   const weekDays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+  const headerLabel =
+    view === "week"
+      ? weekLabel(range.first, range.last)
+      : monthLabel(anchor.getFullYear(), anchor.getMonth());
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <button type="button" className="btn" onClick={() => shiftMonth(-1)}>
+        <button type="button" className="btn" onClick={() => shift(-1)}>
           ◀ Prev
         </button>
         <button type="button" className="btn" onClick={jumpToToday}>
           Today
         </button>
-        <button type="button" className="btn" onClick={() => shiftMonth(1)}>
+        <button type="button" className="btn" onClick={() => shift(1)}>
           Next ▶
         </button>
-        <span className="ml-2 text-base font-medium">{monthLabel(year, month)}</span>
-        <span className="ml-auto text-xs text-stone-500">
-          Default duty: {DEFAULT_START}–{DEFAULT_END} for everyone
-        </span>
+        <span className="ml-2 text-base font-medium">{headerLabel}</span>
+
+        {/* View toggle */}
+        <div className="ml-auto inline-flex rounded-md border border-stone-200 overflow-hidden text-xs">
+          <button
+            type="button"
+            onClick={() => setView("week")}
+            className={`px-3 py-1.5 ${view === "week" ? "bg-stone-900 text-white" : "bg-white text-stone-600 hover:bg-stone-50"}`}
+          >
+            Week
+          </button>
+          <button
+            type="button"
+            onClick={() => setView("month")}
+            className={`px-3 py-1.5 border-l border-stone-200 ${view === "month" ? "bg-stone-900 text-white" : "bg-white text-stone-600 hover:bg-stone-50"}`}
+          >
+            Month
+          </button>
+        </div>
+      </div>
+
+      <div className="text-[11px] text-stone-500 mb-2">
+        Default duty: {DEFAULT_START}–{DEFAULT_END} for everyone
       </div>
 
       <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="min-w-[640px]">
+          <div className={view === "month" ? "min-w-[640px]" : ""}>
             <div className="grid grid-cols-7 text-[11px] text-stone-500 border-b border-stone-200">
               {weekDays.map((d) => (
                 <div key={d} className="px-2 py-1.5 text-center font-medium">

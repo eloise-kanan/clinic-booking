@@ -31,7 +31,7 @@ export async function GET(req: Request) {
   let query = admin
     .from("bookings")
     .select(
-      "id, doctor_id, slot_start, slot_end, status, type, patient:patients(full_name)"
+      "id, doctor_id, slot_start, slot_end, status, type, visit_reason, patient:patients(full_name)"
     )
     .gte("slot_start", dayStart)
     .lte("slot_start", dayEnd)
