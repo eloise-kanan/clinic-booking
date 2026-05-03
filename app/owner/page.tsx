@@ -41,7 +41,7 @@ export default async function OwnerHome() {
     >
       <h2 className="text-base font-medium mb-4">Clinic overview</h2>
 
-      <div className="grid grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <Stat label="This week" value={String(weekCount || 0)} sub="bookings" />
         <Stat label="Pending" value={String(pendingCount || 0)} sub="awaiting nurse" />
         <Stat label="Total patients" value={String(patientCount || 0)} sub="" />
