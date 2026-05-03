@@ -188,15 +188,15 @@ export default function FilterableBookingsTable({
   return (
     <div className="space-y-3">
       {/* Filter bar */}
-      <div className="bg-white border border-stone-200 rounded-lg p-3 grid grid-cols-1 md:grid-cols-12 gap-2">
+      <div className="bg-white border border-stone-200 rounded-lg p-3 grid grid-cols-2 md:grid-cols-12 gap-2">
         <input
-          className="input md:col-span-3"
+          className="input col-span-2 md:col-span-3"
           placeholder="Search patient name or phone"
           value={patientQuery}
           onChange={(e) => setPatientQuery(e.target.value)}
         />
         <select
-          className="input md:col-span-2"
+          className="input col-span-1 md:col-span-2"
           value={doctorFilter}
           onChange={(e) => setDoctorFilter(e.target.value)}
         >
@@ -208,7 +208,7 @@ export default function FilterableBookingsTable({
           ))}
         </select>
         <select
-          className="input md:col-span-2"
+          className="input col-span-1 md:col-span-2"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -220,11 +220,11 @@ export default function FilterableBookingsTable({
           ))}
         </select>
         <select
-          className="input md:col-span-1"
+          className="input col-span-2 md:col-span-1"
           value={typeFilter}
           onChange={(e) => setTypeFilter(e.target.value)}
         >
-          <option value="all">All</option>
+          <option value="all">All types</option>
           {TYPES.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -233,19 +233,19 @@ export default function FilterableBookingsTable({
         </select>
         <input
           type="date"
-          className="input md:col-span-2"
+          className="input col-span-1 md:col-span-2"
           value={dateFrom}
           onChange={(e) => setDateFrom(e.target.value)}
           placeholder="From"
         />
         <input
           type="date"
-          className="input md:col-span-2"
+          className="input col-span-1 md:col-span-2"
           value={dateTo}
           onChange={(e) => setDateTo(e.target.value)}
           placeholder="To"
         />
-        <div className="md:col-span-12 flex items-center justify-between text-xs text-stone-500">
+        <div className="col-span-2 md:col-span-12 flex items-center justify-between text-xs text-stone-500">
           <span>
             {sorted.length} of {rows.length} {activeFilterCount > 0 && `· ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active`}
           </span>

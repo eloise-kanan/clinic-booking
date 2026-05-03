@@ -164,63 +164,67 @@ export default function DutyCalendar() {
       </div>
 
       <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-        <div className="grid grid-cols-7 text-[11px] text-stone-500 border-b border-stone-200">
-          {weekDays.map((d) => (
-            <div key={d} className="px-2 py-1.5 text-center font-medium">
-              {d}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7">
-          {grid.map((cell, i) => {
-            const isToday = cell.date === todayKey;
-            return (
-              <div
-                key={i}
-                className={`min-h-[110px] border-r border-b border-stone-100 last:border-r-0 p-1.5 text-[11px] ${
-                  cell.inMonth ? "bg-white" : "bg-stone-50 text-stone-400"
-                } ${isToday ? "ring-2 ring-brand-500 ring-inset" : ""}`}
-              >
-                <div className={`mb-1 font-medium ${isToday ? "text-brand-700" : "text-stone-600"}`}>
-                  {parseInt(cell.date.slice(8), 10)}
+        <div className="overflow-x-auto">
+          <div className="min-w-[640px]">
+            <div className="grid grid-cols-7 text-[11px] text-stone-500 border-b border-stone-200">
+              {weekDays.map((d) => (
+                <div key={d} className="px-2 py-1.5 text-center font-medium">
+                  {d}
                 </div>
-                {cell.inMonth &&
-                  staff.map((s) => {
-                    const onLeave = leaveByProfile.get(s.id)?.has(cell.date) ?? false;
-                    if (onLeave) {
-                      return (
-                        <div
-                          key={s.id}
-                          className="mb-0.5 px-1.5 py-0.5 rounded bg-red-50 text-red-700 truncate"
-                          title={`${s.full_name} on approved leave`}
-                        >
-                          🏖 {s.full_name}
-                        </div>
-                      );
-                    }
-                    const override = shiftByPersonDay.get(s.id)?.get(cell.date);
-                    const start = override ? override.start_time.slice(0, 5) : DEFAULT_START;
-                    const end = override ? override.end_time.slice(0, 5) : DEFAULT_END;
-                    return (
-                      <div
-                        key={s.id}
-                        className={`mb-0.5 px-1.5 py-0.5 rounded truncate ${
-                          override
-                            ? "bg-amber-50 text-amber-800"
-                            : "bg-brand-50 text-brand-800"
-                        }`}
-                        title={`${s.full_name} (${s.role}) ${start}–${end}${override ? " · custom" : ""}`}
-                      >
-                        <span className="truncate">{s.full_name}</span>{" "}
-                        <span className="text-[10px] opacity-70 whitespace-nowrap">
-                          {start}–{end}
-                        </span>
-                      </div>
-                    );
-                  })}
-              </div>
-            );
-          })}
+              ))}
+            </div>
+            <div className="grid grid-cols-7">
+              {grid.map((cell, i) => {
+                const isToday = cell.date === todayKey;
+                return (
+                  <div
+                    key={i}
+                    className={`min-h-[110px] border-r border-b border-stone-100 last:border-r-0 p-1.5 text-[11px] ${
+                      cell.inMonth ? "bg-white" : "bg-stone-50 text-stone-400"
+                    } ${isToday ? "ring-2 ring-brand-500 ring-inset" : ""}`}
+                  >
+                    <div className={`mb-1 font-medium ${isToday ? "text-brand-700" : "text-stone-600"}`}>
+                      {parseInt(cell.date.slice(8), 10)}
+                    </div>
+                    {cell.inMonth &&
+                      staff.map((s) => {
+                        const onLeave = leaveByProfile.get(s.id)?.has(cell.date) ?? false;
+                        if (onLeave) {
+                          return (
+                            <div
+                              key={s.id}
+                              className="mb-0.5 px-1.5 py-0.5 rounded bg-red-50 text-red-700 truncate"
+                              title={`${s.full_name} on approved leave`}
+                            >
+                              🏖 {s.full_name}
+                            </div>
+                          );
+                        }
+                        const override = shiftByPersonDay.get(s.id)?.get(cell.date);
+                        const start = override ? override.start_time.slice(0, 5) : DEFAULT_START;
+                        const end = override ? override.end_time.slice(0, 5) : DEFAULT_END;
+                        return (
+                          <div
+                            key={s.id}
+                            className={`mb-0.5 px-1.5 py-0.5 rounded truncate ${
+                              override
+                                ? "bg-amber-50 text-amber-800"
+                                : "bg-brand-50 text-brand-800"
+                            }`}
+                            title={`${s.full_name} (${s.role}) ${start}–${end}${override ? " · custom" : ""}`}
+                          >
+                            <span className="truncate">{s.full_name}</span>{" "}
+                            <span className="text-[10px] opacity-70 whitespace-nowrap">
+                              {start}–{end}
+                            </span>
+                          </div>
+                        );
+                      })}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 

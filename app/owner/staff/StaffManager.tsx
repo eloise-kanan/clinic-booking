@@ -92,7 +92,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
           </button>
         ) : (
           <form onSubmit={add} className="bg-white border border-stone-200 rounded-lg p-4 space-y-3">
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Role</label>
                 <select className="input" value={role} onChange={(e) => setRole(e.target.value as any)}>
@@ -105,7 +105,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
                 <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="label">Email</label>
                 <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
@@ -139,8 +139,8 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
         )}
       </div>
 
-      <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="bg-white border border-stone-200 rounded-lg overflow-x-auto">
+        <table className="w-full text-sm min-w-[640px]">
           <thead>
             <tr className="text-left text-xs text-stone-500 border-b border-stone-200">
               <th className="px-4 py-2.5 font-medium">Name</th>

@@ -1,9 +1,10 @@
 // Country list with ISO dial codes. Used for the nationality dropdown
 // and the WhatsApp number prefix on the public booking form.
+// Sorted A–Z (with "Other" pinned to the end) so patients can scan quickly.
 
 export type Country = { name: string; dial: string };
 
-export const COUNTRIES: Country[] = [
+const RAW: Country[] = [
   { name: "Malaysia", dial: "+60" },
   { name: "Singapore", dial: "+65" },
   { name: "Indonesia", dial: "+62" },
@@ -113,6 +114,11 @@ export const COUNTRIES: Country[] = [
   { name: "Malta", dial: "+356" },
   { name: "Luxembourg", dial: "+352" },
   { name: "Monaco", dial: "+377" },
+];
+
+// Sort A–Z by name; pin "Other" to the end so it's always reachable.
+export const COUNTRIES: Country[] = [
+  ...RAW.slice().sort((a, b) => a.name.localeCompare(b.name)),
   { name: "Other", dial: "" },
 ];
 

@@ -114,7 +114,7 @@ export default function PendingQueue({
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-stone-500 mt-0.5">
+                <div className="text-xs text-stone-500 mt-0.5 break-words">
                   {b.patient.nationality} · {b.patient.id_type === "ic" ? "IC" : "Passport"}{" "}
                   {b.patient.id_number} · {b.patient.whatsapp_number}
                 </div>
