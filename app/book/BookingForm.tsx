@@ -256,7 +256,7 @@ export default function BookingForm() {
               className="input"
               value={idNumber}
               onChange={(e) => setIdNumber(e.target.value)}
-              placeholder={idType === "ic" ? "931213026278" : "A12345678"}
+              placeholder={idType === "ic" ? "12 digits, no dashes" : "Passport number"}
               inputMode={idType === "ic" ? "numeric" : "text"}
               autoComplete="off"
               name="patient-doc-id"
@@ -275,7 +275,7 @@ export default function BookingForm() {
                 className="input rounded-l-none"
                 value={phoneLocal}
                 onChange={(e) => setPhoneLocal(e.target.value)}
-                placeholder="183811213"
+                placeholder="Mobile number"
                 inputMode="numeric"
                 autoComplete="off"
                 name="patient-wa-local"
