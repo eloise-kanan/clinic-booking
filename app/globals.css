@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html, body {
+  background: #fafaf7;
+  color: #1a1a1a;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  font-feature-settings: "ss01", "cv11";
+}
+
+button { font-family: inherit; }
+
+/* utility for narrow vertical rhythm */
+.prose-sm p { margin: 0.5rem 0; }
+
+/* form controls */
+.input {
+  @apply w-full px-3 py-2.5 text-sm border border-stone-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent;
+}
+.label {
+  @apply block text-xs font-medium text-stone-600 mb-1.5;
+}
+.btn {
+  @apply px-4 py-2 text-sm rounded-md border border-stone-300 bg-white hover:bg-stone-50 transition-colors;
+}
+.btn-primary {
+  @apply px-4 py-2.5 text-sm rounded-md bg-brand text-white hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+.btn-wa {
+  @apply inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border border-emerald-300 bg-emerald-50 text-emerald-800 hover:bg-emerald-100 transition-colors;
+}
+.btn-approve {
+  @apply px-3 py-1.5 text-xs rounded-md border border-green-400 bg-green-50 text-green-800 hover:bg-green-100 transition-colors;
+}
+.btn-reject {
+  @apply px-3 py-1.5 text-xs rounded-md border border-red-300 bg-red-50 text-red-800 hover:bg-red-100 transition-colors;
+}
+.pill {
+  @apply inline-block px-2 py-0.5 text-[11px] rounded-full;
+}
+.pill-pending { @apply bg-amber-100 text-amber-800; }
+.pill-confirmed { @apply bg-green-100 text-green-800; }
+.pill-rejected { @apply bg-red-100 text-red-800; }
+.pill-cancelled { @apply bg-stone-200 text-stone-700; }
+.pill-expired { @apply bg-stone-100 text-stone-500; }
+.pill-new { @apply bg-purple-100 text-purple-800; }
