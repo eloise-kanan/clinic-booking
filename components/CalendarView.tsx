@@ -13,6 +13,13 @@ type Booking = {
   visit_reason: string | null;
   patient: { full_name: string } | null;
 };
+type LeaveMark = { doctor_id: string; date: string };
+type CustomShift = {
+  doctor_id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+};
 
 const DAY_BATCH = 7;
 const FIRST_HOUR = 9;
@@ -65,6 +72,8 @@ export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; sc
   const [startDate, setStartDate] = useState<string>("");
   const [daysCount, setDaysCount] = useState<number>(DAY_BATCH);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [onLeave, setOnLeave] = useState<LeaveMark[]>([]);
+  const [customShifts, setCustomShifts] = useState<CustomShift[]>([]);
   const [pickerDate, setPickerDate] = useState<string>("");
   const [selected, setSelected] = useState<Booking | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -79,8 +88,16 @@ export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; sc
     if (!startDate) return;
     fetch(`/api/calendar?date=${startDate}&days=${daysCount}`)
       .then((r) => r.json())
-      .then((d) => setBookings(d.bookings || []))
-      .catch(() => setBookings([]));
+      .then((d) => {
+        setBookings(d.bookings || []);
+        setOnLeave(d.onLeave || []);
+        setCustomShifts(d.customShifts || []);
+      })
+      .catch(() => {
+        setBookings([]);
+        setOnLeave([]);
+        setCustomShifts([]);
+      });
   }, [startDate, daysCount]);
 
   // Close modal on Escape
@@ -108,6 +125,20 @@ export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; sc
     }
     return map;
   }, [bookings]);
+
+  // Set of "doctor_id-date" strings indicating on-leave full-day coverage
+  const leaveSet = useMemo(() => {
+    const s = new Set<string>();
+    for (const lm of onLeave) s.add(`${lm.doctor_id}-${lm.date}`);
+    return s;
+  }, [onLeave]);
+
+  // Map "doctor_id-date" to the approved custom shift for that day, if any
+  const shiftMap = useMemo(() => {
+    const m = new Map<string, CustomShift>();
+    for (const cs of customShifts) m.set(`${cs.doctor_id}-${cs.date}`, cs);
+    return m;
+  }, [customShifts]);
 
   function jumpTo(dateStr: string) {
     setPickerDate(dateStr);
@@ -170,6 +201,8 @@ export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; sc
             dateStr={dateStr}
             doctors={doctors}
             bookings={byDate.get(dateStr) || []}
+            leaveSet={leaveSet}
+            shiftMap={shiftMap}
             onSelect={setSelected}
           />
         ))}
@@ -192,15 +225,37 @@ export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; sc
   );
 }
 
+// Convert "HH:MM[:SS]" to minutes since midnight
+function hmsToMinutes(s: string): number {
+  const [h, m] = s.split(":").map((x) => parseInt(x, 10));
+  return (h || 0) * 60 + (m || 0);
+}
+
+// Convert "minutes since midnight" relative to FIRST_HOUR into a top px,
+// clamped to the visible window. Returns 0..TOTAL_HEIGHT.
+function minutesToTop(minutesSinceMidnight: number): number {
+  const m = Math.max(FIRST_HOUR * 60, Math.min(LAST_HOUR * 60, minutesSinceMidnight));
+  return (m - FIRST_HOUR * 60) * PX_PER_MIN;
+}
+
+const STRIPE_BG_RED =
+  "repeating-linear-gradient(45deg, transparent 0 6px, rgba(239,68,68,0.10) 6px 12px)";
+const STRIPE_BG_GREY =
+  "repeating-linear-gradient(45deg, transparent 0 6px, rgba(120,113,108,0.10) 6px 12px)";
+
 function DaySection({
   dateStr,
   doctors,
   bookings,
+  leaveSet,
+  shiftMap,
   onSelect,
 }: {
   dateStr: string;
   doctors: Doctor[];
   bookings: Booking[];
+  leaveSet: Set<string>;
+  shiftMap: Map<string, CustomShift>;
   onSelect: (b: Booking) => void;
 }) {
   const isToday = dateStr === todayStr();
@@ -218,89 +273,140 @@ function DaySection({
       {doctors.length === 0 ? (
         <p className="p-4 text-xs text-stone-500">No doctors visible.</p>
       ) : (
-        <div className="overflow-x-auto scrollbar-none">
-          <div
-            className="grid"
-            style={{
-              gridTemplateColumns: `52px repeat(${doctors.length}, minmax(0, 1fr))`,
-            }}
-          >
-            <div className="border-b border-stone-200 bg-stone-50" />
-            {doctors.map((d) => (
+        <div
+          className="grid"
+          style={{
+            gridTemplateColumns: `44px repeat(${doctors.length}, minmax(0, 1fr))`,
+          }}
+        >
+          <div className="border-b border-stone-200 bg-stone-50" />
+          {doctors.map((d) => (
+            <div
+              key={d.id}
+              className="border-b border-stone-200 bg-stone-50 px-1.5 py-1.5 text-[11px] font-medium text-stone-600 truncate"
+              title={d.display_name}
+            >
+              {d.display_name}
+            </div>
+          ))}
+
+          <div className="relative" style={{ height: TOTAL_HEIGHT }}>
+            {HOURS.map((h, i) => (
               <div
-                key={d.id}
-                className="border-b border-stone-200 bg-stone-50 px-2 py-1.5 text-xs font-medium text-stone-600 truncate"
+                key={h}
+                className="absolute left-0 right-0 text-[10px] text-stone-400 px-1"
+                style={{ top: i * 60 * PX_PER_MIN }}
               >
-                {d.display_name}
+                {String(h).padStart(2, "0")}
               </div>
             ))}
-
-            <div className="relative" style={{ height: TOTAL_HEIGHT }}>
-              {HOURS.map((h, i) => (
-                <div
-                  key={h}
-                  className="absolute left-0 right-0 text-[10px] text-stone-400 px-1.5"
-                  style={{ top: i * 60 * PX_PER_MIN }}
-                >
-                  {String(h).padStart(2, "0")}:00
-                </div>
-              ))}
-            </div>
-
-            {doctors.map((d) => {
-              const docBookings = bookings.filter((b) => b.doctor_id === d.id);
-              return (
-                <div
-                  key={d.id}
-                  className="relative border-l border-stone-100"
-                  style={{ height: TOTAL_HEIGHT }}
-                >
-                  {HOURS.map((h, i) => (
-                    <div
-                      key={h}
-                      className="absolute left-0 right-0 border-t border-stone-100"
-                      style={{ top: i * 60 * PX_PER_MIN }}
-                    />
-                  ))}
-                  {HOURS.slice(0, -1).map((h, i) => (
-                    <div
-                      key={`half-${h}`}
-                      className="absolute left-0 right-0 border-t border-dashed border-stone-100/60"
-                      style={{ top: (i * 60 + 30) * PX_PER_MIN }}
-                    />
-                  ))}
-                  {docBookings.map((b) => {
-                    const start = new Date(b.slot_start);
-                    const end = new Date(b.slot_end);
-                    const pos = offsetForBooking(start, end);
-                    if (!pos) return null;
-                    const isConfirmed = b.status === "confirmed";
-                    const name = b.patient?.full_name || "Patient";
-                    const reason = b.visit_reason || "";
-                    return (
-                      <button
-                        type="button"
-                        key={b.id}
-                        onClick={() => onSelect(b)}
-                        className={`absolute left-1 right-1 rounded px-1.5 py-0.5 overflow-hidden text-left text-[11px] leading-tight cursor-pointer hover:brightness-95 transition ${
-                          isConfirmed
-                            ? "bg-green-50 text-green-800 border-l-2 border-green-500"
-                            : "bg-amber-50 text-amber-800 border-l-2 border-amber-500"
-                        }`}
-                        style={{ top: pos.top, height: pos.height }}
-                        title={`${timeLabel(start)}–${timeLabel(end)} · ${name}${reason ? ` · ${reason}` : ""}`}
-                      >
-                        <div className="truncate font-medium">
-                          {name}
-                          {reason && <span className="font-normal opacity-80"> — {reason}</span>}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              );
-            })}
           </div>
+
+          {doctors.map((d) => {
+            const docBookings = bookings.filter((b) => b.doctor_id === d.id);
+            const onLeave = leaveSet.has(`${d.id}-${dateStr}`);
+            const shift = shiftMap.get(`${d.id}-${dateStr}`);
+            const offDutyZones: { topPx: number; heightPx: number }[] = [];
+            if (!onLeave && shift) {
+              const startMin = hmsToMinutes(shift.start_time);
+              const endMin = hmsToMinutes(shift.end_time);
+              const beforeTop = 0;
+              const beforeHeight = minutesToTop(startMin) - 0;
+              if (beforeHeight > 0) offDutyZones.push({ topPx: beforeTop, heightPx: beforeHeight });
+              const afterTop = minutesToTop(endMin);
+              const afterHeight = TOTAL_HEIGHT - afterTop;
+              if (afterHeight > 0) offDutyZones.push({ topPx: afterTop, heightPx: afterHeight });
+            }
+            return (
+              <div
+                key={d.id}
+                className="relative border-l border-stone-100"
+                style={{ height: TOTAL_HEIGHT }}
+              >
+                {HOURS.map((h, i) => (
+                  <div
+                    key={h}
+                    className="absolute left-0 right-0 border-t border-stone-100 pointer-events-none"
+                    style={{ top: i * 60 * PX_PER_MIN }}
+                  />
+                ))}
+                {HOURS.slice(0, -1).map((h, i) => (
+                  <div
+                    key={`half-${h}`}
+                    className="absolute left-0 right-0 border-t border-dashed border-stone-100/60 pointer-events-none"
+                    style={{ top: (i * 60 + 30) * PX_PER_MIN }}
+                  />
+                ))}
+
+                {/* Off-duty stripes (around a custom shift) */}
+                {offDutyZones.map((z, idx) => (
+                  <div
+                    key={`off-${idx}`}
+                    className="absolute left-0 right-0 pointer-events-none"
+                    style={{
+                      top: z.topPx,
+                      height: z.heightPx,
+                      backgroundImage: STRIPE_BG_GREY,
+                    }}
+                  />
+                ))}
+
+                {/* On-leave full-day overlay */}
+                {onLeave && (
+                  <div
+                    className="absolute inset-0 pointer-events-none flex items-start justify-center"
+                    style={{ backgroundImage: STRIPE_BG_RED }}
+                  >
+                    <span className="mt-2 px-1.5 py-0.5 rounded bg-red-100 text-red-700 text-[10px] font-medium">
+                      🏖 On leave
+                    </span>
+                  </div>
+                )}
+
+                {/* "Off duty" pill if there's a custom shift today */}
+                {!onLeave && shift && (
+                  <div
+                    className="absolute left-0 right-0 flex justify-center pointer-events-none"
+                    style={{ top: 2 }}
+                  >
+                    <span className="px-1.5 py-0.5 rounded bg-stone-200/80 text-stone-700 text-[10px] font-medium">
+                      Shift {shift.start_time.slice(0, 5)}–{shift.end_time.slice(0, 5)}
+                    </span>
+                  </div>
+                )}
+
+                {/* Bookings */}
+                {docBookings.map((b) => {
+                  const start = new Date(b.slot_start);
+                  const end = new Date(b.slot_end);
+                  const pos = offsetForBooking(start, end);
+                  if (!pos) return null;
+                  const isConfirmed = b.status === "confirmed";
+                  const name = b.patient?.full_name || "Patient";
+                  const reason = b.visit_reason || "";
+                  return (
+                    <button
+                      type="button"
+                      key={b.id}
+                      onClick={() => onSelect(b)}
+                      className={`absolute left-1 right-1 rounded px-1.5 py-0.5 overflow-hidden text-left text-[11px] leading-tight cursor-pointer hover:brightness-95 transition ${
+                        isConfirmed
+                          ? "bg-green-50 text-green-800 border-l-2 border-green-500"
+                          : "bg-amber-50 text-amber-800 border-l-2 border-amber-500"
+                      }`}
+                      style={{ top: pos.top, height: pos.height }}
+                      title={`${timeLabel(start)}–${timeLabel(end)} · ${name}${reason ? ` · ${reason}` : ""}`}
+                    >
+                      <div className="truncate font-medium">
+                        {name}
+                        {reason && <span className="font-normal opacity-80"> — {reason}</span>}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
