@@ -17,7 +17,7 @@ type Booking = {
 const DAY_BATCH = 7;
 const FIRST_HOUR = 9;
 const LAST_HOUR = 21; // 21:00 — last grid line
-const PX_PER_MIN = 0.7; // ~42px per hour — compact view
+const PX_PER_MIN = 0.85; // ~51px per hour
 const TOTAL_MINUTES = (LAST_HOUR - FIRST_HOUR) * 60;
 const TOTAL_HEIGHT = TOTAL_MINUTES * PX_PER_MIN;
 const HOURS = Array.from({ length: LAST_HOUR - FIRST_HOUR + 1 }, (_, i) => FIRST_HOUR + i);
@@ -189,7 +189,7 @@ function DaySection({
   return (
     <div id={`day-${dateStr}`} className="bg-white border border-stone-200 rounded-lg overflow-hidden">
       <div
-        className={`sticky top-[48px] z-10 px-4 py-2 border-b border-stone-200 text-sm font-medium ${
+        className={`px-4 py-2 border-b border-stone-200 text-sm font-medium ${
           isToday ? "bg-brand-50 text-brand-800" : "bg-stone-50 text-stone-700"
         }`}
       >
@@ -265,6 +265,8 @@ function DaySection({
                     const pos = offsetForBooking(start, end);
                     if (!pos) return null;
                     const isConfirmed = b.status === "confirmed";
+                    const name = b.patient?.full_name || "Patient";
+                    const reason = b.visit_reason || "";
                     return (
                       <div
                         key={b.id}
@@ -274,15 +276,12 @@ function DaySection({
                             : "bg-amber-50 text-amber-800 border-l-2 border-amber-500"
                         }`}
                         style={{ top: pos.top, height: pos.height }}
-                        title={`${timeLabel(start)}–${timeLabel(end)} · ${b.patient?.full_name || "Patient"}${b.visit_reason ? ` · ${b.visit_reason}` : ""}`}
+                        title={`${timeLabel(start)}–${timeLabel(end)} · ${name}${reason ? ` · ${reason}` : ""}`}
                       >
-                        <div className="font-medium truncate">
-                          {timeLabel(start)}–{timeLabel(end)}
+                        <div className="truncate font-medium">
+                          {name}
+                          {reason && <span className="font-normal opacity-80"> — {reason}</span>}
                         </div>
-                        <div className="truncate">{b.patient?.full_name || "Patient"}</div>
-                        {b.visit_reason && pos.height > 38 && (
-                          <div className="truncate text-[10px] opacity-80">{b.visit_reason}</div>
-                        )}
                       </div>
                     );
                   })}
