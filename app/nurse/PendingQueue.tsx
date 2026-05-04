@@ -2,15 +2,29 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import {
-  formatSlotLabel,
-  tplCheck,
-  tplConfirmBooking,
-  tplConfirmReschedule,
-  tplConfirmCancellation,
-  tplReject,
-  waLink,
-} from "@/lib/utils";
+import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
+
+const FALLBACK_TEMPLATES: Record<string, string> = {
+  check:
+    "Hi {patient_name}, this is {clinic_name}. We received your appointment request:\n• Doctor: {doctor_name}\n• Date & time: {slot_label}\n• Reason: {visit_reason}\n\nCould you please confirm this is correct?",
+  confirm_booking:
+    "Hi {patient_name}, your appointment is confirmed:\n• Doctor: {doctor_name}\n• Date & time: {slot_label}\n\nPlease arrive 10 minutes early.\n— {clinic_name}",
+  confirm_reschedule:
+    "Hi {patient_name}, your appointment has been rescheduled:\n• Doctor: {doctor_name}\n• New date & time: {slot_label}\n\n— {clinic_name}",
+  confirm_cancellation:
+    "Hi {patient_name}, your appointment has been cancelled. We hope to see you again soon.\n— {clinic_name}",
+  reject:
+    "Hi {patient_name}, unfortunately we are unable to confirm your appointment request for {slot_label} with {doctor_name}.\n— {clinic_name}",
+};
+
+function build(
+  templates: Record<string, string> | undefined,
+  key: string,
+  vars: Record<string, string>
+): string {
+  const body = (templates && templates[key]) || FALLBACK_TEMPLATES[key] || "";
+  return applyTemplate(body, vars);
+}
 
 type Booking = {
   id: string;
@@ -37,9 +51,11 @@ type Booking = {
 export default function PendingQueue({
   initial,
   clinicName,
+  templates,
 }: {
   initial: Booking[];
   clinicName: string;
+  templates?: Record<string, string>;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -76,24 +92,24 @@ export default function PendingQueue({
     <div className="space-y-3">
       {initial.map((b) => {
         const slotLabel = formatSlotLabel(b.slot_start, b.slot_end);
-        const ctx = {
+        const vars = bookingVars({
           patient_name: b.patient.full_name,
           doctor_name: b.doctor.display_name,
           slot_label: slotLabel,
-          visit_reason: b.visit_reason || undefined,
+          visit_reason: b.visit_reason || "",
           clinic_name: clinicName,
-        };
-        const checkLink = waLink(b.patient.whatsapp_number, tplCheck(ctx));
-        const confirmTpl =
+        });
+        const checkLink = waLink(b.patient.whatsapp_number, build(templates, "check", vars));
+        const confirmKey =
           b.type === "cancellation"
-            ? tplConfirmCancellation({ patient_name: b.patient.full_name, clinic_name: clinicName })
+            ? "confirm_cancellation"
             : b.type === "reschedule"
-            ? tplConfirmReschedule(ctx)
-            : tplConfirmBooking(ctx);
-        const confirmLink = waLink(b.patient.whatsapp_number, confirmTpl);
+            ? "confirm_reschedule"
+            : "confirm_booking";
+        const confirmLink = waLink(b.patient.whatsapp_number, build(templates, confirmKey, vars));
         const rejectLink = waLink(
           b.patient.whatsapp_number,
-          tplReject({ ...ctx, reason: rejectReason[b.id] })
+          build(templates, "reject", { ...vars, reject_reason: rejectReason[b.id] || "" })
         );
 
         const typeLabel =

@@ -57,6 +57,64 @@ export function waLink(phone: string, message: string): string {
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
+// ============================================================
+// Template substitution
+// ============================================================
+//
+// Replaces {placeholder} tokens in a template body with values from `vars`.
+// Empty / missing values are stripped along with their surrounding bullet line
+// to avoid awkward "• Reason:" leftovers when the field is empty.
+
+export type TemplateKey =
+  | "check"
+  | "confirm_booking"
+  | "confirm_reschedule"
+  | "confirm_cancellation"
+  | "reject"
+  | "reminder";
+
+export function applyTemplate(body: string, vars: Record<string, string>): string {
+  // First pass: drop bullet-style lines whose only token is empty.
+  // E.g. "• Reason: {visit_reason}" disappears when visit_reason is "".
+  const lines = body.split("\n").filter((line) => {
+    const matches = line.match(/\{(\w+)\}/g);
+    if (!matches) return true;
+    // If the line is essentially "label: {token}" and token is empty → drop
+    const onlyTokens = matches.map((t) => t.slice(1, -1));
+    if (onlyTokens.length === 1 && !vars[onlyTokens[0]]) {
+      const tokenStripped = line.replace(matches[0], "").trim();
+      // Drop only if what's left is short label-like text (≤ ~30 chars, ends with ':' or '-')
+      if (tokenStripped.length <= 30 && /[:\-•]\s*$/.test(tokenStripped)) {
+        return false;
+      }
+    }
+    return true;
+  });
+  // Second pass: substitute remaining tokens; missing → empty string
+  return lines
+    .join("\n")
+    .replace(/\{(\w+)\}/g, (_m, k: string) => vars[k] ?? "");
+}
+
+// Convenience: build the standard {placeholder} → value map for booking-related templates
+export function bookingVars(ctx: {
+  patient_name?: string;
+  doctor_name?: string;
+  slot_label?: string;
+  visit_reason?: string;
+  clinic_name?: string;
+  reject_reason?: string;
+}): Record<string, string> {
+  return {
+    patient_name: ctx.patient_name || "",
+    doctor_name: ctx.doctor_name || "",
+    slot_label: ctx.slot_label || "",
+    visit_reason: ctx.visit_reason || "",
+    clinic_name: ctx.clinic_name || "the clinic",
+    reject_reason: ctx.reject_reason || "",
+  };
+}
+
 // Re-export so callers can resolve a country's dial code without a separate import
 export { dialCodeFor };
 

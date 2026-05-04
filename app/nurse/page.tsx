@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
+import { loadTemplates } from "@/lib/templates-server";
 import PendingQueue from "./PendingQueue";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,8 @@ export default async function NursePage() {
     .select("id", { count: "exact", head: true })
     .eq("status", "pending");
 
+  const templates = await loadTemplates();
+
   return (
     <StaffShell
       role="nurse"
@@ -33,6 +36,7 @@ export default async function NursePage() {
       <PendingQueue
         initial={(pending as any[]) || []}
         clinicName={process.env.NEXT_PUBLIC_CLINIC_NAME || "the clinic"}
+        templates={templates}
       />
     </StaffShell>
   );

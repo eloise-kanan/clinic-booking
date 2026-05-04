@@ -3,8 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatSlotLabel } from "@/lib/utils";
+import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
 import { WhatsAppActions } from "@/components/WhatsAppActions";
+
+const REMINDER_FALLBACK =
+  "Hi {patient_name},\n\nFriendly reminder of your appointment:\n• Doctor: {doctor_name}\n• Date & time: {slot_label}\n\nPlease arrive 10 minutes early.\n— {clinic_name}";
 
 export type BookingRow = {
   id: string;
@@ -17,6 +20,7 @@ export type BookingRow = {
   reviewed_at?: string | null;
   attended_at?: string | null;
   no_show?: boolean | null;
+  reminder_sent_at?: string | null;
   reviewer?: { full_name: string } | { full_name: string }[] | null;
   patient: { id?: string; full_name: string; whatsapp_number: string; id_number?: string } | null;
   doctor: { id?: string; display_name: string } | null;
@@ -93,10 +97,12 @@ export default function FilterableBookingsTable({
   rows,
   clinicName,
   enableOverride = false,
+  templates,
 }: {
   rows: BookingRow[];
   clinicName: string;
   enableOverride?: boolean;
+  templates?: Record<string, string>;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
@@ -254,6 +260,34 @@ export default function FilterableBookingsTable({
     } else {
       router.refresh();
     }
+  }
+
+  function sendReminder(r: BookingRow) {
+    if (!r.patient?.whatsapp_number) {
+      alert("This patient has no WhatsApp number.");
+      return;
+    }
+    const slotLabel = formatSlotLabel(r.slot_start, r.slot_end);
+    const body = applyTemplate(
+      (templates && templates.reminder) || REMINDER_FALLBACK,
+      bookingVars({
+        patient_name: r.patient.full_name,
+        doctor_name: r.doctor?.display_name || "the doctor",
+        slot_label: slotLabel,
+        visit_reason: r.visit_reason || "",
+        clinic_name: clinicName,
+      })
+    );
+    // Open WhatsApp first so the user gesture isn't lost to an async hop
+    window.open(waLink(r.patient.whatsapp_number, body), "_blank");
+    // Then record the send (best-effort)
+    fetch("/api/bookings/reminder-sent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking_id: r.id }),
+    })
+      .then(() => router.refresh())
+      .catch(() => {});
   }
 
   async function markAttendance(id: string, mark: "attended" | "no_show" | "clear") {
@@ -446,10 +480,29 @@ export default function FilterableBookingsTable({
                       patient={r.patient}
                       doctor={r.doctor}
                       clinicName={clinicName}
+                      templates={templates}
                     />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1.5">
+                      {r.status === "confirmed" && !isPast && !r.attended_at && !r.no_show && (
+                        <button
+                          type="button"
+                          onClick={() => sendReminder(r)}
+                          className={
+                            r.reminder_sent_at
+                              ? "px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
+                              : "btn-wa"
+                          }
+                          title={
+                            r.reminder_sent_at
+                              ? `Reminder sent ${new Date(r.reminder_sent_at).toLocaleString("en-MY")}`
+                              : "Open WhatsApp with the reminder template"
+                          }
+                        >
+                          {r.reminder_sent_at ? "✓ Reminded — resend" : "Send reminder"}
+                        </button>
+                      )}
                       {(r.status === "pending" || r.status === "confirmed") && (
                         <>
                           <Link

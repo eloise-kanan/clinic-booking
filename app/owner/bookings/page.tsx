@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
+import { loadTemplates } from "@/lib/templates-server";
 import FilterableBookingsTable from "@/components/FilterableBookingsTable";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export default async function OwnerBookingsPage() {
   const { data } = await admin
     .from("bookings")
     .select(
-      "id, type, status, slot_start, slot_end, visit_reason, reviewed_at, attended_at, no_show, reviewer:profiles!bookings_reviewed_by_fkey(full_name), created_at, patient:patients(id, full_name, whatsapp_number, id_number), doctor:doctors(id, display_name)"
+      "id, type, status, slot_start, slot_end, visit_reason, reviewed_at, attended_at, no_show, reminder_sent_at, reviewer:profiles!bookings_reviewed_by_fkey(full_name), created_at, patient:patients(id, full_name, whatsapp_number, id_number), doctor:doctors(id, display_name)"
     )
     .order("slot_start", { ascending: false })
     .limit(300);
@@ -28,7 +29,12 @@ export default async function OwnerBookingsPage() {
       <p className="text-xs text-stone-500 mb-4">
         As owner, you can override any booking's status. All overrides are logged in the audit trail.
       </p>
-      <FilterableBookingsTable rows={(data as any) || []} clinicName={clinicName} enableOverride />
+      <FilterableBookingsTable
+        rows={(data as any) || []}
+        clinicName={clinicName}
+        templates={await loadTemplates()}
+        enableOverride
+      />
     </StaffShell>
   );
 }

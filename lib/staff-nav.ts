@@ -29,6 +29,7 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
       },
     ];
   }
+  // owner + nurse share the bookings/calendars/staff sections; differences below.
   if (role === "owner") {
     return [
       {
@@ -42,6 +43,7 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
         items: [
           { href: "/owner/bookings", label: "All bookings" },
           { href: "/staff/new", label: "New booking" },
+          { href: "/staff/reminders", label: "Send reminders" },
           { href: "/owner/patients", label: "Patients" },
         ],
       },
@@ -61,6 +63,12 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
         ],
       },
       {
+        title: "Settings",
+        items: [
+          { href: "/staff/templates", label: "WhatsApp templates" },
+        ],
+      },
+      {
         title: "Account",
         items: [{ href: "/staff/profile", label: "My account" }],
       },
@@ -74,6 +82,7 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
         { href: "/nurse", label: "Pending", badge: pendingCount },
         { href: "/nurse/all", label: "All bookings" },
         { href: "/staff/new", label: "New booking" },
+        { href: "/staff/reminders", label: "Send reminders" },
         { href: "/nurse/patients", label: "Patients" },
       ],
     },
@@ -89,6 +98,12 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
       items: [
         { href: "/staff/duty", label: "Shift changes" },
         { href: "/staff/leave", label: "Leave" },
+      ],
+    },
+    {
+      title: "Settings",
+      items: [
+        { href: "/staff/templates", label: "WhatsApp templates" },
       ],
     },
     {
