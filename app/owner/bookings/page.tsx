@@ -14,7 +14,7 @@ export default async function OwnerBookingsPage() {
   const { data } = await admin
     .from("bookings")
     .select(
-      "id, type, status, slot_start, slot_end, visit_reason, reviewed_at, attended_at, no_show, reminder_sent_at, reviewer:profiles!bookings_reviewed_by_fkey(full_name), created_at, patient:patients(id, full_name, whatsapp_number, id_number), doctor:doctors(id, display_name)"
+      "id, type, status, slot_start, slot_end, visit_reason, reviewed_at, attended_at, no_show, reminder_sent_at, check_sent_at, confirm_sent_at, reject_sent_at, cancel_sent_at, reviewer:profiles!bookings_reviewed_by_fkey(full_name), reminder_sender:profiles!bookings_reminder_sent_by_fkey(full_name), check_sender:profiles!bookings_check_sent_by_fkey(full_name), confirm_sender:profiles!bookings_confirm_sent_by_fkey(full_name), reject_sender:profiles!bookings_reject_sent_by_fkey(full_name), cancel_sender:profiles!bookings_cancel_sent_by_fkey(full_name), created_at, patient:patients(id, full_name, whatsapp_number, id_number), doctor:doctors(id, display_name)"
     )
     .order("slot_start", { ascending: false })
     .limit(300);

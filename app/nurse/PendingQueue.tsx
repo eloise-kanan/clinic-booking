@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
+import { logWaSent } from "@/lib/wa-track";
 
 const FALLBACK_TEMPLATES: Record<string, string> = {
   check:
@@ -164,10 +165,24 @@ export default function PendingQueue({
             </div>
 
             <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <a href={checkLink} target="_blank" rel="noreferrer" className="btn-wa">
+              <a
+                href={checkLink}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-wa"
+                onClick={() => logWaSent(b.id, "check")}
+              >
                 <WAIcon /> Check with patient
               </a>
-              <a href={confirmLink} target="_blank" rel="noreferrer" className="btn-wa">
+              <a
+                href={confirmLink}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-wa"
+                onClick={() =>
+                  logWaSent(b.id, b.type === "cancellation" ? "cancel" : "confirm")
+                }
+              >
                 <WAIcon /> Send confirmation
               </a>
               <button
@@ -190,7 +205,13 @@ export default function PendingQueue({
               >
                 Reject
               </button>
-              <a href={rejectLink} target="_blank" rel="noreferrer" className="btn-wa">
+              <a
+                href={rejectLink}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-wa"
+                onClick={() => logWaSent(b.id, "reject")}
+              >
                 <WAIcon /> Send rejection
               </a>
             </div>

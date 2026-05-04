@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
+import { logWaSent } from "@/lib/wa-track";
 import { WhatsAppActions } from "@/components/WhatsAppActions";
 
 const REMINDER_FALLBACK =
@@ -21,10 +22,33 @@ export type BookingRow = {
   attended_at?: string | null;
   no_show?: boolean | null;
   reminder_sent_at?: string | null;
+  check_sent_at?: string | null;
+  confirm_sent_at?: string | null;
+  reject_sent_at?: string | null;
+  cancel_sent_at?: string | null;
   reviewer?: { full_name: string } | { full_name: string }[] | null;
+  reminder_sender?: { full_name: string } | { full_name: string }[] | null;
+  check_sender?: { full_name: string } | { full_name: string }[] | null;
+  confirm_sender?: { full_name: string } | { full_name: string }[] | null;
+  reject_sender?: { full_name: string } | { full_name: string }[] | null;
+  cancel_sender?: { full_name: string } | { full_name: string }[] | null;
   patient: { id?: string; full_name: string; whatsapp_number: string; id_number?: string } | null;
   doctor: { id?: string; display_name: string } | null;
 };
+
+const WA_KINDS: { key: keyof BookingRow; label: string; senderKey: keyof BookingRow }[] = [
+  { key: "check_sent_at", label: "Check", senderKey: "check_sender" },
+  { key: "confirm_sent_at", label: "Confirm", senderKey: "confirm_sender" },
+  { key: "reject_sent_at", label: "Reject", senderKey: "reject_sender" },
+  { key: "cancel_sent_at", label: "Cancel", senderKey: "cancel_sender" },
+  { key: "reminder_sent_at", label: "Reminder", senderKey: "reminder_sender" },
+];
+
+function flat<T>(v: T | T[] | null | undefined): T | null {
+  if (!v) return null;
+  if (Array.isArray(v)) return v[0] || null;
+  return v;
+}
 
 function reviewerName(r: BookingRow): string | null {
   const rev = r.reviewer;
@@ -278,16 +302,9 @@ export default function FilterableBookingsTable({
         clinic_name: clinicName,
       })
     );
-    // Open WhatsApp first so the user gesture isn't lost to an async hop
+    logWaSent(r.id, "reminder");
     window.open(waLink(r.patient.whatsapp_number, body), "_blank");
-    // Then record the send (best-effort)
-    fetch("/api/bookings/reminder-sent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: r.id }),
-    })
-      .then(() => router.refresh())
-      .catch(() => {});
+    setTimeout(() => router.refresh(), 200);
   }
 
   async function markAttendance(id: string, mark: "attended" | "no_show" | "clear") {
@@ -482,6 +499,7 @@ export default function FilterableBookingsTable({
                       clinicName={clinicName}
                       templates={templates}
                     />
+                    <SentPills row={r} />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1.5">
@@ -577,6 +595,36 @@ export default function FilterableBookingsTable({
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+function SentPills({ row }: { row: BookingRow }) {
+  const items = WA_KINDS.flatMap((k) => {
+    const at = row[k.key] as string | null | undefined;
+    if (!at) return [];
+    const sender = flat(row[k.senderKey] as { full_name: string } | { full_name: string }[] | null | undefined);
+    const when = new Date(at).toLocaleString("en-MY");
+    const senderLabel = sender?.full_name || "—";
+    return [
+      {
+        label: k.label,
+        title: `${k.label} sent ${when} by ${senderLabel}`,
+      },
+    ];
+  });
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {items.map((it) => (
+        <span
+          key={it.label}
+          title={it.title}
+          className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px]"
+        >
+          ✓ {it.label}
+        </span>
+      ))}
     </div>
   );
 }

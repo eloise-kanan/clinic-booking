@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
+import { logWaSent } from "@/lib/wa-track";
 
 type Row = {
   id: string;
@@ -78,16 +79,9 @@ export default function RemindersList({
         clinic_name: clinicName,
       })
     );
-    // Open WhatsApp first so the user's tap isn't blocked by an async hop
+    logWaSent(row.id, "reminder");
     window.open(waLink(row.patient.whatsapp_number, body), "_blank");
-    // Then record the send
-    fetch("/api/bookings/reminder-sent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: row.id }),
-    })
-      .then(() => router.refresh())
-      .catch(() => {});
+    setTimeout(() => router.refresh(), 200);
   }
 
   const sorted = useMemo(() => {

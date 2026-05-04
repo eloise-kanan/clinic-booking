@@ -1,8 +1,10 @@
 "use client";
 
 import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
+import { logWaSent, type WaKind } from "@/lib/wa-track";
 
 type Booking = {
+  id: string;
   type: "booking" | "reschedule" | "cancellation" | string;
   status: string;
   slot_start: string;
@@ -60,37 +62,57 @@ export function WhatsAppActions({
     clinic_name: clinicName,
   });
 
-  const items: { label: string; href: string }[] = [];
+  const items: { label: string; href: string; kind: WaKind | null }[] = [];
 
   if (booking.status === "pending") {
-    items.push({ label: "Check", href: waLink(patient.whatsapp_number, build(templates, "check", vars)) });
+    items.push({
+      label: "Check",
+      href: waLink(patient.whatsapp_number, build(templates, "check", vars)),
+      kind: "check",
+    });
   } else if (booking.status === "confirmed") {
     const key = booking.type === "reschedule" ? "confirm_reschedule" : "confirm_booking";
     items.push({
       label: "Send confirmation",
       href: waLink(patient.whatsapp_number, build(templates, key, vars)),
+      kind: "confirm",
     });
   } else if (booking.status === "cancelled") {
     items.push({
       label: "Send cancellation",
       href: waLink(patient.whatsapp_number, build(templates, "confirm_cancellation", vars)),
+      kind: "cancel",
     });
   } else if (booking.status === "rejected") {
     items.push({
       label: "Send rejection",
       href: waLink(patient.whatsapp_number, build(templates, "reject", vars)),
+      kind: "reject",
     });
   } else {
-    items.push({ label: "Check", href: waLink(patient.whatsapp_number, build(templates, "check", vars)) });
+    items.push({
+      label: "Check",
+      href: waLink(patient.whatsapp_number, build(templates, "check", vars)),
+      kind: "check",
+    });
   }
 
   const digits = patient.whatsapp_number.replace(/\D/g, "");
-  items.push({ label: "Open WA", href: `https://wa.me/${digits}` });
+  items.push({ label: "Open WA", href: `https://wa.me/${digits}`, kind: null });
 
   return (
     <div className="flex flex-wrap gap-1.5">
       {items.map((it) => (
-        <a key={it.label} href={it.href} target="_blank" rel="noreferrer" className="btn-wa">
+        <a
+          key={it.label}
+          href={it.href}
+          target="_blank"
+          rel="noreferrer"
+          className="btn-wa"
+          onClick={() => {
+            if (it.kind) logWaSent(booking.id, it.kind);
+          }}
+        >
           {it.label}
         </a>
       ))}
