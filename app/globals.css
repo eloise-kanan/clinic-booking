@@ -48,6 +48,16 @@ textarea {
 html, body {
   overflow-x: hidden;
 }
+
+/* Hide scrollbars but keep scrollability — used by horizontal calendars
+   so a thin scrollbar doesn't show below content that barely overflows. */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
 .label {
   @apply block text-xs font-medium text-stone-600 mb-1.5;
 }

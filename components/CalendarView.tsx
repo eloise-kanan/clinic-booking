@@ -48,12 +48,9 @@ function timeLabel(d: Date) {
   });
 }
 
-// Pixel offset for a Date relative to the day's FIRST_HOUR.
-// Returns null if the booking is outside the visible window.
 function offsetForBooking(start: Date, end: Date) {
   const startMin = (start.getHours() - FIRST_HOUR) * 60 + start.getMinutes();
   const endMin = (end.getHours() - FIRST_HOUR) * 60 + end.getMinutes();
-  // Crossing midnight or outside window — clip
   const visStart = Math.max(0, startMin);
   const visEnd = Math.min(TOTAL_MINUTES, endMin > 0 ? endMin : TOTAL_MINUTES);
   if (visEnd <= visStart) return null;
@@ -64,12 +61,12 @@ function offsetForBooking(start: Date, end: Date) {
 }
 
 export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; scope: "all" | "own" }) {
-  // scope is reserved for future filtering (e.g. own vs all); kept for compatibility
   void scope;
   const [startDate, setStartDate] = useState<string>("");
   const [daysCount, setDaysCount] = useState<number>(DAY_BATCH);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [pickerDate, setPickerDate] = useState<string>("");
+  const [selected, setSelected] = useState<Booking | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -85,6 +82,16 @@ export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; sc
       .then((d) => setBookings(d.bookings || []))
       .catch(() => setBookings([]));
   }, [startDate, daysCount]);
+
+  // Close modal on Escape
+  useEffect(() => {
+    if (!selected) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setSelected(null);
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selected]);
 
   const days = useMemo(() => {
     if (!startDate) return [];
@@ -163,6 +170,7 @@ export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; sc
             dateStr={dateStr}
             doctors={doctors}
             bookings={byDate.get(dateStr) || []}
+            onSelect={setSelected}
           />
         ))}
       </div>
@@ -172,6 +180,14 @@ export default function CalendarView({ doctors, scope }: { doctors: Doctor[]; sc
           Load {DAY_BATCH} more days
         </button>
       </div>
+
+      {selected && (
+        <BookingDetailsModal
+          booking={selected}
+          doctors={doctors}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </div>
   );
 }
@@ -180,10 +196,12 @@ function DaySection({
   dateStr,
   doctors,
   bookings,
+  onSelect,
 }: {
   dateStr: string;
   doctors: Doctor[];
   bookings: Booking[];
+  onSelect: (b: Booking) => void;
 }) {
   const isToday = dateStr === todayStr();
   return (
@@ -200,15 +218,13 @@ function DaySection({
       {doctors.length === 0 ? (
         <p className="p-4 text-xs text-stone-500">No doctors visible.</p>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto scrollbar-none">
           <div
             className="grid"
             style={{
-              gridTemplateColumns: `60px repeat(${doctors.length}, minmax(140px, 1fr))`,
-              minWidth: doctors.length * 140 + 60,
+              gridTemplateColumns: `52px repeat(${doctors.length}, minmax(0, 1fr))`,
             }}
           >
-            {/* Header row: empty corner + doctor names */}
             <div className="border-b border-stone-200 bg-stone-50" />
             {doctors.map((d) => (
               <div
@@ -219,7 +235,6 @@ function DaySection({
               </div>
             ))}
 
-            {/* Time axis column */}
             <div className="relative" style={{ height: TOTAL_HEIGHT }}>
               {HOURS.map((h, i) => (
                 <div
@@ -232,7 +247,6 @@ function DaySection({
               ))}
             </div>
 
-            {/* Doctor columns with absolute-positioned bookings */}
             {doctors.map((d) => {
               const docBookings = bookings.filter((b) => b.doctor_id === d.id);
               return (
@@ -241,7 +255,6 @@ function DaySection({
                   className="relative border-l border-stone-100"
                   style={{ height: TOTAL_HEIGHT }}
                 >
-                  {/* Hour gridlines */}
                   {HOURS.map((h, i) => (
                     <div
                       key={h}
@@ -249,7 +262,6 @@ function DaySection({
                       style={{ top: i * 60 * PX_PER_MIN }}
                     />
                   ))}
-                  {/* Half-hour minor gridlines */}
                   {HOURS.slice(0, -1).map((h, i) => (
                     <div
                       key={`half-${h}`}
@@ -257,8 +269,6 @@ function DaySection({
                       style={{ top: (i * 60 + 30) * PX_PER_MIN }}
                     />
                   ))}
-
-                  {/* Bookings */}
                   {docBookings.map((b) => {
                     const start = new Date(b.slot_start);
                     const end = new Date(b.slot_end);
@@ -268,9 +278,11 @@ function DaySection({
                     const name = b.patient?.full_name || "Patient";
                     const reason = b.visit_reason || "";
                     return (
-                      <div
+                      <button
+                        type="button"
                         key={b.id}
-                        className={`absolute left-1 right-1 rounded px-1.5 py-0.5 overflow-hidden text-[11px] leading-tight ${
+                        onClick={() => onSelect(b)}
+                        className={`absolute left-1 right-1 rounded px-1.5 py-0.5 overflow-hidden text-left text-[11px] leading-tight cursor-pointer hover:brightness-95 transition ${
                           isConfirmed
                             ? "bg-green-50 text-green-800 border-l-2 border-green-500"
                             : "bg-amber-50 text-amber-800 border-l-2 border-amber-500"
@@ -282,7 +294,7 @@ function DaySection({
                           {name}
                           {reason && <span className="font-normal opacity-80"> — {reason}</span>}
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -291,6 +303,81 @@ function DaySection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function BookingDetailsModal({
+  booking,
+  doctors,
+  onClose,
+}: {
+  booking: Booking;
+  doctors: Doctor[];
+  onClose: () => void;
+}) {
+  const start = new Date(booking.slot_start);
+  const end = new Date(booking.slot_end);
+  const doctor = doctors.find((d) => d.id === booking.doctor_id);
+  const dateLine = start.toLocaleDateString("en-MY", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return (
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-4"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-xl max-w-md w-full p-5 shadow-lg max-h-[85vh] overflow-y-auto"
+      >
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div>
+            <h3 className="text-base font-medium">
+              {booking.patient?.full_name || "Patient"}
+            </h3>
+            <p className="text-xs text-stone-500 mt-0.5 capitalize">{booking.type} · {booking.status}</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-stone-400 hover:text-stone-700 text-xl leading-none"
+            aria-label="Close"
+          >
+            ×
+          </button>
+        </div>
+
+        <dl className="text-sm divide-y divide-stone-100">
+          <div className="py-2 grid grid-cols-[100px_1fr] gap-2">
+            <dt className="text-xs text-stone-500">Date</dt>
+            <dd>{dateLine}</dd>
+          </div>
+          <div className="py-2 grid grid-cols-[100px_1fr] gap-2">
+            <dt className="text-xs text-stone-500">Time</dt>
+            <dd>
+              {timeLabel(start)} – {timeLabel(end)}
+            </dd>
+          </div>
+          <div className="py-2 grid grid-cols-[100px_1fr] gap-2">
+            <dt className="text-xs text-stone-500">Doctor</dt>
+            <dd>{doctor?.display_name || "—"}</dd>
+          </div>
+          {booking.visit_reason && (
+            <div className="py-2 grid grid-cols-[100px_1fr] gap-2">
+              <dt className="text-xs text-stone-500">Reason</dt>
+              <dd className="break-words whitespace-pre-wrap">{booking.visit_reason}</dd>
+            </div>
+          )}
+        </dl>
+
+        <button type="button" onClick={onClose} className="btn-primary w-full mt-5">
+          Close
+        </button>
+      </div>
     </div>
   );
 }
