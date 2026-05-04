@@ -13,7 +13,7 @@ export default async function AllBookingsPage() {
   const { data } = await admin
     .from("bookings")
     .select(
-      "id, type, status, slot_start, slot_end, visit_reason, reviewed_at, reviewer:profiles!bookings_reviewed_by_fkey(full_name), patient:patients(full_name, whatsapp_number), doctor:doctors(display_name)"
+      "id, type, status, slot_start, slot_end, visit_reason, reviewed_at, attended_at, no_show, reviewer:profiles!bookings_reviewed_by_fkey(full_name), patient:patients(full_name, whatsapp_number, id_number), doctor:doctors(display_name)"
     )
     .order("slot_start", { ascending: false })
     .limit(200);

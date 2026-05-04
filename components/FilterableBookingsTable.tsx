@@ -15,8 +15,10 @@ export type BookingRow = {
   visit_reason: string | null;
   created_at?: string;
   reviewed_at?: string | null;
+  attended_at?: string | null;
+  no_show?: boolean | null;
   reviewer?: { full_name: string } | { full_name: string }[] | null;
-  patient: { id?: string; full_name: string; whatsapp_number: string } | null;
+  patient: { id?: string; full_name: string; whatsapp_number: string; id_number?: string } | null;
   doctor: { id?: string; display_name: string } | null;
 };
 
@@ -29,9 +31,63 @@ function reviewerName(r: BookingRow): string | null {
 
 type SortKey = "slot_start" | "patient" | "doctor" | "type" | "status";
 type SortDir = "asc" | "desc";
+type QuickFilter =
+  | "upcoming"
+  | "today"
+  | "past_unmarked"
+  | "attended"
+  | "no_show"
+  | "all";
 
 const STATUSES = ["pending", "confirmed", "rejected", "cancelled", "expired"];
 const TYPES = ["booking", "reschedule", "cancellation"];
+
+const QUICK_FILTERS: { key: QuickFilter; label: string }[] = [
+  { key: "upcoming", label: "Upcoming" },
+  { key: "today", label: "Today" },
+  { key: "past_unmarked", label: "Past · unmarked" },
+  { key: "attended", label: "Attended" },
+  { key: "no_show", label: "No-show" },
+  { key: "all", label: "All" },
+];
+
+function isToday(d: Date) {
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
+function applyQuickFilter(r: BookingRow, q: QuickFilter): boolean {
+  const slot = new Date(r.slot_start);
+  const now = new Date();
+  switch (q) {
+    case "all":
+      return true;
+    case "upcoming":
+      return (
+        (r.status === "pending" || r.status === "confirmed") &&
+        slot.getTime() >= now.getTime() &&
+        !r.attended_at &&
+        !r.no_show
+      );
+    case "today":
+      return isToday(slot);
+    case "past_unmarked":
+      return (
+        r.status === "confirmed" &&
+        slot.getTime() < now.getTime() &&
+        !r.attended_at &&
+        !r.no_show
+      );
+    case "attended":
+      return !!r.attended_at;
+    case "no_show":
+      return !!r.no_show;
+  }
+}
 
 export default function FilterableBookingsTable({
   rows,
@@ -45,7 +101,10 @@ export default function FilterableBookingsTable({
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
 
-  // Filters
+  // Quick filter (high-level)
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>("upcoming");
+
+  // Detailed filters
   const [patientQuery, setPatientQuery] = useState("");
   const [doctorFilter, setDoctorFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -65,19 +124,39 @@ export default function FilterableBookingsTable({
     return Array.from(seen.values()).sort();
   }, [rows]);
 
+  // Counts per quick filter — shown inline in tab labels
+  const quickCounts = useMemo(() => {
+    const counts: Record<QuickFilter, number> = {
+      upcoming: 0,
+      today: 0,
+      past_unmarked: 0,
+      attended: 0,
+      no_show: 0,
+      all: rows.length,
+    };
+    for (const r of rows) {
+      for (const q of ["upcoming", "today", "past_unmarked", "attended", "no_show"] as QuickFilter[]) {
+        if (applyQuickFilter(r, q)) counts[q]++;
+      }
+    }
+    return counts;
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const q = patientQuery.trim().toLowerCase();
     const fromMs = dateFrom ? new Date(dateFrom + "T00:00:00").getTime() : null;
     const toMs = dateTo ? new Date(dateTo + "T23:59:59").getTime() : null;
 
     return rows.filter((r) => {
+      if (!applyQuickFilter(r, quickFilter)) return false;
       if (doctorFilter !== "all" && r.doctor?.display_name !== doctorFilter) return false;
       if (statusFilter !== "all" && r.status !== statusFilter) return false;
       if (typeFilter !== "all" && r.type !== typeFilter) return false;
       if (q) {
         const name = (r.patient?.full_name || "").toLowerCase();
         const phone = (r.patient?.whatsapp_number || "").toLowerCase();
-        if (!name.includes(q) && !phone.includes(q)) return false;
+        const ic = (r.patient?.id_number || "").toLowerCase();
+        if (!name.includes(q) && !phone.includes(q) && !ic.includes(q)) return false;
       }
       if (fromMs || toMs) {
         const slotMs = new Date(r.slot_start).getTime();
@@ -86,7 +165,7 @@ export default function FilterableBookingsTable({
       }
       return true;
     });
-  }, [rows, patientQuery, doctorFilter, statusFilter, typeFilter, dateFrom, dateTo]);
+  }, [rows, quickFilter, patientQuery, doctorFilter, statusFilter, typeFilter, dateFrom, dateTo]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -177,6 +256,28 @@ export default function FilterableBookingsTable({
     }
   }
 
+  async function markAttendance(id: string, mark: "attended" | "no_show" | "clear") {
+    const labels: Record<typeof mark, string> = {
+      attended: "Mark patient as ATTENDED (showed up + completed)?",
+      no_show: "Mark patient as NO-SHOW (did not come)?",
+      clear: "Clear attendance status?",
+    };
+    if (!confirm(labels[mark])) return;
+    setBusy(id);
+    const res = await fetch("/api/bookings/attendance", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ booking_id: id, mark }),
+    });
+    setBusy(null);
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Failed");
+    } else {
+      router.refresh();
+    }
+  }
+
   const activeFilterCount =
     (patientQuery ? 1 : 0) +
     (doctorFilter !== "all" ? 1 : 0) +
@@ -187,11 +288,36 @@ export default function FilterableBookingsTable({
 
   return (
     <div className="space-y-3">
+      {/* Quick filter tabs */}
+      <div className="flex flex-wrap gap-1.5">
+        {QUICK_FILTERS.map((qf) => {
+          const active = quickFilter === qf.key;
+          const count = quickCounts[qf.key];
+          return (
+            <button
+              key={qf.key}
+              type="button"
+              onClick={() => setQuickFilter(qf.key)}
+              className={`px-3 py-1.5 text-xs rounded-md border ${
+                active
+                  ? "bg-brand text-white border-brand"
+                  : "bg-white text-stone-700 border-stone-200 hover:border-stone-400"
+              }`}
+            >
+              {qf.label}
+              <span className={`ml-1.5 ${active ? "text-brand-50" : "text-stone-400"}`}>
+                {count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
       {/* Filter bar */}
       <div className="bg-white border border-stone-200 rounded-lg p-3 grid grid-cols-2 md:grid-cols-12 gap-2">
         <input
           className="input col-span-2 md:col-span-3"
-          placeholder="Search patient name or phone"
+          placeholder="Search name, IC, or phone"
           value={patientQuery}
           onChange={(e) => setPatientQuery(e.target.value)}
         />
@@ -247,7 +373,9 @@ export default function FilterableBookingsTable({
         />
         <div className="col-span-2 md:col-span-12 flex items-center justify-between text-xs text-stone-500">
           <span>
-            {sorted.length} of {rows.length} {activeFilterCount > 0 && `· ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active`}
+            {sorted.length} of {rows.length}
+            {activeFilterCount > 0 &&
+              ` · ${activeFilterCount} filter${activeFilterCount === 1 ? "" : "s"} active`}
           </span>
           {activeFilterCount > 0 && (
             <button onClick={clearAll} className="text-brand-700 hover:underline">
@@ -275,78 +403,124 @@ export default function FilterableBookingsTable({
           <tbody>
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={enableOverride ? 8 : 7} className="px-4 py-12 text-center text-sm text-stone-500">
+                <td
+                  colSpan={enableOverride ? 8 : 7}
+                  className="px-4 py-12 text-center text-sm text-stone-500"
+                >
                   No bookings match the current filters.
                 </td>
               </tr>
             )}
-            {sorted.map((r) => (
-              <tr key={r.id} className="border-b border-stone-100 last:border-b-0">
-                <td className="px-4 py-3">
-                  <div className="font-medium">{r.patient?.full_name || "—"}</div>
-                  <div className="text-xs text-stone-500">{r.patient?.whatsapp_number}</div>
-                </td>
-                <td className="px-4 py-3 text-xs">{r.doctor?.display_name || "—"}</td>
-                <td className="px-4 py-3 text-xs">{formatSlotLabel(r.slot_start, r.slot_end)}</td>
-                <td className="px-4 py-3 text-xs capitalize">{r.type}</td>
-                <td className="px-4 py-3">
-                  <span className={`pill pill-${r.status}`}>{r.status}</span>
-                  {reviewerName(r) && (
-                    <div className="text-[10px] text-stone-500 mt-1">
-                      by {reviewerName(r)}
+            {sorted.map((r) => {
+              const slot = new Date(r.slot_start);
+              const isPast = slot.getTime() < Date.now();
+              const canMarkAttendance =
+                r.status === "confirmed" && (isPast || isToday(slot));
+              return (
+                <tr key={r.id} className="border-b border-stone-100 last:border-b-0">
+                  <td className="px-4 py-3">
+                    <div className="font-medium">{r.patient?.full_name || "—"}</div>
+                    <div className="text-xs text-stone-500">
+                      {r.patient?.id_number && <span>{r.patient.id_number} · </span>}
+                      {r.patient?.whatsapp_number}
                     </div>
-                  )}
-                </td>
-                <td className="px-4 py-3">
-                  <WhatsAppActions
-                    booking={r}
-                    patient={r.patient}
-                    doctor={r.doctor}
-                    clinicName={clinicName}
-                  />
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    {(r.status === "pending" || r.status === "confirmed") && (
-                      <>
-                        <Link
-                          href={`/staff/new?reschedule=${r.id}`}
-                          className="px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
-                        >
-                          Reschedule
-                        </Link>
+                  </td>
+                  <td className="px-4 py-3 text-xs">{r.doctor?.display_name || "—"}</td>
+                  <td className="px-4 py-3 text-xs">{formatSlotLabel(r.slot_start, r.slot_end)}</td>
+                  <td className="px-4 py-3 text-xs capitalize">{r.type}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-col gap-0.5 items-start">
+                      <span className={`pill pill-${r.status}`}>{r.status}</span>
+                      {r.attended_at && (
+                        <span className="pill pill-confirmed">✓ attended</span>
+                      )}
+                      {r.no_show && <span className="pill pill-rejected">no-show</span>}
+                      {reviewerName(r) && (
+                        <div className="text-[10px] text-stone-500">by {reviewerName(r)}</div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <WhatsAppActions
+                      booking={r}
+                      patient={r.patient}
+                      doctor={r.doctor}
+                      clinicName={clinicName}
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex flex-wrap gap-1.5">
+                      {(r.status === "pending" || r.status === "confirmed") && (
+                        <>
+                          <Link
+                            href={`/staff/new?reschedule=${r.id}`}
+                            className="px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
+                          >
+                            Reschedule
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => cancelBooking(r.id)}
+                            disabled={busy === r.id}
+                            className="btn-reject"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                      {canMarkAttendance && !r.attended_at && !r.no_show && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => markAttendance(r.id, "attended")}
+                            disabled={busy === r.id}
+                            className="btn-approve"
+                          >
+                            ✓ Attended
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => markAttendance(r.id, "no_show")}
+                            disabled={busy === r.id}
+                            className="px-2 py-1 text-xs rounded-md border border-stone-300 bg-white hover:bg-stone-50"
+                          >
+                            No-show
+                          </button>
+                        </>
+                      )}
+                      {(r.attended_at || r.no_show) && (
                         <button
                           type="button"
-                          onClick={() => cancelBooking(r.id)}
+                          onClick={() => markAttendance(r.id, "clear")}
                           disabled={busy === r.id}
-                          className="btn-reject"
+                          className="text-xs text-stone-500 hover:text-stone-800 hover:underline"
                         >
-                          Cancel
+                          Undo
                         </button>
-                      </>
-                    )}
-                  </div>
-                </td>
-                {enableOverride && (
-                  <td className="px-4 py-3">
-                    <select
-                      className="text-xs border border-stone-200 rounded px-2 py-1 bg-white"
-                      value={r.status}
-                      disabled={busy === r.id}
-                      onChange={(e) => {
-                        if (e.target.value !== r.status) override(r.id, e.target.value);
-                      }}
-                    >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                      )}
+                    </div>
                   </td>
-                )}
-              </tr>
-            ))}
+                  {enableOverride && (
+                    <td className="px-4 py-3">
+                      <select
+                        className="text-xs border border-stone-200 rounded px-2 py-1 bg-white"
+                        value={r.status}
+                        disabled={busy === r.id}
+                        onChange={(e) => {
+                          if (e.target.value !== r.status) override(r.id, e.target.value);
+                        }}
+                      >
+                        {STATUSES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
