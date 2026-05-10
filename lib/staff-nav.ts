@@ -58,6 +58,7 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
         title: "Staff",
         items: [
           { href: "/owner/staff", label: "Doctors & nurses" },
+          { href: "/owner/working-hours", label: "Working hours" },
           { href: "/staff/duty", label: "Shift changes" },
           { href: "/staff/leave", label: "Leave" },
         ],
@@ -66,6 +67,7 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
         title: "Settings",
         items: [
           { href: "/staff/templates", label: "WhatsApp templates" },
+          { href: "/owner/audit", label: "Audit log" },
         ],
       },
       {
