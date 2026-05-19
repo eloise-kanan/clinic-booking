@@ -66,6 +66,7 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
       {
         title: "Settings",
         items: [
+          { href: "/owner/branding", label: "Branding & theme" },
           { href: "/staff/templates", label: "WhatsApp templates" },
           { href: "/owner/audit", label: "Audit log" },
         ],

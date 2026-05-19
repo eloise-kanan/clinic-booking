@@ -4,7 +4,7 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["ui-sans-serif", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+        sans: ["var(--font-clinic, ui-sans-serif)", "system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
         display: ["ui-serif", "Georgia", "serif"],
       },
       colors: {
@@ -13,18 +13,21 @@ module.exports = {
         accent: "#0f6e56",
         warn: "#854f0b",
         danger: "#a32d2d",
-        // Clinic brand (clean dental teal). Refine with exact hex from logo if available.
+        // Brand colors are sourced from CSS variables (set per-clinic at runtime
+        // by lib/branding-server.ts). Owner edits at /owner/branding to change.
         brand: {
-          DEFAULT: "#0d9488",
-          50: "#f0fdfa",
-          100: "#ccfbf1",
-          200: "#99f6e4",
-          500: "#14b8a6",
-          600: "#0d9488",
-          700: "#0f766e",
-          800: "#115e59",
-          900: "#134e4a",
+          DEFAULT: "var(--brand, #0d9488)",
+          50: "var(--brand-50, #f0fdfa)",
+          100: "var(--brand-50, #ccfbf1)",
+          500: "var(--brand, #14b8a6)",
+          600: "var(--brand, #0d9488)",
+          700: "var(--brand-dark, #0f766e)",
+          800: "var(--brand-dark, #115e59)",
+          900: "var(--brand-dark, #134e4a)",
         },
+      },
+      borderRadius: {
+        btn: "var(--button-radius, 6px)",
       },
     },
   },

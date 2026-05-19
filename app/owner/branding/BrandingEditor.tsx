@@ -1,0 +1,334 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+type Branding = {
+  primary_color: string;
+  font_family: string;
+  button_radius: "sharp" | "rounded" | "pill";
+  logo_url: string | null;
+};
+
+const FONT_OPTIONS = [
+  { value: "Inter", label: "Inter — clean modern (default)" },
+  { value: "Roboto", label: "Roboto — friendly sans-serif" },
+  { value: "Open Sans", label: "Open Sans — highly readable" },
+  { value: "Poppins", label: "Poppins — geometric, energetic" },
+  { value: "Plus Jakarta Sans", label: "Plus Jakarta Sans — modern, soft" },
+  { value: "Lora", label: "Lora — elegant serif" },
+  { value: "Merriweather", label: "Merriweather — classic serif" },
+  { value: "system-ui", label: "System default — fastest" },
+];
+
+const RADIUS_OPTIONS: Array<{ value: Branding["button_radius"]; label: string; preview: string }> = [
+  { value: "sharp", label: "Sharp", preview: "0px" },
+  { value: "rounded", label: "Rounded", preview: "6px" },
+  { value: "pill", label: "Pill", preview: "9999px" },
+];
+
+const COLOR_PRESETS = [
+  { name: "Dental teal", hex: "#0d9488" },
+  { name: "Trust blue", hex: "#1d4ed8" },
+  { name: "Medical green", hex: "#059669" },
+  { name: "Warm coral", hex: "#dc2626" },
+  { name: "Sunset orange", hex: "#ea580c" },
+  { name: "Royal purple", hex: "#7c3aed" },
+  { name: "Charcoal", hex: "#1f2937" },
+  { name: "Rose pink", hex: "#e11d48" },
+];
+
+function darken(hex: string, amount = 0.15): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const dr = Math.max(0, Math.floor(r * (1 - amount)));
+  const dg = Math.max(0, Math.floor(g * (1 - amount)));
+  const db = Math.max(0, Math.floor(b * (1 - amount)));
+  return `#${dr.toString(16).padStart(2, "0")}${dg.toString(16).padStart(2, "0")}${db.toString(16).padStart(2, "0")}`;
+}
+
+function lighten(hex: string, amount = 0.92): string {
+  const h = hex.replace("#", "");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  const lr = Math.min(255, Math.floor(r + (255 - r) * amount));
+  const lg = Math.min(255, Math.floor(g + (255 - g) * amount));
+  const lb = Math.min(255, Math.floor(b + (255 - b) * amount));
+  return `#${lr.toString(16).padStart(2, "0")}${lg.toString(16).padStart(2, "0")}${lb.toString(16).padStart(2, "0")}`;
+}
+
+export default function BrandingEditor({
+  initial,
+  clinicName,
+}: {
+  initial: Branding;
+  clinicName: string;
+}) {
+  const router = useRouter();
+  const [color, setColor] = useState(initial.primary_color);
+  const [font, setFont] = useState(initial.font_family);
+  const [radius, setRadius] = useState<Branding["button_radius"]>(initial.button_radius);
+  const [logo, setLogo] = useState(initial.logo_url || "");
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  const darkColor = darken(color, 0.15);
+  const lightColor = lighten(color, 0.92);
+  const radiusPx =
+    radius === "sharp" ? "0px" : radius === "pill" ? "9999px" : "6px";
+
+  async function save() {
+    setSaving(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/branding", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          primary_color: color,
+          font_family: font,
+          button_radius: radius,
+          logo_url: logo.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg({ type: "err", text: data.error || "Failed to save" });
+        return;
+      }
+      setMsg({ type: "ok", text: "Saved. Refresh to see changes everywhere." });
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* Editor controls */}
+      <div className="space-y-4">
+        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-medium">Primary colour</h3>
+          <div className="flex items-center gap-3">
+            <input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="w-14 h-10 rounded border border-stone-200 cursor-pointer"
+            />
+            <input
+              type="text"
+              className="input max-w-[140px] font-mono"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              maxLength={7}
+            />
+            <span className="text-xs text-stone-500">e.g. #0d9488</span>
+          </div>
+          <div>
+            <p className="text-[11px] text-stone-500 mb-1.5">Quick picks</p>
+            <div className="flex flex-wrap gap-1.5">
+              {COLOR_PRESETS.map((p) => (
+                <button
+                  key={p.hex}
+                  type="button"
+                  onClick={() => setColor(p.hex)}
+                  className="flex items-center gap-1.5 px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
+                  title={p.name}
+                >
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: p.hex }}
+                  />
+                  {p.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-medium">Font</h3>
+          <select
+            className="input"
+            value={font}
+            onChange={(e) => setFont(e.target.value)}
+          >
+            {FONT_OPTIONS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-medium">Button shape</h3>
+          <div className="grid grid-cols-3 gap-2">
+            {RADIUS_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setRadius(opt.value)}
+                className={`p-3 text-sm border transition-colors ${
+                  radius === opt.value
+                    ? "border-stone-900 bg-stone-900 text-white"
+                    : "border-stone-200 hover:border-stone-400"
+                }`}
+                style={{ borderRadius: opt.preview }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-medium">Logo (optional)</h3>
+          <input
+            type="url"
+            className="input"
+            value={logo}
+            onChange={(e) => setLogo(e.target.value)}
+            placeholder="https://example.com/logo.png"
+          />
+          <p className="text-[11px] text-stone-500">
+            Paste a direct link to your logo image. PNG with transparent background, ~200px square works
+            best. Leave blank to show the clinic name as text.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={save} disabled={saving} className="btn-primary">
+            {saving ? "Saving…" : "Save branding"}
+          </button>
+          {msg && (
+            <span className={`text-xs ${msg.type === "ok" ? "text-emerald-700" : "text-red-600"}`}>
+              {msg.text}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Live preview */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-medium text-stone-600 uppercase tracking-wider">Live preview</h3>
+        <p className="text-[11px] text-stone-500">
+          A miniature of how your booking page will look. The real page reflects these changes the
+          moment you save.
+        </p>
+
+        <div
+          className="border border-stone-200 rounded-xl overflow-hidden shadow-sm"
+          style={{
+            fontFamily: `"${font}", system-ui, sans-serif`,
+            backgroundColor: "#fafaf7",
+          }}
+        >
+          <div className="px-6 py-5 text-center">
+            {logo ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={logo}
+                alt={clinicName}
+                className="mx-auto mb-2 max-h-14 object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : null}
+            <h1
+              className="text-2xl font-medium tracking-tight"
+              style={{ color: "#1a1a1a" }}
+            >
+              {clinicName}
+            </h1>
+            <p className="text-sm mt-1" style={{ color: "#78716c" }}>
+              Appointment booking
+            </p>
+          </div>
+          <div className="bg-white rounded-xl border border-stone-200 m-4 p-4 space-y-3">
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                style={{
+                  background: color,
+                  color: "#fff",
+                  borderRadius: radiusPx,
+                  fontFamily: "inherit",
+                }}
+                className="p-2 text-xs font-medium"
+              >
+                Booking
+              </button>
+              <button
+                style={{
+                  background: "#fff",
+                  color: "#1a1a1a",
+                  border: "1px solid #e7e5e4",
+                  borderRadius: radiusPx,
+                  fontFamily: "inherit",
+                }}
+                className="p-2 text-xs"
+              >
+                Reschedule
+              </button>
+              <button
+                style={{
+                  background: "#fff",
+                  color: "#1a1a1a",
+                  border: "1px solid #e7e5e4",
+                  borderRadius: radiusPx,
+                  fontFamily: "inherit",
+                }}
+                className="p-2 text-xs"
+              >
+                Cancel
+              </button>
+            </div>
+            <div className="space-y-2">
+              <div className="text-[11px] text-stone-500">Sample slot picker</div>
+              <div className="grid grid-cols-4 gap-1.5">
+                {["09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30"].map(
+                  (t, i) => (
+                    <button
+                      key={t}
+                      style={{
+                        background: i === 1 ? color : "#fff",
+                        color: i === 1 ? "#fff" : "#1a1a1a",
+                        border: `1px solid ${i === 1 ? color : "#e7e5e4"}`,
+                        borderRadius: radiusPx,
+                        fontFamily: "inherit",
+                      }}
+                      className="p-1.5 text-[11px]"
+                    >
+                      {t}
+                    </button>
+                  )
+                )}
+              </div>
+            </div>
+            <button
+              style={{
+                background: color,
+                color: "#fff",
+                borderRadius: radiusPx,
+                fontFamily: "inherit",
+              }}
+              className="w-full p-2.5 text-sm font-medium"
+            >
+              Submit request
+            </button>
+          </div>
+        </div>
+
+        <div className="text-[11px] text-stone-500 pt-2">
+          Hover-darkened: <code className="bg-stone-100 px-1 rounded">{darkColor}</code> ·{" "}
+          Soft tint: <code className="bg-stone-100 px-1 rounded">{lightColor}</code>
+        </div>
+      </div>
+    </div>
+  );
+}
