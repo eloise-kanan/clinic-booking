@@ -9,6 +9,7 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
     return [
       {
         items: [
+          { href: "/home", label: "🏠 Home" },
           { href: "/doctor", label: "Today" },
           { href: "/doctor/calendar", label: "My calendar" },
           { href: "/doctor/patients", label: "My patients" },
@@ -34,6 +35,7 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
     return [
       {
         items: [
+          { href: "/home", label: "🏠 Home" },
           { href: "/owner", label: "Overview" },
           { href: "/owner/utilization", label: "Utilization" },
         ],
@@ -79,6 +81,11 @@ export function staffNav(role: string, pendingCount = 0): NavSection[] {
   }
   // nurse
   return [
+    {
+      items: [
+        { href: "/home", label: "🏠 Home" },
+      ],
+    },
     {
       title: "Bookings",
       items: [

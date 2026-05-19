@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase-browser";
 export default function LoginForm() {
   const router = useRouter();
   const search = useSearchParams();
-  const next = search.get("next") || "/nurse";
+  const next = search.get("next") || "/home";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -24,15 +24,8 @@ export default function LoginForm() {
       setError(error.message);
       return;
     }
-    // Determine redirect by role
-    const { data: profileData } = await supabase
-      .from("profiles")
-      .select("role")
-      .single();
-    const role = profileData?.role;
-    if (role === "owner") router.push("/owner");
-    else if (role === "doctor") router.push("/doctor");
-    else router.push(next);
+    // Everyone lands on /home — the card launcher detects role and renders accordingly
+    router.push(next);
   }
 
   return (

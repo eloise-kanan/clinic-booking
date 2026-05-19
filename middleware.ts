@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
-const STAFF_PREFIXES = ["/nurse", "/doctor", "/owner", "/staff"];
+const STAFF_PREFIXES = ["/nurse", "/doctor", "/owner", "/staff", "/home"];
 
 type CookieToSet = { name: string; value: string; options: CookieOptions };
 
@@ -46,5 +46,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/nurse/:path*", "/doctor/:path*", "/owner/:path*", "/staff/:path*"],
+  matcher: ["/nurse/:path*", "/doctor/:path*", "/owner/:path*", "/staff/:path*", "/home"],
 };
