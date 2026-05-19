@@ -369,34 +369,46 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
 }
 
 function CardItem({ card }: { card: Card }) {
+  const hasBadge = card.badge !== undefined && card.badge > 0;
   const toneClass =
-    card.tone === "warn"
+    card.tone === "warn" && hasBadge
       ? "border-amber-300 bg-amber-50/40"
       : card.tone === "info"
         ? "border-brand bg-brand-50/40"
         : "border-stone-200 bg-white";
-  const badgeClass =
-    card.tone === "warn"
-      ? "bg-amber-100 text-amber-800"
-      : card.tone === "info"
-        ? "bg-brand-100 text-brand-800"
-        : "bg-stone-200 text-stone-700";
+  // iPhone-style notification badge — red for action-needed (warn),
+  // brand-teal for informational (info), red as a safe default for any
+  // other non-zero badge.
+  const dotClass =
+    card.tone === "info"
+      ? "bg-brand text-white"
+      : "bg-red-500 text-white";
+  const badgeLabel =
+    card.badge !== undefined && card.badge > 99 ? "99+" : String(card.badge ?? "");
+
   return (
     <Link
       href={card.href}
       className={`group relative block p-5 rounded-xl border-2 hover:shadow-md hover:-translate-y-0.5 transition-all ${toneClass}`}
     >
-      <div className="flex items-start justify-between gap-3 mb-2">
-        <div className="text-3xl leading-none">{card.icon}</div>
-        {card.badge !== undefined && card.badge > 0 && (
-          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${badgeClass}`}>
-            <strong className="text-sm">{card.badge}</strong>
-            {card.badgeLabel}
+      <div className="relative inline-block mb-3">
+        <div className="text-4xl leading-none">{card.icon}</div>
+        {hasBadge && (
+          <span
+            className={`absolute -top-1.5 -right-3 min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center shadow-sm ring-2 ring-white ${dotClass}`}
+            aria-label={`${card.badge} ${card.badgeLabel || ""}`.trim()}
+          >
+            {badgeLabel}
           </span>
         )}
       </div>
       <div className="text-sm font-semibold text-stone-900 mb-1">{card.title}</div>
       <div className="text-xs text-stone-600 leading-snug">{card.description}</div>
+      {hasBadge && card.badgeLabel && (
+        <div className="text-[11px] text-stone-500 mt-1.5">
+          {card.badge} {card.badgeLabel}
+        </div>
+      )}
     </Link>
   );
 }
