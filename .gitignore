@@ -10,3 +10,5 @@ dist/
 build/
 .claude/
 tsconfig.tsbuildinfo
+# Office app lockfiles (Keynote / PowerPoint create these while a file is open)
+~$*
