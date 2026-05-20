@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Branding = {
@@ -79,6 +79,21 @@ export default function BrandingEditor({
   const lightColor = lighten(color, 0.92);
   const radiusPx =
     radius === "sharp" ? "0px" : radius === "pill" ? "9999px" : "6px";
+
+  // Dynamically load the previewed font's stylesheet on dropdown change so the
+  // live preview actually renders with that face (otherwise the browser falls
+  // back to system-ui because only the saved font is loaded by the layout).
+  useEffect(() => {
+    const safeStacks = ["system-ui", "sans-serif", "serif"];
+    if (safeStacks.includes(font)) return;
+    const id = `preview-font-${font.replace(/\s+/g, "-")}`;
+    if (document.getElementById(id)) return;
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?family=${font.replace(/ /g, "+")}:wght@400;500;600;700&display=swap`;
+    document.head.appendChild(link);
+  }, [font]);
 
   async function save() {
     setSaving(true);
