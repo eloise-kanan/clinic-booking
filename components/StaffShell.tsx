@@ -2,15 +2,26 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase-browser";
 
 type NavItem = { href: string; label: string; badge?: number };
-type NavSection = { title?: string; items: NavItem[] };
+type NavSection = { title?: string; items: NavItem[]; expandable?: boolean };
 type Nav = NavItem[] | NavSection[];
 
 function isSectioned(n: Nav): n is NavSection[] {
   return n.length === 0 || (typeof n[0] === "object" && n[0] !== null && "items" in (n[0] as object));
+}
+
+function isItemActive(item: NavItem, pathname: string): boolean {
+  if (item.href === pathname) return true;
+  // Treat a parent href as active when on a sub-path, but ignore the root "/"
+  // which would falsely match everything.
+  return item.href !== "/" && pathname.startsWith(item.href + "/");
+}
+
+function isSectionActive(section: NavSection, pathname: string): boolean {
+  return section.items.some((it) => isItemActive(it, pathname));
 }
 
 export function StaffShell({
@@ -27,6 +38,29 @@ export function StaffShell({
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+
+  const sections: NavSection[] = isSectioned(nav) ? nav : [{ items: nav as NavItem[] }];
+
+  // Track which expandable section is open. Only one at a time.
+  // Initial open = the section containing the active route.
+  const activeExpandableIndex = useMemo(() => {
+    return sections.findIndex(
+      (s) => s.expandable && isSectionActive(s, pathname)
+    );
+  }, [sections, pathname]);
+
+  const [openIndex, setOpenIndex] = useState<number>(
+    activeExpandableIndex >= 0 ? activeExpandableIndex : -1
+  );
+
+  // When the route changes (e.g. user clicked a link in a different section),
+  // open that section automatically.
+  useEffect(() => {
+    if (activeExpandableIndex >= 0 && activeExpandableIndex !== openIndex) {
+      setOpenIndex(activeExpandableIndex);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   // Close the mobile drawer on route change
   useEffect(() => {
@@ -50,6 +84,10 @@ export function StaffShell({
     router.push("/login");
   }
 
+  function toggleSection(idx: number) {
+    setOpenIndex((prev) => (prev === idx ? -1 : idx));
+  }
+
   const roleLabel = { owner: "Owner", nurse: "Nurse", doctor: "Doctor" }[role];
   const roleColor = {
     owner: "bg-amber-100 text-amber-800",
@@ -57,41 +95,101 @@ export function StaffShell({
     doctor: "bg-blue-100 text-blue-800",
   }[role];
 
-  const sections: NavSection[] = isSectioned(nav) ? nav : [{ items: nav as NavItem[] }];
+  function renderItem(item: NavItem) {
+    const active = isItemActive(item, pathname);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setMobileNavOpen(false)}
+        className={`block px-4 py-2 text-sm flex items-center justify-between ${
+          active
+            ? "bg-stone-100 text-stone-900 font-medium border-l-2 border-stone-900 pl-[14px]"
+            : "text-stone-600 hover:bg-stone-50"
+        }`}
+      >
+        <span>{item.label}</span>
+        {item.badge ? (
+          <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
+            {item.badge}
+          </span>
+        ) : null}
+      </Link>
+    );
+  }
 
   const navList = (
     <>
-      {sections.map((section, si) => (
-        <div key={si} className={si > 0 ? "mt-4" : ""}>
-          {section.title && (
-            <div className="px-4 py-1 text-[10px] uppercase tracking-wider text-stone-400 font-medium">
-              {section.title}
+      {sections.map((section, si) => {
+        // Non-expandable section — render directly (top-level items)
+        if (!section.expandable) {
+          return (
+            <div key={si} className={si > 0 ? "mt-2" : ""}>
+              {section.title && (
+                <div className="px-4 py-1 text-[10px] uppercase tracking-wider text-stone-400 font-medium">
+                  {section.title}
+                </div>
+              )}
+              {section.items.map(renderItem)}
             </div>
-          )}
-          {section.items.map((item) => {
-            const active = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileNavOpen(false)}
-                className={`block px-4 py-2 text-sm flex items-center justify-between ${
-                  active
-                    ? "bg-stone-100 text-stone-900 font-medium border-l-2 border-stone-900 pl-[14px]"
-                    : "text-stone-600 hover:bg-stone-50"
-                }`}
-              >
-                <span>{item.label}</span>
-                {item.badge ? (
+          );
+        }
+
+        // Expandable section — accordion behaviour
+        const isOpen = openIndex === si;
+        const hasActive = isSectionActive(section, pathname);
+        const headerActive = hasActive && !isOpen;
+        // Compute total badge count for the section so we can show it on the header
+        const totalBadge = section.items.reduce((sum, it) => sum + (it.badge || 0), 0);
+
+        return (
+          <div key={si} className="mt-2">
+            <button
+              type="button"
+              onClick={() => toggleSection(si)}
+              aria-expanded={isOpen}
+              className={`w-full text-left flex items-center justify-between px-4 py-2 text-sm transition-colors ${
+                headerActive
+                  ? "bg-stone-100 text-stone-900 font-medium"
+                  : isOpen
+                    ? "text-stone-900 font-medium"
+                    : "text-stone-700 hover:bg-stone-50"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <span>{section.title}</span>
+                {!isOpen && totalBadge > 0 && (
                   <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
-                    {item.badge}
+                    {totalBadge}
                   </span>
-                ) : null}
-              </Link>
-            );
-          })}
-        </div>
-      ))}
+                )}
+              </span>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 12 12"
+                className={`transition-transform duration-200 text-stone-400 ${
+                  isOpen ? "rotate-90" : "rotate-0"
+                }`}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <polyline points="4 2 8 6 4 10" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <div
+              className={`overflow-hidden transition-all duration-200 ease-out ${
+                isOpen ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0"
+              }`}
+            >
+              <div className="pl-2 border-l border-stone-200 ml-4 my-1">
+                {section.items.map(renderItem)}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </>
   );
 
@@ -138,7 +236,7 @@ export function StaffShell({
         <aside
           className={`
             bg-white py-4 overflow-y-auto
-            md:w-52 md:flex-shrink-0 md:border-r md:border-stone-200 md:min-h-[calc(100vh-49px)] md:static md:translate-x-0 md:block
+            md:w-56 md:flex-shrink-0 md:border-r md:border-stone-200 md:min-h-[calc(100vh-49px)] md:static md:translate-x-0 md:block
             fixed top-[49px] left-0 z-40 w-64 max-w-[85vw] h-[calc(100vh-49px)] border-r border-stone-200
             transition-transform duration-200 ease-out
             ${mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
