@@ -30,7 +30,7 @@ export default async function OwnerPatientsPage() {
     <StaffShell
       role="owner"
       userName={profile.full_name}
-      nav={staffNav(profile.role)}
+      nav={await staffNav(profile.role)}
     >
       <h2 className="text-base font-medium mb-4">Patient demographics</h2>
 

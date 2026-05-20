@@ -48,7 +48,7 @@ export default async function RemindersPage() {
     <StaffShell
       role={profile.role as "owner" | "nurse"}
       userName={profile.full_name}
-      nav={staffNav(profile.role, count || 0)}
+      nav={await staffNav(profile.role, count || 0)}
     >
       <h2 className="text-base font-medium mb-1">Send reminders</h2>
       <p className="text-xs text-stone-500 mb-4">

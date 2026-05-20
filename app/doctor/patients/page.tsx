@@ -31,7 +31,7 @@ export default async function DoctorPatientsPage() {
     <StaffShell
       role="doctor"
       userName={profile.full_name}
-      nav={staffNav(profile.role)}
+      nav={await staffNav(profile.role)}
     >
       <h2 className="text-base font-medium mb-4">My patients</h2>
       <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">

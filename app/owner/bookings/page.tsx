@@ -23,7 +23,7 @@ export default async function OwnerBookingsPage() {
     <StaffShell
       role="owner"
       userName={profile.full_name}
-      nav={staffNav(profile.role)}
+      nav={await staffNav(profile.role)}
     >
       <h2 className="text-base font-medium mb-1">All bookings</h2>
       <p className="text-xs text-stone-500 mb-4">

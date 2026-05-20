@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { hasFeature, type FeatureKey, type Plan } from "@/lib/plan";
 
 type Role = "owner" | "nurse" | "doctor";
 
@@ -21,6 +22,7 @@ type Card = {
   badge?: number;
   badgeLabel?: string;
   tone?: "default" | "warn" | "info";
+  feature?: FeatureKey;
 };
 
 type Section = {
@@ -48,6 +50,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             icon: "📅",
             title: "My calendar",
             description: "Week and day view of your own bookings.",
+            feature: "calendar.clinical",
           },
         ],
       },
@@ -59,6 +62,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             icon: "🧑‍⚕️",
             title: "My patients",
             description: "Patients you've treated and their history.",
+            feature: "patients",
           },
           {
             href: "/doctor/breaks",
@@ -76,18 +80,21 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             icon: "🔁",
             title: "Shift changes",
             description: "Submit a shift-change request — owner approves.",
+            feature: "staff.shift_changes",
           },
           {
             href: "/staff/leave",
             icon: "🏖",
             title: "Leave",
             description: "Submit annual leave or MC. Owner approves.",
+            feature: "staff.leave",
           },
           {
             href: "/staff/duty-calendar",
             icon: "📆",
             title: "Duty calendar",
             description: "Who's on duty across the team this week and month.",
+            feature: "calendar.duty",
           },
         ],
       },
@@ -118,12 +125,14 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             badge: counts.today,
             badgeLabel: counts.today === 1 ? "today" : "today",
             tone: "info",
+            feature: "analytics.overview",
           },
           {
             href: "/owner/utilization",
             icon: "📈",
             title: "Utilization",
             description: "Per-doctor heatmap, where you've got headroom or are full.",
+            feature: "analytics.utilization",
           },
         ],
       },
@@ -138,18 +147,21 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             badge: counts.pending,
             badgeLabel: counts.pending === 1 ? "pending" : "pending",
             tone: counts.pending > 0 ? "warn" : "default",
+            feature: "bookings.pending",
           },
           {
             href: "/owner/bookings",
             icon: "🗂",
             title: "All bookings",
             description: "Filter, sort, search by name or IC. Override any status.",
+            feature: "bookings.all",
           },
           {
             href: "/staff/new",
             icon: "➕",
             title: "New booking",
             description: "Book on behalf of a walk-in or phone-in patient.",
+            feature: "bookings.new",
           },
           {
             href: "/staff/reminders",
@@ -159,6 +171,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             badge: counts.remindersPending,
             badgeLabel: counts.remindersPending === 1 ? "to send" : "to send",
             tone: counts.remindersPending > 0 ? "warn" : "default",
+            feature: "bookings.reminders",
           },
         ],
       },
@@ -170,18 +183,21 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             icon: "🧑‍🤝‍🧑",
             title: "Patients",
             description: "Patient list, demographics, visit history.",
+            feature: "patients",
           },
           {
             href: "/owner/calendar",
             icon: "🦷",
             title: "Clinical calendar",
             description: "All doctors' bookings, week-by-week.",
+            feature: "calendar.clinical",
           },
           {
             href: "/staff/duty-calendar",
             icon: "📆",
             title: "Duty calendar",
             description: "Who's on duty, who's on leave, who's on custom shift.",
+            feature: "calendar.duty",
           },
         ],
       },
@@ -193,12 +209,14 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             icon: "👥",
             title: "Doctors & nurses",
             description: "Add staff, deactivate, reset passwords.",
+            feature: "staff.management",
           },
           {
             href: "/owner/working-hours",
             icon: "🕘",
             title: "Working hours",
             description: "Configure each doctor's weekly schedule.",
+            feature: "staff.working_hours",
           },
           {
             href: "/staff/duty",
@@ -208,6 +226,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             badge: counts.pendingShifts,
             badgeLabel: counts.pendingShifts === 1 ? "request" : "requests",
             tone: counts.pendingShifts > 0 ? "warn" : "default",
+            feature: "staff.shift_changes",
           },
           {
             href: "/staff/leave",
@@ -217,6 +236,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             badge: counts.pendingLeaves,
             badgeLabel: counts.pendingLeaves === 1 ? "request" : "requests",
             tone: counts.pendingLeaves > 0 ? "warn" : "default",
+            feature: "staff.leave",
           },
         ],
       },
@@ -224,22 +244,38 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
         title: "Settings & control",
         cards: [
           {
+            href: "/owner/plan",
+            icon: "🎯",
+            title: "Plan & tier",
+            description: "Switch between Basic / Standard / Pro / Franchise.",
+          },
+          {
             href: "/owner/branding",
             icon: "🎨",
             title: "Branding & theme",
             description: "Colour, logo, font, button shape.",
+            feature: "settings.branding",
           },
           {
             href: "/staff/templates",
             icon: "💬",
             title: "WhatsApp templates",
             description: "Customise the 6 message templates.",
+            feature: "settings.templates",
+          },
+          {
+            href: "/owner/backup",
+            icon: "💾",
+            title: "Backup & export",
+            description: "Download patients, bookings, and audit log as CSV.",
+            feature: "backup",
           },
           {
             href: "/owner/audit",
             icon: "🛡",
             title: "Audit log",
             description: "Every action, who did it, when.",
+            feature: "settings.audit_log",
           },
         ],
       },
@@ -270,6 +306,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
           badge: counts.pending,
           badgeLabel: counts.pending === 1 ? "pending" : "pending",
           tone: counts.pending > 0 ? "warn" : "default",
+          feature: "bookings.pending",
         },
         {
           href: "/staff/reminders",
@@ -279,6 +316,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
           badge: counts.remindersPending,
           badgeLabel: counts.remindersPending === 1 ? "to send" : "to send",
           tone: counts.remindersPending > 0 ? "warn" : "default",
+          feature: "bookings.reminders",
         },
         {
           href: "/nurse/all?quickFilter=past_unmarked",
@@ -288,6 +326,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
           badge: counts.pastUnmarked,
           badgeLabel: counts.pastUnmarked === 1 ? "to mark" : "to mark",
           tone: counts.pastUnmarked > 0 ? "warn" : "default",
+          feature: "bookings.all",
         },
       ],
     },
@@ -299,18 +338,21 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
           icon: "🗂",
           title: "All bookings",
           description: "Filter, sort, search by name or IC.",
+          feature: "bookings.all",
         },
         {
           href: "/staff/new",
           icon: "➕",
           title: "New booking",
           description: "Book on behalf of a walk-in or phone-in patient.",
+          feature: "bookings.new",
         },
         {
           href: "/nurse/patients",
           icon: "🧑‍🤝‍🧑",
           title: "Patients",
           description: "Patient list. Search by IC or name.",
+          feature: "patients",
         },
       ],
     },
@@ -322,12 +364,14 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
           icon: "🦷",
           title: "Clinical calendar",
           description: "All doctors' bookings, week-by-week.",
+          feature: "calendar.clinical",
         },
         {
           href: "/staff/duty-calendar",
           icon: "📆",
           title: "Duty calendar",
           description: "Who's on duty, on leave, on custom shift.",
+          feature: "calendar.duty",
         },
       ],
     },
@@ -339,12 +383,14 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
           icon: "🔁",
           title: "Shift changes",
           description: "Submit a shift change. Owner approves.",
+          feature: "staff.shift_changes",
         },
         {
           href: "/staff/leave",
           icon: "🏖",
           title: "Leave",
           description: "Submit a leave request. Owner approves.",
+          feature: "staff.leave",
         },
       ],
     },
@@ -356,6 +402,7 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
           icon: "💬",
           title: "WhatsApp templates",
           description: "View and customise message templates.",
+          feature: "settings.templates",
         },
         {
           href: "/staff/profile",
@@ -417,14 +464,23 @@ export default function HomeLauncher({
   role,
   userName,
   clinicName,
+  plan,
   counts,
 }: {
   role: Role;
   userName: string;
   clinicName: string;
+  plan: Plan;
   counts: Counts;
 }) {
-  const sections = cardsForRole(role, counts);
+  // Filter cards by plan tier; drop sections that become empty after filtering.
+  const sections = cardsForRole(role, counts)
+    .map((s) => ({
+      ...s,
+      cards: s.cards.filter((c) => !c.feature || hasFeature(plan, c.feature)),
+    }))
+    .filter((s) => s.cards.length > 0);
+
   const greeting = (() => {
     const h = new Date().getHours();
     if (h < 12) return "Good morning";
@@ -432,16 +488,22 @@ export default function HomeLauncher({
     return "Good evening";
   })();
   const firstName = userName.split(" ")[0] || userName;
+  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-medium tracking-tight text-stone-900">
-          {greeting}, {firstName}
-        </h1>
-        <p className="text-sm text-stone-500 mt-1">
-          Welcome to {clinicName}. Pick where to go below — or use the side menu for everything else.
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-medium tracking-tight text-stone-900">
+            {greeting}, {firstName}
+          </h1>
+          <p className="text-sm text-stone-500 mt-1">
+            Welcome to {clinicName}. Pick where to go below — or use the side menu for everything else.
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-800 text-xs font-medium border border-brand-100">
+          🎯 {planLabel} plan
+        </span>
       </div>
 
       {sections.map((section) => (

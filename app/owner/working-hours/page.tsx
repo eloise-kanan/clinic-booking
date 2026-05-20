@@ -17,7 +17,7 @@ export default async function WorkingHoursPage() {
     .order("display_name");
 
   return (
-    <StaffShell role="owner" userName={profile.full_name} nav={staffNav(profile.role)}>
+    <StaffShell role="owner" userName={profile.full_name} nav={await staffNav(profile.role)}>
       <h2 className="text-base font-medium mb-1">Doctor working hours</h2>
       <p className="text-xs text-stone-500 mb-4">
         Set each doctor&apos;s recurring weekly schedule. The booking form only offers slots within these

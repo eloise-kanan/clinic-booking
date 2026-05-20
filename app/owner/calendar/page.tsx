@@ -20,7 +20,7 @@ export default async function OwnerCalendarPage() {
     <StaffShell
       role="owner"
       userName={profile.full_name}
-      nav={staffNav(profile.role)}
+      nav={await staffNav(profile.role)}
     >
       <div className="flex items-center justify-between mb-4 gap-3">
         <h2 className="text-base font-medium">All doctors — calendar view</h2>

@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
+import { loadPlan } from "@/lib/branding-server";
 import HomeLauncher from "./HomeLauncher";
 
 export const dynamic = "force-dynamic";
@@ -71,17 +72,19 @@ export default async function HomePage() {
     .eq("no_show", false);
 
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "the clinic";
+  const plan = await loadPlan();
 
   return (
     <StaffShell
       role={profile.role as "owner" | "nurse" | "doctor"}
       userName={profile.full_name}
-      nav={staffNav(profile.role, pendingCount || 0)}
+      nav={await staffNav(profile.role, pendingCount || 0)}
     >
       <HomeLauncher
         role={profile.role as "nurse" | "owner" | "doctor"}
         userName={profile.full_name}
         clinicName={clinicName}
+        plan={plan}
         counts={{
           pending: pendingCount || 0,
           today: todayCount || 0,

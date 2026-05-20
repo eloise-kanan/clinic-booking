@@ -26,7 +26,7 @@ export default async function BreaksPage() {
     <StaffShell
       role="doctor"
       userName={profile.full_name}
-      nav={staffNav(profile.role)}
+      nav={await staffNav(profile.role)}
     >
       <h2 className="text-base font-medium mb-4">Block time off</h2>
       <BreakManager doctorId={doctor?.id || ""} initial={(breaks as any) || []} />

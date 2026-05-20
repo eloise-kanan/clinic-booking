@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-admin";
+import type { Plan } from "@/lib/plan";
 
 export type Branding = {
   primary_color: string;
@@ -31,6 +32,24 @@ export async function loadBranding(): Promise<Branding> {
     };
   } catch {
     return DEFAULT;
+  }
+}
+
+export async function loadPlan(): Promise<Plan> {
+  try {
+    const admin = createAdminClient();
+    const { data } = await admin
+      .from("clinic_settings")
+      .select("plan")
+      .eq("id", true)
+      .maybeSingle();
+    const plan = data?.plan as Plan | undefined;
+    if (plan && ["basic", "standard", "pro", "franchise"].includes(plan)) {
+      return plan;
+    }
+    return "standard";
+  } catch {
+    return "standard";
   }
 }
 

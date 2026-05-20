@@ -17,7 +17,7 @@ export default async function AuditPage() {
     .limit(500);
 
   return (
-    <StaffShell role="owner" userName={profile.full_name} nav={staffNav(profile.role)}>
+    <StaffShell role="owner" userName={profile.full_name} nav={await staffNav(profile.role)}>
       <h2 className="text-base font-medium mb-1">Audit log</h2>
       <p className="text-xs text-stone-500 mb-4">
         Last 500 actions across the clinic. Read-only. Use this to verify who did what when.

@@ -30,7 +30,7 @@ export default async function AllBookingsPage() {
     <StaffShell
       role="nurse"
       userName={profile.full_name}
-      nav={staffNav(profile.role, count || 0)}
+      nav={await staffNav(profile.role, count || 0)}
     >
       <h2 className="text-base font-medium mb-4">All bookings</h2>
       <FilterableBookingsTable

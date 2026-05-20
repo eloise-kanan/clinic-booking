@@ -30,7 +30,7 @@ export default async function NursePage() {
     <StaffShell
       role="nurse"
       userName={profile.full_name}
-      nav={staffNav(profile.role, pendingCount || 0)}
+      nav={await staffNav(profile.role, pendingCount || 0)}
     >
       <h2 className="text-base font-medium mb-4">Pending approvals</h2>
       <PendingQueue
