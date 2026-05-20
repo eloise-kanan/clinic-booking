@@ -12,6 +12,15 @@ export default async function BackupPage() {
   const plan = await loadPlan();
   const admin = createAdminClient();
 
+  // Auto-email backup settings
+  const { data: settings } = await admin
+    .from("clinic_settings")
+    .select(
+      "backup_email_enabled, backup_email_frequency, backup_email_to, backup_email_last_sent_at, backup_email_last_status"
+    )
+    .eq("id", true)
+    .maybeSingle();
+
   // Last export timestamps for each kind
   const { data: lastExports } = await admin
     .from("audit_log")
@@ -61,6 +70,14 @@ export default async function BackupPage() {
           patients: lastByKind["backup_export_patients"],
           bookings: lastByKind["backup_export_bookings"],
           audit: lastByKind["backup_export_audit"],
+        }}
+        emailSettings={{
+          enabled: settings?.backup_email_enabled || false,
+          frequency:
+            (settings?.backup_email_frequency as "daily" | "weekly" | "monthly") || "weekly",
+          to: settings?.backup_email_to || "",
+          lastSentAt: settings?.backup_email_last_sent_at || null,
+          lastStatus: settings?.backup_email_last_status || null,
         }}
       />
     </StaffShell>
