@@ -79,21 +79,46 @@ export async function PATCH(req: Request) {
   const auth = await requireOwner();
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const { profile_id, active } = await req.json();
+  const body = await req.json();
+  const { profile_id, active, default_slot_minutes } = body;
+  if (!profile_id) {
+    return NextResponse.json({ error: "profile_id required" }, { status: 400 });
+  }
   const admin = createAdminClient();
-  const { error } = await admin.from("profiles").update({ active }).eq("id", profile_id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Also flip the matching doctor row if any
-  await admin.from("doctors").update({ active }).eq("profile_id", profile_id);
+  if (active !== undefined) {
+    const { error } = await admin.from("profiles").update({ active }).eq("id", profile_id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await admin.from("doctors").update({ active }).eq("profile_id", profile_id);
+    await admin.from("audit_log").insert({
+      actor_id: auth.user.id,
+      action: active ? "activate_staff" : "deactivate_staff",
+      entity_type: "profile",
+      entity_id: profile_id,
+      after_data: { active },
+    });
+  }
 
-  await admin.from("audit_log").insert({
-    actor_id: auth.user.id,
-    action: active ? "activate_staff" : "deactivate_staff",
-    entity_type: "profile",
-    entity_id: profile_id,
-    after_data: { active },
-  });
+  if (default_slot_minutes !== undefined) {
+    if (![15, 30, 45, 60].includes(default_slot_minutes)) {
+      return NextResponse.json(
+        { error: "Slot length must be 15, 30, 45 or 60 minutes" },
+        { status: 400 }
+      );
+    }
+    const { error } = await admin
+      .from("doctors")
+      .update({ default_slot_minutes })
+      .eq("profile_id", profile_id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    await admin.from("audit_log").insert({
+      actor_id: auth.user.id,
+      action: "update_doctor_slot_minutes",
+      entity_type: "doctor",
+      entity_id: profile_id,
+      after_data: { default_slot_minutes },
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

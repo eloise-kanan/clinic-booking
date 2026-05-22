@@ -1,8 +1,53 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+type Tab = "password" | "email";
 
 export default function ProfileForm({ email }: { email: string }) {
+  const [tab, setTab] = useState<Tab>("password");
+
+  return (
+    <div className="max-w-md">
+      <div className="flex gap-1 mb-3 border-b border-stone-200">
+        <TabBtn active={tab === "password"} onClick={() => setTab("password")}>
+          Change password
+        </TabBtn>
+        <TabBtn active={tab === "email"} onClick={() => setTab("email")}>
+          Change email
+        </TabBtn>
+      </div>
+      {tab === "password" ? <PasswordSection /> : <EmailSection currentEmail={email} />}
+    </div>
+  );
+}
+
+function TabBtn({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`px-3 py-2 text-sm -mb-px border-b-2 transition-colors ${
+        active
+          ? "border-stone-900 text-stone-900 font-medium"
+          : "border-transparent text-stone-500 hover:text-stone-900"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function PasswordSection() {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -42,11 +87,7 @@ export default function ProfileForm({ email }: { email: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-5 space-y-3 max-w-md">
-      <div>
-        <label className="label">Email</label>
-        <input className="input bg-stone-50" value={email} disabled readOnly />
-      </div>
+    <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
       <div>
         <label className="label">Current password</label>
         <input
@@ -83,10 +124,89 @@ export default function ProfileForm({ email }: { email: string }) {
         />
       </div>
       {msg && (
-        <p className={`text-xs ${msg.type === "ok" ? "text-emerald-700" : "text-red-600"}`}>{msg.text}</p>
+        <p className={`text-xs ${msg.type === "ok" ? "text-emerald-700" : "text-red-600"}`}>
+          {msg.text}
+        </p>
       )}
       <button type="submit" disabled={busy} className="btn-primary">
         {busy ? "Changing…" : "Change password"}
+      </button>
+    </form>
+  );
+}
+
+function EmailSection({ currentEmail }: { currentEmail: string }) {
+  const router = useRouter();
+  const [password, setPassword] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    setBusy(true);
+    try {
+      const res = await fetch("/api/account/email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current_password: password, new_email: newEmail }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg({ type: "err", text: data.error || "Failed to change email" });
+        return;
+      }
+      setMsg({
+        type: "ok",
+        text: `Email changed. Use ${newEmail} from your next login.`,
+      });
+      setPassword("");
+      setNewEmail("");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
+      <div>
+        <label className="label">Current email</label>
+        <input className="input bg-stone-50" value={currentEmail} disabled readOnly />
+      </div>
+      <div>
+        <label className="label">New email</label>
+        <input
+          type="email"
+          className="input"
+          value={newEmail}
+          onChange={(e) => setNewEmail(e.target.value)}
+          placeholder="new@example.com"
+          required
+        />
+      </div>
+      <div>
+        <label className="label">Current password</label>
+        <input
+          type="password"
+          className="input"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="current-password"
+          required
+        />
+        <p className="text-[11px] text-stone-500 mt-1">
+          Confirms it&apos;s you. The change is applied immediately — log in with the new email next time.
+        </p>
+      </div>
+      {msg && (
+        <p className={`text-xs ${msg.type === "ok" ? "text-emerald-700" : "text-red-600"}`}>
+          {msg.text}
+        </p>
+      )}
+      <button type="submit" disabled={busy} className="btn-primary">
+        {busy ? "Changing…" : "Change email"}
       </button>
     </form>
   );
