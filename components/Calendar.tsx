@@ -8,10 +8,12 @@ type Props = {
   onChange: (ymd: string) => void;
   minDate?: string;
   maxDate?: string;
+  monthNames?: string[];   // optional override for i18n; 12 entries Jan..Dec
+  weekdayNames?: string[]; // optional override for i18n; 7 entries Mon..Sun
 };
 
-const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-const MONTHS = [
+const DOW_EN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const MONTHS_EN = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
 ];
@@ -35,7 +37,9 @@ function toYmd(y: number, m: number, d: number): string {
   return `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
 }
 
-export default function Calendar({ value, onChange, minDate, maxDate }: Props) {
+export default function Calendar({ value, onChange, minDate, maxDate, monthNames, weekdayNames }: Props) {
+  const months = monthNames && monthNames.length === 12 ? monthNames : MONTHS_EN;
+  const dow = weekdayNames && weekdayNames.length === 7 ? weekdayNames : DOW_EN;
   // Anchor: which month is currently visible.
   const today = localYmd();
   const initialAnchor = value || minDate || today;
@@ -99,7 +103,7 @@ export default function Calendar({ value, onChange, minDate, maxDate }: Props) {
           ‹
         </button>
         <div className="text-sm font-medium text-stone-900">
-          {MONTHS[view.m - 1]} {view.y}
+          {months[view.m - 1]} {view.y}
         </div>
         <button
           type="button"
@@ -113,8 +117,8 @@ export default function Calendar({ value, onChange, minDate, maxDate }: Props) {
       </div>
 
       <div className="grid grid-cols-7 gap-1 mb-1">
-        {DOW.map((d) => (
-          <div key={d} className="text-[10px] text-stone-400 font-medium text-center py-1">
+        {dow.map((d, i) => (
+          <div key={i} className="text-[10px] text-stone-400 font-medium text-center py-1">
             {d}
           </div>
         ))}

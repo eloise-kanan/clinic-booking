@@ -6,7 +6,7 @@ import { TREATMENTS, treatmentMinutes } from "@/lib/treatments";
 import { composePhone, normalizeIc } from "@/lib/utils";
 import { localYmd, addDaysYmd } from "@/lib/local-date";
 import Calendar from "@/components/Calendar";
-import { BOOK_T, LANGS, type Lang, type BookKey } from "@/lib/i18n-book";
+import { BOOK_T, LANGS, TREATMENT_LABELS, MONTHS_T, DOW_T, type Lang, type BookKey } from "@/lib/i18n-book";
 
 type RequestType = "booking" | "reschedule" | "cancellation";
 type Doctor = { id: string; display_name: string };
@@ -224,22 +224,24 @@ export default function BookingForm() {
 
   return (
     <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-6" autoComplete="off">
-      {/* Language toggle — top-right, compact */}
+      {/* Language toggle — segmented buttons */}
       <div className="flex justify-end -mb-2">
-        <label className="flex items-center gap-2 text-xs text-stone-500">
-          <span>{t("lang_label")}</span>
-          <select
-            className="border border-stone-200 rounded px-2 py-1 text-xs bg-white"
-            value={lang}
-            onChange={(e) => setLang(e.target.value as Lang)}
-          >
-            {LANGS.map((l) => (
-              <option key={l.value} value={l.value}>
-                {l.nativeLabel}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="inline-flex rounded-md border border-stone-200 overflow-hidden text-xs">
+          {LANGS.map((l, i) => (
+            <button
+              key={l.value}
+              type="button"
+              onClick={() => setLang(l.value)}
+              className={`px-3 py-1.5 transition-colors ${
+                lang === l.value
+                  ? "bg-stone-900 text-white"
+                  : "bg-white text-stone-600 hover:bg-stone-50"
+              } ${i > 0 ? "border-l border-stone-200" : ""}`}
+            >
+              {l.nativeLabel}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Identity — captured up front so reschedule/cancel can look up the
@@ -440,7 +442,7 @@ export default function BookingForm() {
               <option value="">{t("select_treatment")}</option>
               {TREATMENTS.map((tr) => (
                 <option key={tr.value} value={tr.value}>
-                  {tr.label} ({tr.minutes} min)
+                  {TREATMENT_LABELS[lang][tr.value] || tr.label} ({tr.minutes} min)
                 </option>
               ))}
             </select>
@@ -495,6 +497,8 @@ export default function BookingForm() {
               }}
               minDate={today}
               maxDate={today ? addDaysYmd(today, 35) : undefined}
+              monthNames={MONTHS_T[lang]}
+              weekdayNames={DOW_T[lang]}
             />
             <p className="text-[11px] text-stone-500 mt-1">
               {t("five_weeks_hint")}

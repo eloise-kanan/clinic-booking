@@ -218,3 +218,51 @@ export const BOOK_T: Record<Lang, Record<BookKey, string>> = {
     submitted_hold_note: "Sehingga disahkan, slot tersebut ditahan tetapi belum dikunci.",
   },
 };
+
+// Treatment labels by language. Keyed by `value` in lib/treatments.ts.
+export const TREATMENT_LABELS: Record<Lang, Record<string, string>> = {
+  en: {
+    scaling: "Normal treatment / scaling",
+    root_canal: "Root canal treatment",
+    whitening: "Whitening",
+    wisdom_tooth: "Wisdom tooth surgery",
+    other: "Others",
+  },
+  zh: {
+    scaling: "一般治疗 / 洗牙",
+    root_canal: "根管治疗",
+    whitening: "牙齿美白",
+    wisdom_tooth: "智齿手术",
+    other: "其他",
+  },
+  ms: {
+    scaling: "Rawatan biasa / cuci karang gigi",
+    root_canal: "Rawatan saluran akar",
+    whitening: "Pemutihan gigi",
+    wisdom_tooth: "Pembedahan gigi bongsu",
+    other: "Lain-lain",
+  },
+};
+
+// Month names for the inline calendar.
+export const MONTHS_T: Record<Lang, string[]> = {
+  en: [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ],
+  zh: [
+    "一月", "二月", "三月", "四月", "五月", "六月",
+    "七月", "八月", "九月", "十月", "十一月", "十二月",
+  ],
+  ms: [
+    "Januari", "Februari", "Mac", "April", "Mei", "Jun",
+    "Julai", "Ogos", "September", "Oktober", "November", "Disember",
+  ],
+};
+
+// Day-of-week abbreviations for the inline calendar header (Mon first).
+export const DOW_T: Record<Lang, string[]> = {
+  en: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+  zh: ["一", "二", "三", "四", "五", "六", "日"],
+  ms: ["Isn", "Sel", "Rab", "Kha", "Jum", "Sab", "Ahd"],
+};
