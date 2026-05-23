@@ -6,6 +6,7 @@ import { TREATMENTS, treatmentMinutes } from "@/lib/treatments";
 import { composePhone, normalizeIc } from "@/lib/utils";
 import { localYmd, addDaysYmd } from "@/lib/local-date";
 import Calendar from "@/components/Calendar";
+import { BOOK_T, LANGS, type Lang, type BookKey } from "@/lib/i18n-book";
 
 type RequestType = "booking" | "reschedule" | "cancellation";
 type Doctor = { id: string; display_name: string };
@@ -19,13 +20,24 @@ type ActiveBooking = {
   status: string;
 };
 
-const REQUEST_TYPES: { value: RequestType; label: string; description: string }[] = [
-  { value: "booking", label: "Booking", description: "Book a new appointment" },
-  { value: "reschedule", label: "Reschedule", description: "Change an existing one" },
-  { value: "cancellation", label: "Cancel", description: "Cancel an existing one" },
+const REQUEST_TYPE_KEYS: { value: RequestType; labelKey: BookKey; descKey: BookKey }[] = [
+  { value: "booking", labelKey: "type_booking", descKey: "type_booking_desc" },
+  { value: "reschedule", labelKey: "type_reschedule", descKey: "type_reschedule_desc" },
+  { value: "cancellation", labelKey: "type_cancellation", descKey: "type_cancellation_desc" },
 ];
 
 export default function BookingForm() {
+  // Language toggle — defaults to English, persists across visits.
+  const [lang, setLang] = useState<Lang>("en");
+  useEffect(() => {
+    const saved = (typeof window !== "undefined" && localStorage.getItem("book_lang")) as Lang | null;
+    if (saved && ["en", "zh", "ms"].includes(saved)) setLang(saved);
+  }, []);
+  useEffect(() => {
+    if (typeof window !== "undefined") localStorage.setItem("book_lang", lang);
+  }, [lang]);
+  const t = (k: BookKey) => BOOK_T[lang][k];
+
   const [reqType, setReqType] = useState<RequestType>("booking");
 
   // Identity
@@ -201,7 +213,7 @@ export default function BookingForm() {
     }
   }
 
-  if (submitted) return <SubmittedView reqType={reqType} />;
+  if (submitted) return <SubmittedView reqType={reqType} lang={lang} />;
 
   const showTreatment =
     (reqType === "booking" && isFirstTime !== null) ||
@@ -212,12 +224,30 @@ export default function BookingForm() {
 
   return (
     <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-6" autoComplete="off">
+      {/* Language toggle — top-right, compact */}
+      <div className="flex justify-end -mb-2">
+        <label className="flex items-center gap-2 text-xs text-stone-500">
+          <span>{t("lang_label")}</span>
+          <select
+            className="border border-stone-200 rounded px-2 py-1 text-xs bg-white"
+            value={lang}
+            onChange={(e) => setLang(e.target.value as Lang)}
+          >
+            {LANGS.map((l) => (
+              <option key={l.value} value={l.value}>
+                {l.nativeLabel}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+
       {/* Identity — captured up front so reschedule/cancel can look up the
           existing booking, and so the patient sees a clear "tell us who you
           are" entry point before choosing what they're here to do. */}
       <div className="space-y-3">
         <div>
-          <label className="label">Full name (as per IC/passport)</label>
+          <label className="label">{t("full_name")}</label>
           <input
             className="input"
             value={fullName}
@@ -229,7 +259,7 @@ export default function BookingForm() {
         </div>
 
         <div>
-          <label className="label">Nationality</label>
+          <label className="label">{t("nationality")}</label>
           <select
             className="input"
             value={nationality}
@@ -247,12 +277,12 @@ export default function BookingForm() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="label">{idType === "ic" ? "IC number" : "Passport number"}</label>
+            <label className="label">{idType === "ic" ? t("ic_number") : t("passport_number")}</label>
             <input
               className="input"
               value={idNumber}
               onChange={(e) => setIdNumber(e.target.value)}
-              placeholder={idType === "ic" ? "12 digits, no dashes" : "Passport number"}
+              placeholder={idType === "ic" ? t("ic_placeholder") : t("passport_placeholder")}
               inputMode={idType === "ic" ? "numeric" : "text"}
               autoComplete="off"
               name="patient-doc-id"
@@ -262,7 +292,7 @@ export default function BookingForm() {
             />
           </div>
           <div>
-            <label className="label">WhatsApp number</label>
+            <label className="label">{t("whatsapp_number")}</label>
             <div className="flex">
               <span className="inline-flex items-center px-2 rounded-l-md border border-r-0 border-stone-300 bg-stone-50 text-sm text-stone-600 select-none">
                 {dial}
@@ -271,7 +301,7 @@ export default function BookingForm() {
                 className="input rounded-l-none"
                 value={phoneLocal}
                 onChange={(e) => setPhoneLocal(e.target.value)}
-                placeholder="Mobile number"
+                placeholder={t("mobile_placeholder")}
                 inputMode="numeric"
                 autoComplete="off"
                 name="patient-wa-local"
@@ -281,7 +311,7 @@ export default function BookingForm() {
               />
             </div>
             <p className="text-[11px] text-stone-500 mt-1">
-              Please make sure this is correct — our nurse will contact you on WhatsApp to confirm.
+              {t("whatsapp_hint")}
             </p>
           </div>
         </div>
@@ -290,22 +320,22 @@ export default function BookingForm() {
       {/* Request type — patient picks what they're here to do AFTER giving us
           their identity, so reschedule/cancel can act on it immediately. */}
       <div>
-        <div className="label mb-2">What would you like to do?</div>
+        <div className="label mb-2">{t("request_label")}</div>
         <div className="grid grid-cols-3 gap-2">
-          {REQUEST_TYPES.map((t) => (
+          {REQUEST_TYPE_KEYS.map((rt) => (
             <button
-              key={t.value}
+              key={rt.value}
               type="button"
-              onClick={() => setReqType(t.value)}
+              onClick={() => setReqType(rt.value)}
               className={`p-2 sm:p-3 text-center rounded-md border transition-colors leading-tight ${
-                reqType === t.value
+                reqType === rt.value
                   ? "border-brand bg-brand text-white"
                   : "border-stone-200 hover:border-stone-300"
               }`}
             >
-              <div className="text-xs sm:text-sm font-medium break-words">{t.label}</div>
-              <div className={`text-[10px] sm:text-[11px] mt-0.5 break-words ${reqType === t.value ? "text-brand-50" : "text-stone-500"}`}>
-                {t.description}
+              <div className="text-xs sm:text-sm font-medium break-words">{t(rt.labelKey)}</div>
+              <div className={`text-[10px] sm:text-[11px] mt-0.5 break-words ${reqType === rt.value ? "text-brand-50" : "text-stone-500"}`}>
+                {t(rt.descKey)}
               </div>
             </button>
           ))}
@@ -317,11 +347,11 @@ export default function BookingForm() {
         <div className="border-t border-stone-200 pt-5">
           {!activeBooking ? (
             <button type="button" onClick={lookupActive} className="btn">
-              Find my active appointment
+              {t("find_active")}
             </button>
           ) : (
             <div className="bg-stone-50 border border-stone-200 rounded-md p-3 text-sm">
-              <div className="text-xs text-stone-500 mb-1">Active appointment</div>
+              <div className="text-xs text-stone-500 mb-1">{t("active_appointment")}</div>
               <div className="font-medium">{activeBooking.doctor_name}</div>
               <div className="text-stone-600">{new Date(activeBooking.slot_start).toLocaleString("en-MY")}</div>
             </div>
@@ -333,14 +363,14 @@ export default function BookingForm() {
       {/* Cancellation: confirm */}
       {reqType === "cancellation" && activeBooking && (
         <div className="border-t border-stone-200 pt-5">
-          <p className="text-sm text-stone-700 mb-3">Confirm you would like to cancel this appointment.</p>
+          <p className="text-sm text-stone-700 mb-3">{t("confirm_cancel")}</p>
         </div>
       )}
 
       {/* Booking: first-time? */}
       {reqType === "booking" && (
         <div className="border-t border-stone-200 pt-5">
-          <div className="label">First-time patient?</div>
+          <div className="label">{t("first_time")}</div>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -349,7 +379,7 @@ export default function BookingForm() {
                 isFirstTime === true ? "border-brand bg-brand text-white" : "border-stone-200"
               }`}
             >
-              Yes
+              {t("yes")}
             </button>
             <button
               type="button"
@@ -358,7 +388,7 @@ export default function BookingForm() {
                 isFirstTime === false ? "border-brand bg-brand text-white" : "border-stone-200"
               }`}
             >
-              No
+              {t("no")}
             </button>
           </div>
         </div>
@@ -367,7 +397,9 @@ export default function BookingForm() {
       {/* Reschedule: keep same doctor? */}
       {reqType === "reschedule" && activeBooking && (
         <div className="border-t border-stone-200 pt-5">
-          <div className="label">Keep the same doctor ({activeBooking.doctor_name})?</div>
+          <div className="label">
+            {t("keep_same_doctor")} <span className="text-stone-500 text-xs">({activeBooking.doctor_name})</span>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -376,7 +408,7 @@ export default function BookingForm() {
                 keepSameDoctor === true ? "border-brand bg-brand text-white" : "border-stone-200"
               }`}
             >
-              Yes, same doctor
+              {t("yes_same")}
             </button>
             <button
               type="button"
@@ -385,7 +417,7 @@ export default function BookingForm() {
                 keepSameDoctor === false ? "border-brand bg-brand text-white" : "border-stone-200"
               }`}
             >
-              Choose different
+              {t("choose_different")}
             </button>
           </div>
         </div>
@@ -395,7 +427,7 @@ export default function BookingForm() {
       {showTreatment && (
         <div className="border-t border-stone-200 pt-5 space-y-3">
           <div>
-            <label className="label">Reason for visit</label>
+            <label className="label">{t("reason")}</label>
             <select
               className="input"
               value={treatment}
@@ -405,10 +437,10 @@ export default function BookingForm() {
               }}
               required
             >
-              <option value="">Select a treatment</option>
-              {TREATMENTS.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label} ({t.minutes} min)
+              <option value="">{t("select_treatment")}</option>
+              {TREATMENTS.map((tr) => (
+                <option key={tr.value} value={tr.value}>
+                  {tr.label} ({tr.minutes} min)
                 </option>
               ))}
             </select>
@@ -416,16 +448,16 @@ export default function BookingForm() {
 
           {treatment === "other" && (
             <div>
-              <label className="label">Please describe</label>
+              <label className="label">{t("please_describe")}</label>
               <textarea
                 className="input"
                 rows={2}
                 value={otherDetail}
                 onChange={(e) => setOtherDetail(e.target.value)}
-                placeholder="Brief description of your visit"
+                placeholder={t("describe_placeholder")}
                 required
               />
-              <p className="text-xs text-stone-500 mt-1">Default 30 minutes — our nurse will adjust if needed.</p>
+              <p className="text-xs text-stone-500 mt-1">{t("default_30")}</p>
             </div>
           )}
         </div>
@@ -435,7 +467,7 @@ export default function BookingForm() {
       {treatmentReady && (
         <div className="border-t border-stone-200 pt-5 space-y-3">
           <div>
-            <label className="label">Doctor</label>
+            <label className="label">{t("doctor")}</label>
             <select
               className="input"
               value={doctorId}
@@ -445,7 +477,7 @@ export default function BookingForm() {
               }}
               required
             >
-              <option value="">Select doctor</option>
+              <option value="">{t("select_doctor")}</option>
               {doctors.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.display_name}
@@ -454,7 +486,7 @@ export default function BookingForm() {
             </select>
           </div>
           <div>
-            <label className="label">Date</label>
+            <label className="label">{t("date")}</label>
             <Calendar
               value={date}
               onChange={(ymd) => {
@@ -465,17 +497,17 @@ export default function BookingForm() {
               maxDate={today ? addDaysYmd(today, 35) : undefined}
             />
             <p className="text-[11px] text-stone-500 mt-1">
-              Bookings open for the next 5 weeks.
+              {t("five_weeks_hint")}
             </p>
           </div>
 
           {doctorId && (
             <div>
-              <label className="label">Available slots</label>
+              <label className="label">{t("available_slots")}</label>
               {slotsLoading ? (
-                <p className="text-xs text-stone-500">Loading…</p>
+                <p className="text-xs text-stone-500">{t("loading")}</p>
               ) : slots.length === 0 ? (
-                <p className="text-xs text-stone-500">No available slots for this date. Try another day.</p>
+                <p className="text-xs text-stone-500">{t("no_slots")}</p>
               ) : (
                 <div className="grid grid-cols-4 gap-2">
                   {slots.map((s) => {
@@ -514,7 +546,7 @@ export default function BookingForm() {
         disabled={submitting || !canSubmit({ reqType, isFirstTime, keepSameDoctor, activeBooking, chosenSlot, treatment, otherDetail })}
         className="btn-primary w-full"
       >
-        {submitting ? "Submitting…" : "Submit request"}
+        {submitting ? t("submitting") : t("submit")}
       </button>
     </form>
   );
@@ -537,12 +569,14 @@ function canSubmit(s: {
   return false;
 }
 
-function SubmittedView({ reqType }: { reqType: RequestType }) {
-  const messages = {
-    booking: "verify your details and confirm your appointment",
-    reschedule: "verify your details and confirm your new slot",
-    cancellation: "verify your details and confirm the cancellation",
-  };
+function SubmittedView({ reqType, lang }: { reqType: RequestType; lang: Lang }) {
+  const t = (k: BookKey) => BOOK_T[lang][k];
+  const bodyKey: BookKey =
+    reqType === "reschedule"
+      ? "submitted_body_reschedule"
+      : reqType === "cancellation"
+        ? "submitted_body_cancellation"
+        : "submitted_body_booking";
   return (
     <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
       <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-brand-50 flex items-center justify-center">
@@ -550,12 +584,12 @@ function SubmittedView({ reqType }: { reqType: RequestType }) {
           <polyline points="20 6 9 17 4 12" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <h2 className="text-lg font-medium mb-2">Request received</h2>
+      <h2 className="text-lg font-medium mb-2">{t("submitted_heading")}</h2>
       <p className="text-sm text-stone-600 leading-relaxed max-w-sm mx-auto">
-        Your slot is currently under review. Our nurse will contact you on WhatsApp within 24 hours to{" "}
-        {messages[reqType]}. <strong className="font-medium text-stone-800">Please ensure the WhatsApp number you provided is accurate.</strong>
+        {t(bodyKey)}{" "}
+        <strong className="font-medium text-stone-800">{t("submitted_ensure_wa")}</strong>
       </p>
-      <p className="text-xs text-stone-500 mt-4">Until confirmed, the slot is held but not locked.</p>
+      <p className="text-xs text-stone-500 mt-4">{t("submitted_hold_note")}</p>
     </div>
   );
 }
