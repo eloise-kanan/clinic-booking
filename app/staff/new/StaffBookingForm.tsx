@@ -69,9 +69,27 @@ export default function StaffBookingForm({
   const dial = dialCodeFor(nationality) || "+";
   const minutes = treatmentMinutes(treatment);
 
-  // Initialize today's date after mount (avoids SSR/client timezone mismatch)
+  // Today (local timezone) — re-checked on tab visibility so an open page
+  // rolls over at midnight, and used as `min` on the picker so past dates
+  // can't be selected.
+  const [today, setToday] = useState<string>("");
   useEffect(() => {
-    setDate(new Date().toISOString().slice(0, 10));
+    function localYmd() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+    function refresh() {
+      const t = localYmd();
+      setToday(t);
+      setDate((cur) => (!cur || cur < t ? t : cur));
+    }
+    refresh();
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
   }, []);
 
   useEffect(() => {
@@ -354,7 +372,7 @@ export default function StaffBookingForm({
                 type="date"
                 className="input"
                 value={date}
-                min={new Date().toISOString().slice(0, 10)}
+                min={today}
                 onChange={(e) => {
                   setDate(e.target.value);
                   setChosenSlot("");
