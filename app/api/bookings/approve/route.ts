@@ -50,20 +50,8 @@ export async function POST(req: Request) {
     .eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Increment patient visit count on confirmed booking
-  if (newStatus === "confirmed") {
-    const { data: pat } = await admin
-      .from("patients")
-      .select("visit_count")
-      .eq("id", booking.patient_id)
-      .single();
-    if (pat) {
-      await admin
-        .from("patients")
-        .update({ visit_count: (pat.visit_count || 0) + 1 })
-        .eq("id", booking.patient_id);
-    }
-  }
+  // visit_count is no longer touched on confirmation. It now reflects actual
+  // attended visits only and is updated by /api/bookings/attendance.
 
   // Audit
   await admin.from("audit_log").insert({

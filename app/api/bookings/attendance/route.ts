@@ -55,27 +55,47 @@ export async function POST(req: Request) {
             no_show_by: null,
           };
 
+  // Read the previous state so we can adjust visit_count + last_visit_at
+  // correctly across transitions (mark attended ↔ no_show / clear).
+  const { data: prev } = await admin
+    .from("bookings")
+    .select("patient_id, attended_at")
+    .eq("id", booking_id)
+    .maybeSingle();
+  const wasAttended = !!prev?.attended_at;
+
   const { error } = await admin.from("bookings").update(update).eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Bump patients.last_visit_at when the booking is freshly attended, so the
-  // recall worklist knows when to start the 6-month clock.
-  if (mark === "attended") {
-    const { data: b } = await admin
-      .from("bookings")
-      .select("patient_id")
-      .eq("id", booking_id)
-      .maybeSingle();
-    if (b?.patient_id) {
+  // visit_count + last_visit_at follow attended state transitions:
+  //   not-attended → attended  : visit_count += 1, last_visit_at = now,
+  //                              recall_reminder_sent_at reset (fresh cycle)
+  //   attended    → !attended  : visit_count -= 1 (no_show / clear)
+  if (prev?.patient_id) {
+    if (mark === "attended" && !wasAttended) {
+      const { data: pat } = await admin
+        .from("patients")
+        .select("visit_count")
+        .eq("id", prev.patient_id)
+        .maybeSingle();
       await admin
         .from("patients")
         .update({
+          visit_count: (pat?.visit_count || 0) + 1,
           last_visit_at: now,
-          // A fresh visit ends any in-flight recall reminder window — next
-          // 6-month cycle starts from today.
           recall_reminder_sent_at: null,
         })
-        .eq("id", b.patient_id);
+        .eq("id", prev.patient_id);
+    } else if (mark !== "attended" && wasAttended) {
+      const { data: pat } = await admin
+        .from("patients")
+        .select("visit_count")
+        .eq("id", prev.patient_id)
+        .maybeSingle();
+      await admin
+        .from("patients")
+        .update({ visit_count: Math.max(0, (pat?.visit_count || 0) - 1) })
+        .eq("id", prev.patient_id);
     }
   }
 
