@@ -212,30 +212,9 @@ export default function BookingForm() {
 
   return (
     <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-6" autoComplete="off">
-      {/* Request type */}
-      <div>
-        <div className="grid grid-cols-3 gap-2">
-          {REQUEST_TYPES.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              onClick={() => setReqType(t.value)}
-              className={`p-2 sm:p-3 text-center rounded-md border transition-colors leading-tight ${
-                reqType === t.value
-                  ? "border-brand bg-brand text-white"
-                  : "border-stone-200 hover:border-stone-300"
-              }`}
-            >
-              <div className="text-xs sm:text-sm font-medium break-words">{t.label}</div>
-              <div className={`text-[10px] sm:text-[11px] mt-0.5 break-words ${reqType === t.value ? "text-brand-50" : "text-stone-500"}`}>
-                {t.description}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Identity */}
+      {/* Identity — captured up front so reschedule/cancel can look up the
+          existing booking, and so the patient sees a clear "tell us who you
+          are" entry point before choosing what they're here to do. */}
       <div className="space-y-3">
         <div>
           <label className="label">Full name (as per IC/passport)</label>
@@ -301,7 +280,35 @@ export default function BookingForm() {
                 required
               />
             </div>
+            <p className="text-[11px] text-stone-500 mt-1">
+              Please make sure this is correct — our nurse will contact you on WhatsApp to confirm.
+            </p>
           </div>
+        </div>
+      </div>
+
+      {/* Request type — patient picks what they're here to do AFTER giving us
+          their identity, so reschedule/cancel can act on it immediately. */}
+      <div>
+        <div className="label mb-2">What would you like to do?</div>
+        <div className="grid grid-cols-3 gap-2">
+          {REQUEST_TYPES.map((t) => (
+            <button
+              key={t.value}
+              type="button"
+              onClick={() => setReqType(t.value)}
+              className={`p-2 sm:p-3 text-center rounded-md border transition-colors leading-tight ${
+                reqType === t.value
+                  ? "border-brand bg-brand text-white"
+                  : "border-stone-200 hover:border-stone-300"
+              }`}
+            >
+              <div className="text-xs sm:text-sm font-medium break-words">{t.label}</div>
+              <div className={`text-[10px] sm:text-[11px] mt-0.5 break-words ${reqType === t.value ? "text-brand-50" : "text-stone-500"}`}>
+                {t.description}
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
