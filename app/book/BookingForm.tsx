@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import { COUNTRIES, dialCodeFor } from "@/lib/countries";
 import { TREATMENTS, treatmentMinutes } from "@/lib/treatments";
 import { composePhone, normalizeIc } from "@/lib/utils";
-import { localYmd } from "@/lib/local-date";
+import { localYmd, addDaysYmd } from "@/lib/local-date";
+import Calendar from "@/components/Calendar";
 
 type RequestType = "booking" | "reschedule" | "cancellation";
 type Doctor = { id: string; display_name: string };
@@ -426,40 +427,39 @@ export default function BookingForm() {
       {/* Doctor + slot picker — only after treatment is set */}
       {treatmentReady && (
         <div className="border-t border-stone-200 pt-5 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="label">Doctor</label>
-              <select
-                className="input"
-                value={doctorId}
-                onChange={(e) => {
-                  setDoctorId(e.target.value);
-                  setChosenSlot("");
-                }}
-                required
-              >
-                <option value="">Select doctor</option>
-                {doctors.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.display_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">Date</label>
-              <input
-                type="date"
-                className="input"
-                value={date}
-                min={today}
-                onChange={(e) => {
-                  setDate(e.target.value);
-                  setChosenSlot("");
-                }}
-                required
-              />
-            </div>
+          <div>
+            <label className="label">Doctor</label>
+            <select
+              className="input"
+              value={doctorId}
+              onChange={(e) => {
+                setDoctorId(e.target.value);
+                setChosenSlot("");
+              }}
+              required
+            >
+              <option value="">Select doctor</option>
+              {doctors.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.display_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Date</label>
+            <Calendar
+              value={date}
+              onChange={(ymd) => {
+                setDate(ymd);
+                setChosenSlot("");
+              }}
+              minDate={today}
+              maxDate={today ? addDaysYmd(today, 35) : undefined}
+            />
+            <p className="text-[11px] text-stone-500 mt-1">
+              Bookings open for the next 5 weeks.
+            </p>
           </div>
 
           {doctorId && (

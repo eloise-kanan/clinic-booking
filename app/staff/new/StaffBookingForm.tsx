@@ -6,6 +6,7 @@ import { COUNTRIES, dialCodeFor } from "@/lib/countries";
 import { TREATMENTS, treatmentMinutes } from "@/lib/treatments";
 import { composePhone, normalizeIc } from "@/lib/utils";
 import { localYmd } from "@/lib/local-date";
+import Calendar from "@/components/Calendar";
 
 type Doctor = { id: string; display_name: string };
 type Slot = { slot_start: string; slot_end: string };
@@ -343,40 +344,35 @@ export default function StaffBookingForm({
       {/* Doctor + slot */}
       {treatmentReady && (
         <div className="border-t border-stone-200 pt-5 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="label">Doctor</label>
-              <select
-                className="input"
-                value={doctorId}
-                onChange={(e) => {
-                  setDoctorId(e.target.value);
-                  setChosenSlot("");
-                }}
-                required
-              >
-                <option value="">Select doctor</option>
-                {doctors.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.display_name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="label">Date</label>
-              <input
-                type="date"
-                className="input"
-                value={date}
-                min={today}
-                onChange={(e) => {
-                  setDate(e.target.value);
-                  setChosenSlot("");
-                }}
-                required
-              />
-            </div>
+          <div>
+            <label className="label">Doctor</label>
+            <select
+              className="input"
+              value={doctorId}
+              onChange={(e) => {
+                setDoctorId(e.target.value);
+                setChosenSlot("");
+              }}
+              required
+            >
+              <option value="">Select doctor</option>
+              {doctors.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.display_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="label">Date</label>
+            <Calendar
+              value={date}
+              onChange={(ymd) => {
+                setDate(ymd);
+                setChosenSlot("");
+              }}
+              minDate={today}
+            />
           </div>
 
           {doctorId && (
