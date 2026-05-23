@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { localYmd as todayStr, addDaysYmd as addDays } from "@/lib/local-date";
 
 type Doctor = { id: string; display_name: string };
 type Booking = {
@@ -29,14 +30,6 @@ const TOTAL_MINUTES = (LAST_HOUR - FIRST_HOUR) * 60;
 const TOTAL_HEIGHT = TOTAL_MINUTES * PX_PER_MIN;
 const HOURS = Array.from({ length: LAST_HOUR - FIRST_HOUR + 1 }, (_, i) => FIRST_HOUR + i);
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-function addDays(dateStr: string, n: number): string {
-  const d = new Date(dateStr + "T00:00:00");
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-}
 function dayLabel(dateStr: string): string {
   const d = new Date(dateStr + "T00:00:00");
   return d.toLocaleDateString("en-MY", {
