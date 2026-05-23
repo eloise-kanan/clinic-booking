@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { localYmd as todayStr, addDaysYmd as addDays } from "@/lib/local-date";
 
 type Shift = {
   id: string;
@@ -15,15 +16,6 @@ type Shift = {
   profile: { full_name: string; role: string } | { full_name: string; role: string }[] | null;
   reviewer: { full_name: string } | { full_name: string }[] | null;
 };
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
-function addDays(d: string, n: number) {
-  const date = new Date(d + "T00:00:00");
-  date.setDate(date.getDate() + n);
-  return date.toISOString().slice(0, 10);
-}
 
 function flat<T>(v: T | T[] | null | undefined): T | null {
   if (!v) return null;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { localYmd as todayStr } from "@/lib/local-date";
 
 type LeaveRequest = {
   id: string;
@@ -20,10 +21,6 @@ function flat<T>(v: T | T[] | null | undefined): T | null {
   if (!v) return null;
   if (Array.isArray(v)) return v[0] || null;
   return v;
-}
-
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
 }
 
 export default function LeaveManager({

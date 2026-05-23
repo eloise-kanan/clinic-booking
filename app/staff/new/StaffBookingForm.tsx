@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { COUNTRIES, dialCodeFor } from "@/lib/countries";
 import { TREATMENTS, treatmentMinutes } from "@/lib/treatments";
 import { composePhone, normalizeIc } from "@/lib/utils";
+import { localYmd } from "@/lib/local-date";
 
 type Doctor = { id: string; display_name: string };
 type Slot = { slot_start: string; slot_end: string };
@@ -74,10 +75,6 @@ export default function StaffBookingForm({
   // can't be selected.
   const [today, setToday] = useState<string>("");
   useEffect(() => {
-    function localYmd() {
-      const d = new Date();
-      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    }
     function refresh() {
       const t = localYmd();
       setToday(t);
