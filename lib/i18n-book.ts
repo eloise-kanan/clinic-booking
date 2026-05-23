@@ -5,10 +5,10 @@
 
 export type Lang = "en" | "zh" | "ms";
 
-export const LANGS: { value: Lang; label: string; nativeLabel: string }[] = [
-  { value: "en", label: "English", nativeLabel: "English" },
-  { value: "zh", label: "Chinese", nativeLabel: "中文" },
-  { value: "ms", label: "Malay", nativeLabel: "Bahasa Melayu" },
+export const LANGS: { value: Lang; label: string; nativeLabel: string; shortLabel: string }[] = [
+  { value: "en", label: "English", nativeLabel: "English", shortLabel: "EN" },
+  { value: "zh", label: "Chinese", nativeLabel: "中文", shortLabel: "CH" },
+  { value: "ms", label: "Malay", nativeLabel: "Bahasa Melayu", shortLabel: "BM" },
 ];
 
 export type BookKey =

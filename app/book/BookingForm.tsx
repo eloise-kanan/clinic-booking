@@ -223,27 +223,30 @@ export default function BookingForm() {
     showTreatment && !!treatment && (treatment !== "other" || otherDetail.trim().length > 0);
 
   return (
-    <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-6" autoComplete="off">
-      {/* Language toggle — segmented buttons */}
-      <div className="flex justify-end -mb-2">
-        <div className="inline-flex rounded-md border border-stone-200 overflow-hidden text-xs">
-          {LANGS.map((l, i) => (
-            <button
-              key={l.value}
-              type="button"
-              onClick={() => setLang(l.value)}
-              className={`px-3 py-1.5 transition-colors ${
-                lang === l.value
-                  ? "bg-stone-900 text-white"
-                  : "bg-white text-stone-600 hover:bg-stone-50"
-              } ${i > 0 ? "border-l border-stone-200" : ""}`}
-            >
-              {l.nativeLabel}
-            </button>
-          ))}
-        </div>
+    <>
+    {/* Language toggle — segmented buttons, sits OUTSIDE the form box */}
+    <div className="flex justify-end mb-3">
+      <div className="inline-flex rounded-md border border-stone-200 overflow-hidden text-[11px] bg-white">
+        {LANGS.map((l, i) => (
+          <button
+            key={l.value}
+            type="button"
+            onClick={() => setLang(l.value)}
+            className={`px-2 py-1 transition-colors ${
+              lang === l.value
+                ? "bg-stone-900 text-white"
+                : "text-stone-600 hover:bg-stone-50"
+            } ${i > 0 ? "border-l border-stone-200" : ""}`}
+            aria-pressed={lang === l.value}
+            aria-label={l.label}
+          >
+            {l.shortLabel}
+          </button>
+        ))}
       </div>
+    </div>
 
+    <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-6" autoComplete="off">
       {/* Identity — captured up front so reschedule/cancel can look up the
           existing booking, and so the patient sees a clear "tell us who you
           are" entry point before choosing what they're here to do. */}
@@ -553,6 +556,7 @@ export default function BookingForm() {
         {submitting ? t("submitting") : t("submit")}
       </button>
     </form>
+    </>
   );
 }
 
