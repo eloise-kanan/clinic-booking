@@ -94,26 +94,34 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
           { href: "/staff/templates", label: "WhatsApp templates", feature: "settings.templates" },
         ],
       },
-      // Expandable: Calendar (clinical + duty + working hours)
+      // Expandable: Calendar (schedules — view, not configure)
       {
         title: "Calendar",
         expandable: true,
         items: [
           { href: "/owner/calendar", label: "Clinical calendar", feature: "calendar.clinical" },
           { href: "/staff/duty-calendar", label: "Duty calendar", feature: "calendar.duty" },
-          { href: "/owner/working-hours", label: "Working hours", feature: "staff.working_hours" },
           { href: "/owner/utilization", label: "Utilization", feature: "analytics.utilization" },
         ],
       },
-      // Expandable: Settings (everything admin)
+      // Expandable: Staff (everything about managing doctors + nurses —
+      // accounts, hours, approvals)
+      {
+        title: "Staff",
+        expandable: true,
+        items: [
+          { href: "/owner/staff", label: "Doctors & nurses", feature: "staff.management" },
+          { href: "/owner/working-hours", label: "Working hours", feature: "staff.working_hours" },
+          { href: "/staff/duty", label: "Shift changes", feature: "staff.shift_changes" },
+          { href: "/staff/leave", label: "Leave", feature: "staff.leave" },
+        ],
+      },
+      // Expandable: Settings (clinic-level configuration — non-staff)
       {
         title: "Settings",
         expandable: true,
         items: [
           { href: "/staff/profile", label: "My account" },
-          { href: "/staff/duty", label: "Shift changes", feature: "staff.shift_changes" },
-          { href: "/staff/leave", label: "Leave", feature: "staff.leave" },
-          { href: "/owner/staff", label: "Doctors & nurses", feature: "staff.management" },
           { href: "/owner/plan", label: "Plan & tier" },
           { href: "/owner/branding", label: "Branding & theme", feature: "settings.branding" },
           { href: "/owner/backup", label: "Backup & export", feature: "backup" },
