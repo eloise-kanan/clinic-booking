@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase-admin";
-import { csvDocument } from "@/lib/csv";
+import { csvDocument, csvDateMy, csvDateOnlyMy } from "@/lib/csv";
 
 // Daily cron tick (configured in vercel.json). Decides whether today matches
 // the chosen frequency (daily / Mondays / 1st of month) and, if enabled,
@@ -13,12 +13,6 @@ import { csvDocument } from "@/lib/csv";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-function ymd(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate()
-  ).padStart(2, "0")}`;
-}
-
 function flatDisplay(v: unknown): string {
   if (!v) return "";
   if (Array.isArray(v)) return (v[0] as { display_name?: string })?.display_name || "";
@@ -26,7 +20,7 @@ function flatDisplay(v: unknown): string {
 }
 
 async function buildCsvs(admin: ReturnType<typeof createAdminClient>) {
-  const date = ymd(new Date());
+  const date = csvDateOnlyMy();
 
   const { data: patients } = await admin
     .from("patients")
@@ -52,7 +46,7 @@ async function buildCsvs(admin: ReturnType<typeof createAdminClient>) {
       p.id_number,
       p.whatsapp_number,
       p.visit_count,
-      p.created_at,
+      csvDateMy(p.created_at),
     ])
   );
 
@@ -90,18 +84,18 @@ async function buildCsvs(admin: ReturnType<typeof createAdminClient>) {
         b.id,
         b.type,
         b.status,
-        b.slot_start,
-        b.slot_end,
+        csvDateMy(b.slot_start),
+        csvDateMy(b.slot_end),
         b.visit_reason,
         patient?.full_name || "",
         patient?.id_number || "",
         patient?.whatsapp_number || "",
         flatDisplay(b.doctor),
-        b.created_at,
-        b.reviewed_at,
-        b.attended_at,
+        csvDateMy(b.created_at),
+        csvDateMy(b.reviewed_at),
+        csvDateMy(b.attended_at),
         b.no_show,
-        b.reminder_sent_at,
+        csvDateMy(b.reminder_sent_at),
       ];
     })
   );
@@ -132,7 +126,7 @@ async function buildCsvs(admin: ReturnType<typeof createAdminClient>) {
         r.action,
         r.entity_type,
         r.entity_id,
-        r.created_at,
+        csvDateMy(r.created_at),
         a?.full_name || "",
         a?.role || "",
         r.before_data,
@@ -239,7 +233,7 @@ export async function GET(req: Request) {
       apiKey,
       from,
       to: settings.backup_email_to,
-      subject: `${clinicName} — ${ymd(new Date())} backup`,
+      subject: `${clinicName} — ${csvDateOnlyMy()} backup`,
       text: `Attached are today's CSV backups for ${clinicName}.\n\n• Patients (${attachments[0].rowCount} rows)\n• Bookings (${attachments[1].rowCount} rows)\n• Audit log (${attachments[2].rowCount} rows)\n\nStore these in a safe place (Drive / Dropbox / encrypted folder).`,
       attachments: attachments.map((a) => ({ filename: a.filename, content: a.content })),
     });

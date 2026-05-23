@@ -1,10 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { csvDocument } from "@/lib/csv";
-
-function ymd(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+import { csvDocument, csvDateMy, csvDateOnlyMy } from "@/lib/csv";
 
 export async function GET() {
   const supabase = await createClient();
@@ -46,7 +42,7 @@ export async function GET() {
     p.id_number,
     p.whatsapp_number,
     p.visit_count,
-    p.created_at,
+    csvDateMy(p.created_at),
   ]);
 
   // Audit log the export
@@ -61,7 +57,7 @@ export async function GET() {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="patients-${ymd(new Date())}.csv"`,
+      "Content-Disposition": `attachment; filename="patients-${csvDateOnlyMy()}.csv"`,
     },
   });
 }

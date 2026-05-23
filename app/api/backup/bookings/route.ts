@@ -1,10 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { csvDocument } from "@/lib/csv";
-
-function ymd(d: Date) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
+import { csvDocument, csvDateMy, csvDateOnlyMy } from "@/lib/csv";
 
 function flatName(v: unknown): string {
   if (!v) return "";
@@ -66,18 +62,18 @@ export async function GET() {
       b.id,
       b.type,
       b.status,
-      b.slot_start,
-      b.slot_end,
+      csvDateMy(b.slot_start),
+      csvDateMy(b.slot_end),
       b.visit_reason,
       patient?.full_name || "",
       patient?.id_number || "",
       patient?.whatsapp_number || "",
       flatDisplay(b.doctor),
-      b.created_at,
-      b.reviewed_at,
-      b.attended_at,
+      csvDateMy(b.created_at),
+      csvDateMy(b.reviewed_at),
+      csvDateMy(b.attended_at),
       b.no_show,
-      b.reminder_sent_at,
+      csvDateMy(b.reminder_sent_at),
     ];
   });
 
@@ -92,7 +88,7 @@ export async function GET() {
   return new Response(csv, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": `attachment; filename="bookings-${ymd(new Date())}.csv"`,
+      "Content-Disposition": `attachment; filename="bookings-${csvDateOnlyMy()}.csv"`,
     },
   });
 }
