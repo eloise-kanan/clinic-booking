@@ -58,6 +58,27 @@ export async function POST(req: Request) {
   const { error } = await admin.from("bookings").update(update).eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
+  // Bump patients.last_visit_at when the booking is freshly attended, so the
+  // recall worklist knows when to start the 6-month clock.
+  if (mark === "attended") {
+    const { data: b } = await admin
+      .from("bookings")
+      .select("patient_id")
+      .eq("id", booking_id)
+      .maybeSingle();
+    if (b?.patient_id) {
+      await admin
+        .from("patients")
+        .update({
+          last_visit_at: now,
+          // A fresh visit ends any in-flight recall reminder window — next
+          // 6-month cycle starts from today.
+          recall_reminder_sent_at: null,
+        })
+        .eq("id", b.patient_id);
+    }
+  }
+
   await admin.from("audit_log").insert({
     actor_id: user.id,
     action: `booking_${mark}`,
