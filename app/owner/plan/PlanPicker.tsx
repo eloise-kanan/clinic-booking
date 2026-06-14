@@ -7,15 +7,15 @@ import {
   PLAN_DESCRIPTIONS,
   PLAN_LABELS,
   PLAN_ORDER,
+  SEAT_CAPS,
   type FeatureKey,
   type Plan,
 } from "@/lib/plan";
 
 const TIER_PRICES: Record<Plan, string> = {
-  basic: "RM 80 / month",
   standard: "RM 150 / month",
-  pro: "RM 250 / month",
-  franchise: "RM 400 / branch / month",
+  premium: "RM 280 / month",
+  franchise: "Contact us",
 };
 
 const FEATURE_NAMES: Record<FeatureKey, string> = {
@@ -25,35 +25,41 @@ const FEATURE_NAMES: Record<FeatureKey, string> = {
   "bookings.reminders": "WhatsApp reminders",
   "patients": "Patient directory",
   "calendar.clinical": "Clinical calendar",
+  "calendar.duty": "Duty calendar (doctors)",
   "settings.templates": "WhatsApp templates editor",
   "settings.branding": "Branding & theme",
-  "analytics.overview": "Overview dashboard",
   "staff.management": "Doctors & nurses management",
-  "calendar.duty": "Duty calendar",
   "staff.working_hours": "Working hours editor",
   "staff.shift_changes": "Shift change workflow",
   "staff.leave": "Leave request workflow",
-  "settings.audit_log": "Audit log",
   "backup": "Backup & export",
+  "recall": "Patient recall reminders",
+  "analytics.overview": "Overview dashboard",
+  "calendar.duty.nurse": "Duty calendar (nurses)",
+  "analytics.doctor_perf": "Doctor performance analytics",
+  "analytics.nurse_perf": "Nurse performance analytics",
+  "analytics.utilization": "Chair utilization heatmap",
+  "settings.audit_log": "Audit log",
   "compliance": "Compliance reminders (planned)",
-  "recall": "Patient recall reminders (planned)",
+  "review": "Internal review system",
+  "google_review_prompt": "Google review prompt (for 4★+ visits)",
+  "payroll": "Payroll handoff (planned)",
   "commission": "Doctor commission tracking (planned)",
-  "analytics.utilization": "Utilization heatmap",
-  "payroll": "Light payroll (planned)",
   "multi_branch": "Multi-branch (planned)",
 };
 
-const TIERS: Plan[] = ["basic", "standard", "pro", "franchise"];
+const TIERS: Plan[] = ["standard", "premium", "franchise"];
 
-function featuresForTier(tier: Plan): { included: FeatureKey[]; newInTier: FeatureKey[] } {
+function featuresForTier(tier: Plan): { newInTier: FeatureKey[] } {
   const all = Object.entries(FEATURE_REQUIRES) as [FeatureKey, Plan][];
-  const included = all
-    .filter(([_, req]) => PLAN_ORDER[tier] >= PLAN_ORDER[req])
-    .map(([k]) => k);
-  const newInTier = all
-    .filter(([_, req]) => req === tier)
-    .map(([k]) => k);
-  return { included, newInTier };
+  const newInTier = all.filter(([, req]) => req === tier).map(([k]) => k);
+  return { newInTier };
+}
+
+function seatLine(plan: Plan): string {
+  const c = SEAT_CAPS[plan];
+  if (plan === "franchise") return "Unlimited staff (across branches)";
+  return `${c.owner} owner · ${c.doctor} doctors · ${c.nurse} nurses`;
 }
 
 export default function PlanPicker({ current }: { current: Plan }) {
@@ -89,7 +95,7 @@ export default function PlanPicker({ current }: { current: Plan }) {
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         {TIERS.map((tier) => {
           const isSelected = selected === tier;
           const isCurrent = current === tier;
@@ -113,14 +119,15 @@ export default function PlanPicker({ current }: { current: Plan }) {
               <h3 className="text-lg font-semibold text-stone-900 mb-1">
                 {PLAN_LABELS[tier]}
               </h3>
-              <p className="text-sm font-medium text-brand-700 mb-2">{TIER_PRICES[tier]}</p>
+              <p className="text-sm font-medium text-brand-700 mb-1">{TIER_PRICES[tier]}</p>
+              <p className="text-[11px] text-stone-500 mb-3">{seatLine(tier)}</p>
               <p className="text-xs text-stone-600 mb-3 leading-relaxed">
                 {PLAN_DESCRIPTIONS[tier]}
               </p>
               {newInTier.length > 0 && (
                 <div className="border-t border-stone-200 pt-2 mt-2">
                   <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium mb-1">
-                    New in this tier
+                    {tier === "standard" ? "Included" : "New in this tier"}
                   </div>
                   <ul className="space-y-0.5">
                     {newInTier.map((f) => (
@@ -165,6 +172,15 @@ export default function PlanPicker({ current }: { current: Plan }) {
             {saving ? "Saving…" : "Apply"}
           </button>
         </div>
+      </div>
+
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+        <h3 className="text-sm font-semibold text-amber-900 mb-1">💡 Need more seats?</h3>
+        <p className="text-xs text-amber-900 leading-relaxed">
+          Seat caps are enforced when creating new staff. If you&apos;ve hit your cap and need
+          more doctors or nurses without upgrading the whole tier, ping us on WhatsApp and
+          we&apos;ll top up your account.
+        </p>
       </div>
     </div>
   );

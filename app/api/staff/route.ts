@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { loadPlan } from "@/lib/branding-server";
+import { seatAvailable, type Plan, type StaffRole } from "@/lib/plan";
 
 async function requireOwner() {
   const supabase = await createClient();
@@ -32,6 +34,25 @@ export async function POST(req: Request) {
   }
 
   const admin = createAdminClient();
+
+  // Enforce per-role seat cap before creating anything. Counts only *active*
+  // staff — deactivated accounts don't consume a seat.
+  const plan = (await loadPlan()) as Plan;
+  const { count: currentCount } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("role", role)
+    .eq("active", true);
+  const check = seatAvailable(plan, role as StaffRole, currentCount || 0);
+  if (!check.ok) {
+    return NextResponse.json(
+      {
+        error: `Seat limit reached — your plan allows ${check.cap} active ${role}${check.cap === 1 ? "" : "s"}. Deactivate someone, top up via WhatsApp, or upgrade your plan.`,
+        seat_cap_reached: true,
+      },
+      { status: 409 }
+    );
+  }
   const { data: created, error: cErr } = await admin.auth.admin.createUser({
     email,
     password,
@@ -87,6 +108,33 @@ export async function PATCH(req: Request) {
   const admin = createAdminClient();
 
   if (active !== undefined) {
+    // Reactivating a previously-deactivated staff also consumes a seat, so
+    // run the same cap check on that path.
+    if (active === true) {
+      const { data: existing } = await admin
+        .from("profiles")
+        .select("role, active")
+        .eq("id", profile_id)
+        .maybeSingle();
+      if (existing && existing.active === false && existing.role !== "owner") {
+        const plan = (await loadPlan()) as Plan;
+        const { count: currentCount } = await admin
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("role", existing.role)
+          .eq("active", true);
+        const check = seatAvailable(plan, existing.role as StaffRole, currentCount || 0);
+        if (!check.ok) {
+          return NextResponse.json(
+            {
+              error: `Can't reactivate — your plan allows only ${check.cap} active ${existing.role}${check.cap === 1 ? "" : "s"} and you're already at that.`,
+              seat_cap_reached: true,
+            },
+            { status: 409 }
+          );
+        }
+      }
+    }
     const { error } = await admin.from("profiles").update({ active }).eq("id", profile_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await admin.from("doctors").update({ active }).eq("profile_id", profile_id);

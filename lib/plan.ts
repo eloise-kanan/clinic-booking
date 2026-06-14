@@ -1,95 +1,123 @@
-// Plan tier definitions and feature gating helpers.
+// Plan tier definitions, feature gating, and seat caps.
 //
-// Each feature has a minimum plan that includes it. If the clinic is on a plan
-// at or above that minimum, the feature is visible. Otherwise it's hidden from
-// nav and home cards. This is *soft* gating — direct URL access still works,
-// since hiding is a UX hint, not an authorization boundary.
+// Tiers (since 2026-06-14):
+//   standard    — booking-first single clinic, capped at 2 doctors + 3 nurses
+//   premium     — adds analytics, internal reviews, nurse duty calendar,
+//                 capped at 4 doctors + 6 nurses
+//   franchise   — multi-branch (parked; not for sale yet)
+//
+// Feature gating is *soft* — UI hides items the clinic isn't paying for, but
+// direct URL access still works. The seat caps below ARE enforced server-side
+// in /api/staff (POST) so the owner can't over-provision their plan.
 
-export type Plan = "basic" | "standard" | "pro" | "franchise";
+export type Plan = "standard" | "premium" | "franchise";
 
 export const PLAN_ORDER: Record<Plan, number> = {
-  basic: 0,
-  standard: 1,
-  pro: 2,
-  franchise: 3,
+  standard: 0,
+  premium: 1,
+  franchise: 2,
 };
 
 export const PLAN_LABELS: Record<Plan, string> = {
-  basic: "Basic",
   standard: "Standard",
-  pro: "Pro",
+  premium: "Premium",
   franchise: "Franchise",
 };
 
 export const PLAN_DESCRIPTIONS: Record<Plan, string> = {
-  basic:
-    "Bookings, attendance, WhatsApp templates, mobile app. The DoctorPartner sidekick.",
   standard:
-    "Adds multi-doctor working hours, leave, shift changes, duty calendar, audit log, branding, backup. Run your clinic, not your spreadsheets.",
-  pro:
-    "Adds analytics, utilization heatmap, payroll, locum. Manage like a real business.",
+    "Online bookings, WhatsApp comms, recall, duty calendar (doctors), and the daily ops your clinic actually needs. Up to 2 doctors + 3 nurses.",
+  premium:
+    "Adds owner-side analytics across clinic / doctors / nurses, full duty calendar (incl. nurses), internal review system, audit log. Up to 4 doctors + 6 nurses.",
   franchise:
-    "Adds cross-branch dashboard, royalty tracking, patient transfer. Run multiple clinics like one.",
+    "Cross-branch dashboard, patient transfer, central management. For when you run multiple clinics like one. (Not yet released.)",
 };
 
+// Hard per-role seat caps. Owner is always 1 (the buyer). Top-ups happen
+// out-of-band via WhatsApp to the founder — there's no self-serve upgrade
+// path yet, and that's intentional for now.
+export const SEAT_CAPS: Record<Plan, { owner: number; doctor: number; nurse: number }> = {
+  standard:  { owner: 1, doctor: 2, nurse: 3 },
+  premium:   { owner: 1, doctor: 4, nurse: 6 },
+  franchise: { owner: 1, doctor: 999, nurse: 999 },
+};
+
+export type StaffRole = "owner" | "doctor" | "nurse";
+
+// Whether a new staff of `role` can be added given the current active counts.
+export function seatAvailable(
+  plan: Plan,
+  role: StaffRole,
+  currentCount: number
+): { ok: true } | { ok: false; cap: number } {
+  const cap = SEAT_CAPS[plan][role];
+  return currentCount < cap ? { ok: true } : { ok: false, cap };
+}
+
 // Every distinct feature in the system, mapped to the minimum plan
-// that includes it.
+// that includes it. Order in the type union mirrors the tier they sit in.
 export type FeatureKey =
-  // Always-on (Basic tier)
+  // Standard — included with the base subscription
   | "bookings.pending"
   | "bookings.all"
   | "bookings.new"
   | "bookings.reminders"
   | "patients"
   | "calendar.clinical"
+  | "calendar.duty"
   | "settings.templates"
   | "settings.branding"
-  | "analytics.overview"
   | "staff.management"
-  // Standard
-  | "calendar.duty"
   | "staff.working_hours"
   | "staff.shift_changes"
   | "staff.leave"
-  | "settings.audit_log"
   | "backup"
-  // Standard (planned features, gated even though not built yet)
-  | "compliance"
   | "recall"
-  | "commission"
-  // Pro
+  | "analytics.overview"
+  // Premium — management / insight layer
+  | "calendar.duty.nurse"
+  | "analytics.doctor_perf"
+  | "analytics.nurse_perf"
   | "analytics.utilization"
+  | "settings.audit_log"
+  | "compliance"
+  | "review"
+  | "google_review_prompt"
   | "payroll"
+  | "commission"
   // Franchise
   | "multi_branch";
 
 export const FEATURE_REQUIRES: Record<FeatureKey, Plan> = {
-  // Basic
-  "bookings.pending": "basic",
-  "bookings.all": "basic",
-  "bookings.new": "basic",
-  "bookings.reminders": "basic",
-  "patients": "basic",
-  "calendar.clinical": "basic",
-  "settings.templates": "basic",
-  "settings.branding": "basic",
-  "analytics.overview": "basic",
-  "staff.management": "basic",
-
   // Standard
+  "bookings.pending": "standard",
+  "bookings.all": "standard",
+  "bookings.new": "standard",
+  "bookings.reminders": "standard",
+  "patients": "standard",
+  "calendar.clinical": "standard",
   "calendar.duty": "standard",
+  "settings.templates": "standard",
+  "settings.branding": "standard",
+  "staff.management": "standard",
   "staff.working_hours": "standard",
   "staff.shift_changes": "standard",
   "staff.leave": "standard",
-  "settings.audit_log": "standard",
   "backup": "standard",
-  "compliance": "standard",
   "recall": "standard",
-  "commission": "standard",
+  "analytics.overview": "standard",
 
-  // Pro
-  "analytics.utilization": "pro",
-  "payroll": "pro",
+  // Premium
+  "calendar.duty.nurse": "premium",
+  "analytics.doctor_perf": "premium",
+  "analytics.nurse_perf": "premium",
+  "analytics.utilization": "premium",
+  "settings.audit_log": "premium",
+  "compliance": "premium",
+  "review": "premium",
+  "google_review_prompt": "premium",
+  "payroll": "premium",
+  "commission": "premium",
 
   // Franchise
   "multi_branch": "franchise",
