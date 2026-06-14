@@ -35,7 +35,23 @@ export async function loadBranding(): Promise<Branding> {
   }
 }
 
+// Hard-locks the plan to a specific tier via env. Used to ship two demo
+// deployments off the same codebase — one running Standard, one Premium —
+// without sharing a clinic_settings row. When set, the plan can't be changed
+// from the /owner/plan UI (the API also enforces this, see app/api/plan/route.ts).
+const VALID_PLANS = ["standard", "premium", "franchise"] as const;
+
+export function demoPlanLock(): Plan | null {
+  const v = process.env.DEMO_PLAN_LOCK;
+  if (v && (VALID_PLANS as readonly string[]).includes(v)) {
+    return v as Plan;
+  }
+  return null;
+}
+
 export async function loadPlan(): Promise<Plan> {
+  const locked = demoPlanLock();
+  if (locked) return locked;
   try {
     const admin = createAdminClient();
     const { data } = await admin
@@ -44,7 +60,7 @@ export async function loadPlan(): Promise<Plan> {
       .eq("id", true)
       .maybeSingle();
     const plan = data?.plan as Plan | undefined;
-    if (plan && ["basic", "standard", "pro", "franchise"].includes(plan)) {
+    if (plan && (VALID_PLANS as readonly string[]).includes(plan)) {
       return plan;
     }
     return "standard";

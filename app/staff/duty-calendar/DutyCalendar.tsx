@@ -35,10 +35,22 @@ function renderStaffList(
   staff: StaffMember[],
   date: string,
   leaveByProfile: Map<string, Set<string>>,
-  shiftByPersonDay: Map<string, Map<string, Shift>>
+  shiftByPersonDay: Map<string, Map<string, Shift>>,
+  showRoleBadge: boolean
 ) {
   return staff.map((s) => {
     const onLeave = leaveByProfile.get(s.id)?.has(date) ?? false;
+    const roleBadge = showRoleBadge ? (
+      <span
+        className={`text-[9px] uppercase tracking-wider px-1 rounded mr-1 ${
+          s.role === "doctor"
+            ? "bg-blue-100 text-blue-700"
+            : "bg-emerald-100 text-emerald-700"
+        }`}
+      >
+        {s.role === "doctor" ? "Dr" : "Nr"}
+      </span>
+    ) : null;
     if (onLeave) {
       return (
         <div
@@ -46,7 +58,7 @@ function renderStaffList(
           className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 truncate"
           title={`${s.full_name} on approved leave`}
         >
-          🏖 {s.full_name}
+          {roleBadge}🏖 {s.full_name}
         </div>
       );
     }
@@ -61,6 +73,7 @@ function renderStaffList(
         }`}
         title={`${s.full_name} (${s.role}) ${start}–${end}${override ? " · custom" : ""}`}
       >
+        {roleBadge}
         <span className="truncate">{s.full_name}</span>{" "}
         <span className="text-[10px] opacity-70 whitespace-nowrap">
           {start}–{end}
@@ -105,7 +118,7 @@ function weekLabel(first: Date, last: Date) {
   return `${fmt(first, { day: "numeric", month: "short" })} – ${fmt(last, { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
-export default function DutyCalendar() {
+export default function DutyCalendar({ includeNurses = true }: { includeNurses?: boolean }) {
   const [view, setView] = useState<ViewMode | null>(null);
   const [anchor, setAnchor] = useState<Date | null>(null);
   const [staff, setStaff] = useState<StaffMember[]>([]);
@@ -136,7 +149,9 @@ export default function DutyCalendar() {
     const staffData = await staffRes.json();
     const sd = await shiftRes.json();
     const ld = await leaveRes.json();
-    setStaff(staffData.staff || []);
+    const allStaff: StaffMember[] = staffData.staff || [];
+    // Filter by plan: Standard tier sees doctors only.
+    setStaff(includeNurses ? allStaff : allStaff.filter((s) => s.role === "doctor"));
     setShifts(sd.shifts || []);
     setLeaves(ld.requests || []);
   }
@@ -284,7 +299,7 @@ export default function DutyCalendar() {
                       <div className={`mb-1 font-medium ${isToday ? "text-brand-700" : "text-stone-600"}`}>
                         {parseInt(cell.date.slice(8), 10)}
                       </div>
-                      {cell.inMonth && renderStaffList(staff, cell.date, leaveByProfile, shiftByPersonDay)}
+                      {cell.inMonth && renderStaffList(staff, cell.date, leaveByProfile, shiftByPersonDay, includeNurses)}
                     </div>
                   );
                 })}
@@ -318,7 +333,7 @@ export default function DutyCalendar() {
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
-                  {renderStaffList(staff, cell.date, leaveByProfile, shiftByPersonDay)}
+                  {renderStaffList(staff, cell.date, leaveByProfile, shiftByPersonDay, includeNurses)}
                 </div>
               </div>
             );

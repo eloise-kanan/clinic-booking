@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { demoPlanLock } from "@/lib/branding-server";
 
 // PATCH /api/plan — switch the clinic's tier. Owner-only.
 export async function PATCH(req: Request) {
+  // Demo deployments lock the plan via env so prospects can't accidentally
+  // upgrade themselves out of the demo. Reject mutation when locked.
+  if (demoPlanLock()) {
+    return NextResponse.json(
+      { error: "This is a demo deployment with a locked plan." },
+      { status: 423 }
+    );
+  }
   const supabase = await createClient();
   const {
     data: { user },
@@ -20,7 +29,7 @@ export async function PATCH(req: Request) {
   }
 
   const { plan } = await req.json();
-  if (!["basic", "standard", "pro", "franchise"].includes(plan)) {
+  if (!["standard", "premium", "franchise"].includes(plan)) {
     return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
   }
 

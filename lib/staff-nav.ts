@@ -102,6 +102,8 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
           { href: "/owner/calendar", label: "Clinical calendar", feature: "calendar.clinical" },
           { href: "/staff/duty-calendar", label: "Duty calendar", feature: "calendar.duty" },
           { href: "/owner/utilization", label: "Utilization", feature: "analytics.utilization" },
+          { href: "/owner/doctor-performance", label: "Doctor performance", feature: "analytics.doctor_perf" },
+          { href: "/owner/nurse-performance", label: "Nurse performance", feature: "analytics.nurse_perf" },
         ],
       },
       // Expandable: Staff (everything about managing doctors + nurses —
