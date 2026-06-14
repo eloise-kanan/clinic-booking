@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
+import { PoweredByKanan } from "@/components/PoweredByKanan";
 
 export default function LoginPage() {
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Clinic";
@@ -13,6 +14,7 @@ export default function LoginPage() {
         <Suspense fallback={<div className="bg-white rounded-xl border border-stone-200 p-6">Loading…</div>}>
           <LoginForm />
         </Suspense>
+        <PoweredByKanan />
       </div>
     </main>
   );

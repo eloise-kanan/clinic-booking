@@ -1,5 +1,6 @@
 import BookingForm from "./BookingForm";
 import { loadBranding } from "@/lib/branding-server";
+import { PoweredByKanan } from "@/components/PoweredByKanan";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function BookPage() {
           <p className="text-sm text-stone-500 mt-1">Appointment booking</p>
         </header>
         <BookingForm />
+        <PoweredByKanan />
       </div>
     </main>
   );
