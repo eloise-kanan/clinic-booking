@@ -475,7 +475,7 @@ def s_trust(prs, total):
         "Sterilization log, X-rays, treatment notes stay in your EMR — not in our system",
     ], size=14, line_gap_pt=10)
     add_text(s, MARGIN, Inches(6.3), SLIDE_W - 2 * MARGIN, Inches(0.4),
-             "Kanan Digital Enterprise (SSM Enterprise registration in progress) · Kuala Lumpur, Malaysia",
+             "Kanan Digital Enterprise (SSM Reg: AS0516554-D) · Kuala Lumpur, Malaysia",
              size=11, italic=True, color=GREY)
 
 
