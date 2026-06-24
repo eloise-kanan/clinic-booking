@@ -141,21 +141,28 @@ async function createStaff(role, list) {
       password: STAFF_PASSWORD,
       email_confirm: true,
     });
-    if (cErr || !user.user) { console.warn(`  ! ${s.loginId}: ${cErr?.message}`); continue; }
-    await admin.from("profiles").insert({
+    if (cErr || !user.user) {
+      throw new Error(`Auth create failed for ${s.loginId}: ${cErr?.message}`);
+    }
+    const { error: pErr } = await admin.from("profiles").insert({
       id: user.user.id,
       role,
       full_name: s.name,
       login_id: s.loginId,
       active: true,
     });
+    if (pErr) {
+      await admin.auth.admin.deleteUser(user.user.id).catch(() => {});
+      throw new Error(`Profile insert failed for ${s.loginId}: ${pErr.message}. Did the login_id migration run?`);
+    }
     if (role === "doctor") {
-      await admin.from("doctors").insert({
+      const { error: dErr } = await admin.from("doctors").insert({
         profile_id: user.user.id,
         display_name: s.name,
         default_slot_minutes: s.slot ?? 30,
         active: true,
       });
+      if (dErr) throw new Error(`Doctor insert failed for ${s.loginId}: ${dErr.message}`);
     }
     created.push({ ...s, profileId: user.user.id });
     console.log(`  ✓ ${role.padEnd(7)} ${s.loginId.padEnd(20)} ${s.name}`);
