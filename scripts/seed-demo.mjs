@@ -199,7 +199,8 @@ async function seedWorkingHours(doctors) {
     }
     rows.push({ doctor_id: d.id, weekday: 6, start_time: "09:00", end_time: "13:00" });  // Saturday half-day
   }
-  await admin.from("working_hours").insert(rows);
+  const { error } = await admin.from("working_hours").insert(rows);
+  if (error) throw new Error(`Working hours insert failed: ${error.message}`);
   console.log(`  ✓ working hours for ${doctors.length} doctors`);
 }
 
@@ -215,9 +216,13 @@ async function seedPatients() {
     last_visit_at: daysAgo(p.last_visit_days).toISOString(),
     recall_interval_months: 6,
   }));
-  const { data } = await admin.from("patients").insert(rows).select("id, full_name");
-  console.log(`  ✓ seeded ${data?.length || 0} patients`);
-  return data || [];
+  const { error } = await admin.from("patients").insert(rows);
+  if (error) throw new Error(`Patients insert failed: ${error.message}`);
+  // Re-query to get IDs reliably (insert().select() can return null under some RLS configs)
+  const { data: fresh, error: rErr } = await admin.from("patients").select("id, full_name");
+  if (rErr) throw new Error(`Patients read-back failed: ${rErr.message}`);
+  console.log(`  ✓ seeded ${fresh?.length || 0} patients`);
+  return fresh || [];
 }
 
 async function seedBookings(doctors, patients, ownerId, nurses) {
@@ -311,7 +316,14 @@ async function seedBookings(doctors, patients, ownerId, nurses) {
       reminder_sent_by: b.reminder ? nurseIds[b.reminder_by] : null,
     });
   }
-  await admin.from("bookings").insert(inserts);
+  // Guard against undefined patient_id or doctor_id (would cause batch insert to silently fail)
+  const bad = inserts.filter((r) => !r.patient_id || !r.doctor_id);
+  if (bad.length) {
+    console.error("  ! some bookings have missing patient_id or doctor_id:", bad.slice(0, 3));
+    throw new Error(`${bad.length} booking rows had missing FK — patient or doctor lookup failed`);
+  }
+  const { error } = await admin.from("bookings").insert(inserts);
+  if (error) throw new Error(`Bookings insert failed: ${error.message}`);
   console.log(`  ✓ seeded ${inserts.length} bookings`);
 }
 
