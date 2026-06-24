@@ -38,18 +38,18 @@ export default function LoginForm() {
   return (
     <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-4">
       <div>
-        <label className="label">Employee number or owner email</label>
+        <label className="label">Login ID or owner email</label>
         <input
           className="input"
           type="text"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
-          placeholder="1001 — or your email"
+          placeholder="e.g. tan_ming — or your email"
           autoComplete="username"
           required
         />
         <p className="text-[11px] text-stone-500 mt-1">
-          Staff: enter the employee number your clinic owner assigned you. Owner: enter your email.
+          Staff: use the login ID your clinic owner gave you. Owner: enter your email.
         </p>
       </div>
       <div>

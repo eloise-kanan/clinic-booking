@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { loadPlan } from "@/lib/branding-server";
 import { seatAvailable, type Plan, type StaffRole } from "@/lib/plan";
-import { isValidEmployeeNumber, resolveAuthEmail } from "@/lib/login-id";
+import { isValidLoginId, resolveAuthEmail, fullNameToLoginId } from "@/lib/login-id";
 
 async function requireOwner() {
   const supabase = await createClient();
@@ -26,16 +26,20 @@ export async function POST(req: Request) {
   const auth = await requireOwner();
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const { role, full_name, employee_number, password, default_slot_minutes } = await req.json();
+  const body = await req.json();
+  const { role, full_name, password, default_slot_minutes } = body;
   if (!["nurse", "doctor"].includes(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
-  if (!full_name || !employee_number || !password) {
+  if (!full_name || !password) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
-  if (!isValidEmployeeNumber(employee_number)) {
+  // Login ID — owner may pass one explicitly, otherwise derive from full name
+  const login_id: string =
+    (body.login_id || "").trim() || fullNameToLoginId(full_name);
+  if (!login_id || !isValidLoginId(login_id)) {
     return NextResponse.json(
-      { error: "Employee number must be 3–20 chars, letters/digits/dots/dashes only" },
+      { error: "Could not derive a valid login ID — please type one (3–30 chars, letters/digits/dots/dashes/underscores)" },
       { status: 400 }
     );
   }
@@ -60,21 +64,21 @@ export async function POST(req: Request) {
       { status: 409 }
     );
   }
-  // Uniqueness check on employee_number before creating anything
+  // Uniqueness check on login_id before creating anything
   const { count: existing } = await admin
     .from("profiles")
     .select("id", { count: "exact", head: true })
-    .eq("employee_number", employee_number);
+    .eq("login_id", login_id);
   if (existing && existing > 0) {
     return NextResponse.json(
-      { error: `Employee number "${employee_number}" is already in use` },
+      { error: `Login ID "${login_id}" is already in use — pick another` },
       { status: 409 }
     );
   }
 
-  // Synthesize an internal Supabase Auth email from the employee number.
+  // Synthesize an internal Supabase Auth email from the login ID.
   // Staff never see or type this; the login form translates back at sign-in.
-  const synthEmail = resolveAuthEmail(employee_number);
+  const synthEmail = resolveAuthEmail(login_id);
   const { data: created, error: cErr } = await admin.auth.admin.createUser({
     email: synthEmail,
     password,
@@ -88,7 +92,7 @@ export async function POST(req: Request) {
     id: created.user.id,
     role,
     full_name,
-    employee_number,
+    login_id,
     active: true,
   });
   if (pErr) {
@@ -113,7 +117,7 @@ export async function POST(req: Request) {
     action: "create_staff",
     entity_type: "profile",
     entity_id: created.user.id,
-    after_data: { role, full_name, employee_number },
+    after_data: { role, full_name, login_id },
   });
 
   return NextResponse.json({ ok: true });

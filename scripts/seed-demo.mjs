@@ -49,26 +49,26 @@ const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
 // ─── Sample data (Malaysian dental clinic, mirrors sample_data.py) ────────
 
-// Employee numbers — clinic-issued, staff use these to log in.
-// Synthetic auth email is `${empNo}@kanan-clinic.local` (matches lib/login-id.ts).
+// Login IDs derived from full names (algorithm: lib/login-id.ts).
+// Synthetic auth email is `${loginId}@kanan-clinic.local`.
 const DOCTORS = [
-  { name: "Dr. Lee Chee Hong",  empNo: "1001", slot: 30 },
-  { name: "Dr. Sarah Wong",     empNo: "1002", slot: 30 },
-  { name: "Dr. Aiman Rashid",   empNo: "1003", slot: 45 },
-  { name: "Dr. Tan Mei Yee",    empNo: "1004", slot: 30 },
+  { name: "Dr. Lee Chee Hong",  loginId: "cheehong_lee", slot: 30 },
+  { name: "Dr. Sarah Wong",     loginId: "sarah_wong",   slot: 30 },  // Western order — manually corrected
+  { name: "Dr. Aiman Rashid",   loginId: "aiman_rashid", slot: 45 },  // Malay no particle — manually given_family
+  { name: "Dr. Tan Mei Yee",    loginId: "meiyee_tan",   slot: 30 },
 ];
 
 const NURSES = [
-  { name: "Norhaiza Binti Ismail", empNo: "2001" },
-  { name: "Jenny Tan Hui Mei",     empNo: "2002" },
-  { name: "Priya Devi",            empNo: "2003" },
-  { name: "Aini Salleh",           empNo: "2004" },
-  { name: "Chong Li Wen",          empNo: "2005" },
-  { name: "Farah Liyana",          empNo: "2006" },
+  { name: "Norhaiza Binti Ismail", loginId: "norhaiza_ismail" },
+  { name: "Jenny Tan Hui Mei",     loginId: "jenny_tan" },        // Western+Chinese mix — simplified
+  { name: "Priya Devi",            loginId: "priya_devi" },       // Indian no particle — manually given_family
+  { name: "Aini Salleh",           loginId: "aini_salleh" },      // Malay no particle — manually given_family
+  { name: "Chong Li Wen",          loginId: "liwen_chong" },
+  { name: "Farah Liyana",          loginId: "farah_liyana" },     // Malay no particle — manually given_family
 ];
 
 const SYNTH_DOMAIN = "kanan-clinic.local";
-function authEmail(empNo) { return `${empNo}@${SYNTH_DOMAIN}`; }
+function authEmail(loginId) { return `${loginId}@${SYNTH_DOMAIN}`; }
 
 // last_visit_days drives the recall worklist: anyone past their 6-month
 // (=183 days) recall_interval shows up as "due" with overdue colour-coding.
@@ -135,18 +135,18 @@ async function wipeData(ownerId) {
 async function createStaff(role, list) {
   const created = [];
   for (const s of list) {
-    const email = authEmail(s.empNo);
+    const email = authEmail(s.loginId);
     const { data: user, error: cErr } = await admin.auth.admin.createUser({
       email,
       password: STAFF_PASSWORD,
       email_confirm: true,
     });
-    if (cErr || !user.user) { console.warn(`  ! ${s.empNo}: ${cErr?.message}`); continue; }
+    if (cErr || !user.user) { console.warn(`  ! ${s.loginId}: ${cErr?.message}`); continue; }
     await admin.from("profiles").insert({
       id: user.user.id,
       role,
       full_name: s.name,
-      employee_number: s.empNo,
+      login_id: s.loginId,
       active: true,
     });
     if (role === "doctor") {
@@ -158,7 +158,7 @@ async function createStaff(role, list) {
       });
     }
     created.push({ ...s, profileId: user.user.id });
-    console.log(`  ✓ ${role} ${s.empNo} — ${s.name}`);
+    console.log(`  ✓ ${role.padEnd(7)} ${s.loginId.padEnd(20)} ${s.name}`);
   }
   return created;
 }
@@ -355,9 +355,9 @@ async function main() {
   console.log("");
 
   console.log("✓ Done.");
-  console.log(`\nStaff logins (employee number + password '${STAFF_PASSWORD}'):`);
-  for (const d of DOCTORS) console.log(`  doctor   ${d.empNo}  ${d.name}`);
-  for (const n of NURSES)  console.log(`  nurse    ${n.empNo}  ${n.name}`);
+  console.log(`\nStaff logins (login ID + password '${STAFF_PASSWORD}'):`);
+  for (const d of DOCTORS) console.log(`  doctor   ${d.loginId.padEnd(20)} ${d.name}`);
+  for (const n of NURSES)  console.log(`  nurse    ${n.loginId.padEnd(20)} ${n.name}`);
   console.log(`  owner    (unchanged — log in with your email as before)`);
 }
 

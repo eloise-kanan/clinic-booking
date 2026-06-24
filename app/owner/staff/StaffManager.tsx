@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { fullNameToLoginId } from "@/lib/login-id";
 
 type Member = {
   id: string;
   role: "owner" | "nurse" | "doctor";
   full_name: string;
   active: boolean;
-  email: string;                  // owner's real email; synthetic @kanan-clinic.local for staff (never shown)
-  employee_number: string | null; // null for owner, set for nurse/doctor
+  email: string;             // owner's real email; synthetic @kanan-clinic.local for staff (never shown)
+  login_id: string | null;   // null for owner; e.g. "tan_ming" for staff
   doctor: { id: string; display_name: string; default_slot_minutes: number; active: boolean } | null;
 };
 
@@ -18,21 +19,19 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
   const [show, setShow] = useState(false);
   const [role, setRole] = useState<"nurse" | "doctor">("nurse");
   const [fullName, setFullName] = useState("");
-  const [employeeNumber, setEmployeeNumber] = useState("");
+  const [loginId, setLoginId] = useState("");
+  const [loginIdTouched, setLoginIdTouched] = useState(false);
   const [password, setPassword] = useState("");
   const [slotMinutes, setSlotMinutes] = useState(30);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  // Suggest the next sequential employee number based on existing ones
-  function suggestNextEmpNumber() {
-    const existing = initial
-      .map((m) => m.employee_number)
-      .filter((n): n is string => !!n && /^\d+$/.test(n))
-      .map(Number);
-    const next = existing.length > 0 ? Math.max(...existing) + 1 : 1001;
-    return String(next);
-  }
+  // Auto-derive login ID from full name until the owner edits it directly
+  useEffect(() => {
+    if (!loginIdTouched) {
+      setLoginId(fullNameToLoginId(fullName));
+    }
+  }, [fullName, loginIdTouched]);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -44,7 +43,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
       body: JSON.stringify({
         role,
         full_name: fullName,
-        employee_number: employeeNumber,
+        login_id: loginId,
         password,
         default_slot_minutes: role === "doctor" ? slotMinutes : undefined,
       }),
@@ -57,7 +56,8 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
     }
     setShow(false);
     setFullName("");
-    setEmployeeNumber("");
+    setLoginId("");
+    setLoginIdTouched(false);
     setPassword("");
     router.refresh();
   }
@@ -118,20 +118,19 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">Employee number</label>
+                <label className="label">Login ID</label>
                 <input
                   className="input"
                   type="text"
-                  value={employeeNumber}
-                  onChange={(e) => setEmployeeNumber(e.target.value.toLowerCase().trim())}
-                  onFocus={() => { if (!employeeNumber) setEmployeeNumber(suggestNextEmpNumber()); }}
-                  placeholder="e.g. 1001 or jenny.tan"
+                  value={loginId}
+                  onChange={(e) => { setLoginIdTouched(true); setLoginId(e.target.value.toLowerCase().trim()); }}
+                  placeholder="e.g. tan_ming"
                   minLength={3}
-                  maxLength={20}
+                  maxLength={30}
                   required
                 />
                 <p className="text-[11px] text-stone-500 mt-1">
-                  Staff use this + their password to log in. Click the field for a suggestion.
+                  Auto-derived from the full name. Edit if it collides with someone else.
                 </p>
               </div>
               <div>
@@ -185,7 +184,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
                   )}
                 </td>
                 <td className="px-4 py-3 text-xs">
-                  {m.role === "owner" ? m.email : (m.employee_number || "—")}
+                  {m.role === "owner" ? m.email : (m.login_id || "—")}
                 </td>
                 <td className="px-4 py-3">
                   <span className={`pill ${m.active ? "pill-confirmed" : "pill-cancelled"}`}>
