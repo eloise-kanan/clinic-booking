@@ -129,7 +129,26 @@ async function wipeData(ownerId) {
     await admin.from("profiles").delete().eq("id", p.id);
     await admin.auth.admin.deleteUser(p.id).catch(() => {});
   }
-  console.log(`  ✓ removed ${nonOwners?.length || 0} non-owner staff records`);
+  console.log(`  ✓ removed ${nonOwners?.length || 0} non-owner profiles`);
+
+  // Also clean up orphan synthetic auth users — these get left behind when
+  // a prior seed run created the auth user but failed before/at the profile
+  // insert (e.g. the login_id column hadn't been migrated yet).
+  let orphans = 0;
+  let page = 1;
+  while (true) {
+    const { data } = await admin.auth.admin.listUsers({ page, perPage: 100 });
+    if (!data?.users?.length) break;
+    for (const u of data.users) {
+      if (u.email?.endsWith("@kanan-clinic.local")) {
+        await admin.auth.admin.deleteUser(u.id).catch(() => {});
+        orphans++;
+      }
+    }
+    if (data.users.length < 100) break;
+    page++;
+  }
+  if (orphans) console.log(`  ✓ removed ${orphans} orphan synthetic auth user(s)`);
 }
 
 async function createStaff(role, list) {
