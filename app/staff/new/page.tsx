@@ -1,6 +1,7 @@
 import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
+import { staffNav } from "@/lib/staff-nav";
 import StaffBookingForm from "./StaffBookingForm";
 
 export const dynamic = "force-dynamic";
@@ -19,27 +20,19 @@ export default async function StaffNewBookingPage({
     prefill = await loadParent(rescheduleId);
   }
 
-  const nav =
-    profile.role === "owner"
-      ? [
-          { href: "/owner", label: "Overview" },
-          { href: "/owner/utilization", label: "Utilization" },
-          { href: "/owner/patients", label: "Patients" },
-          { href: "/owner/bookings", label: "All bookings" },
-          { href: "/staff/new", label: "New booking" },
-          { href: "/owner/calendar", label: "All calendars" },
-          { href: "/owner/staff", label: "Doctors & nurses" },
-        ]
-      : [
-          { href: "/nurse", label: "Pending" },
-          { href: "/nurse/all", label: "All bookings" },
-          { href: "/staff/new", label: "New booking" },
-          { href: "/nurse/calendar", label: "All calendars" },
-          { href: "/nurse/patients", label: "Patients" },
-        ];
+  // Pending booking count for the nurse's sidebar badge
+  const admin = createAdminClient();
+  const { count: pendingCount } = await admin
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
 
   return (
-    <StaffShell role={profile.role as "owner" | "nurse"} userName={profile.full_name} nav={nav}>
+    <StaffShell
+      role={profile.role as "owner" | "nurse"}
+      userName={profile.full_name}
+      nav={await staffNav(profile.role, pendingCount || 0)}
+    >
       <h2 className="text-base font-medium mb-1">
         {prefill ? "Reschedule on behalf of patient" : "New booking on behalf of patient"}
       </h2>
