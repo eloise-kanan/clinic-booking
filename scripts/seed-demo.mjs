@@ -111,14 +111,28 @@ async function findOwner() {
   return owners[0];
 }
 
+// Delete every row from a table. Robust to id-type differences (some tables
+// have UUID ids, some are SERIAL int — the previous `.neq("id", uuid)` hack
+// silently failed on int-id tables, leaving stale rows that broke re-seeds).
+async function deleteAll(table) {
+  // Pull every id, then delete in chunks via .in() — works for any id type.
+  const { data, error } = await admin.from(table).select("id");
+  if (error) { console.warn(`  ! ${table} (read): ${error.message}`); return; }
+  if (!data?.length) { console.log(`  ✓ ${table} already empty`); return; }
+  const ids = data.map((r) => r.id);
+  for (let i = 0; i < ids.length; i += 500) {
+    const chunk = ids.slice(i, i + 500);
+    const { error: dErr } = await admin.from(table).delete().in("id", chunk);
+    if (dErr) { console.warn(`  ! ${table} (delete): ${dErr.message}`); return; }
+  }
+  console.log(`  ✓ cleared ${ids.length} from ${table}`);
+}
+
 async function wipeData(ownerId) {
   console.log("Wiping operational data...");
+  // Order matters — FKs cascade upward
   const tables = ["audit_log", "bookings", "leave_requests", "duty_shifts", "breaks", "working_hours", "patients"];
-  for (const t of tables) {
-    const { error } = await admin.from(t).delete().neq("id", "00000000-0000-0000-0000-000000000000");
-    if (error) console.warn(`  ! ${t}: ${error.message}`);
-    else console.log(`  ✓ cleared ${t}`);
-  }
+  for (const t of tables) await deleteAll(t);
 
   console.log("Wiping non-owner staff (auth + profile + doctors)...");
   // Delete doctors rows first
