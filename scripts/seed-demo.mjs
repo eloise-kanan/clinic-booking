@@ -267,7 +267,7 @@ async function seedBookings(doctors, patients, ownerId, nurses) {
 
   // ── PENDING — submitted today, waiting for nurse review
   bookings.push(
-    { patient: "Lim Hui Ling",         status: "pending", date: daysAhead(1), time: [9, 0],   doc: 0, treatment: "Scaling" },
+    { patient: "Lim Hui Ling",         status: "pending", date: daysAhead(1), time: [14, 30], doc: 0, treatment: "Scaling" },
     { patient: "Muhammad Daniel",      status: "pending", date: daysAhead(1), time: [11, 0],  doc: 1, treatment: "Wisdom tooth surgery" },
     { patient: "Chong Mei Xuan",       status: "pending", date: daysAhead(1), time: [14, 30], doc: 3, treatment: "Whitening" },
     { patient: "Aaron Cheong",         status: "pending", date: daysAhead(2), time: [10, 30], doc: 0, treatment: "Scaling" },
@@ -349,6 +349,19 @@ async function seedBookings(doctors, patients, ownerId, nurses) {
   if (bad.length) {
     console.error("  ! some bookings have missing patient_id or doctor_id:", bad.slice(0, 3));
     throw new Error(`${bad.length} booking rows had missing FK — patient or doctor lookup failed`);
+  }
+  // Pre-flight: catch (doctor_id, slot_start) duplicates among the rows we're
+  // about to insert — bookings_no_overlap_idx enforces uniqueness on
+  // pending/confirmed bookings and the Postgres error doesn't tell you which row.
+  const seen = new Map();
+  for (const r of inserts) {
+    if (r.status === "cancelled") continue;
+    const key = `${r.doctor_id}|${r.slot_start}`;
+    if (seen.has(key)) {
+      console.error("  ! overlap in seed data:", { docId: r.doctor_id.slice(0, 8), slot: r.slot_start, first: seen.get(key), second: r.visit_reason });
+      throw new Error("Two seeded bookings target the same doctor at the same slot_start (would violate bookings_no_overlap_idx).");
+    }
+    seen.set(key, r.visit_reason);
   }
   const { error } = await admin.from("bookings").insert(inserts);
   if (error) throw new Error(`Bookings insert failed: ${error.message}`);
