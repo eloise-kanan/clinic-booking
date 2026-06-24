@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 
 type Tab = "password" | "email";
 
-export default function ProfileForm({ email }: { email: string }) {
+export default function ProfileForm({
+  email,
+  isOwner,
+}: {
+  email: string;
+  isOwner: boolean;
+}) {
   const [tab, setTab] = useState<Tab>("password");
 
   return (
@@ -14,11 +20,13 @@ export default function ProfileForm({ email }: { email: string }) {
         <TabBtn active={tab === "password"} onClick={() => setTab("password")}>
           Change password
         </TabBtn>
-        <TabBtn active={tab === "email"} onClick={() => setTab("email")}>
-          Change email
-        </TabBtn>
+        {isOwner && (
+          <TabBtn active={tab === "email"} onClick={() => setTab("email")}>
+            Change email
+          </TabBtn>
+        )}
       </div>
-      {tab === "password" ? <PasswordSection /> : <EmailSection currentEmail={email} />}
+      {tab === "password" || !isOwner ? <PasswordSection /> : <EmailSection currentEmail={email} />}
     </div>
   );
 }

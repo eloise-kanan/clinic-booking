@@ -16,7 +16,7 @@ export default async function StaffPage() {
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, role, full_name, active")
+    .select("id, role, full_name, active, employee_number")
     .order("role");
 
   // For each doctor profile, fetch their doctor row

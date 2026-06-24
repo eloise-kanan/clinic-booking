@@ -8,7 +8,8 @@ type Member = {
   role: "owner" | "nurse" | "doctor";
   full_name: string;
   active: boolean;
-  email: string;
+  email: string;                  // owner's real email; synthetic @kanan-clinic.local for staff (never shown)
+  employee_number: string | null; // null for owner, set for nurse/doctor
   doctor: { id: string; display_name: string; default_slot_minutes: number; active: boolean } | null;
 };
 
@@ -17,11 +18,21 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
   const [show, setShow] = useState(false);
   const [role, setRole] = useState<"nurse" | "doctor">("nurse");
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [employeeNumber, setEmployeeNumber] = useState("");
   const [password, setPassword] = useState("");
   const [slotMinutes, setSlotMinutes] = useState(30);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+
+  // Suggest the next sequential employee number based on existing ones
+  function suggestNextEmpNumber() {
+    const existing = initial
+      .map((m) => m.employee_number)
+      .filter((n): n is string => !!n && /^\d+$/.test(n))
+      .map(Number);
+    const next = existing.length > 0 ? Math.max(...existing) + 1 : 1001;
+    return String(next);
+  }
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -33,7 +44,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
       body: JSON.stringify({
         role,
         full_name: fullName,
-        email,
+        employee_number: employeeNumber,
         password,
         default_slot_minutes: role === "doctor" ? slotMinutes : undefined,
       }),
@@ -46,7 +57,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
     }
     setShow(false);
     setFullName("");
-    setEmail("");
+    setEmployeeNumber("");
     setPassword("");
     router.refresh();
   }
@@ -107,8 +118,21 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="label">Email</label>
-                <input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <label className="label">Employee number</label>
+                <input
+                  className="input"
+                  type="text"
+                  value={employeeNumber}
+                  onChange={(e) => setEmployeeNumber(e.target.value.toLowerCase().trim())}
+                  onFocus={() => { if (!employeeNumber) setEmployeeNumber(suggestNextEmpNumber()); }}
+                  placeholder="e.g. 1001 or jenny.tan"
+                  minLength={3}
+                  maxLength={20}
+                  required
+                />
+                <p className="text-[11px] text-stone-500 mt-1">
+                  Staff use this + their password to log in. Click the field for a suggestion.
+                </p>
               </div>
               <div>
                 <label className="label">Initial password</label>
@@ -145,7 +169,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
             <tr className="text-left text-xs text-stone-500 border-b border-stone-200">
               <th className="px-4 py-2.5 font-medium">Name</th>
               <th className="px-4 py-2.5 font-medium">Role</th>
-              <th className="px-4 py-2.5 font-medium">Email</th>
+              <th className="px-4 py-2.5 font-medium">Login</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="px-4 py-2.5 font-medium"></th>
             </tr>
@@ -160,7 +184,9 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
                     <span className="text-stone-500"> · {m.doctor.default_slot_minutes} min slots</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-xs">{m.email}</td>
+                <td className="px-4 py-3 text-xs">
+                  {m.role === "owner" ? m.email : (m.employee_number || "—")}
+                </td>
                 <td className="px-4 py-3">
                   <span className={`pill ${m.active ? "pill-confirmed" : "pill-cancelled"}`}>
                     {m.active ? "Active" : "Inactive"}

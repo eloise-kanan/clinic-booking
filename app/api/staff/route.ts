@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { loadPlan } from "@/lib/branding-server";
 import { seatAvailable, type Plan, type StaffRole } from "@/lib/plan";
+import { isValidEmployeeNumber, resolveAuthEmail } from "@/lib/login-id";
 
 async function requireOwner() {
   const supabase = await createClient();
@@ -25,12 +26,18 @@ export async function POST(req: Request) {
   const auth = await requireOwner();
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: auth.status });
 
-  const { role, full_name, email, password, default_slot_minutes } = await req.json();
+  const { role, full_name, employee_number, password, default_slot_minutes } = await req.json();
   if (!["nurse", "doctor"].includes(role)) {
     return NextResponse.json({ error: "Invalid role" }, { status: 400 });
   }
-  if (!full_name || !email || !password) {
+  if (!full_name || !employee_number || !password) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+  if (!isValidEmployeeNumber(employee_number)) {
+    return NextResponse.json(
+      { error: "Employee number must be 3–20 chars, letters/digits/dots/dashes only" },
+      { status: 400 }
+    );
   }
 
   const admin = createAdminClient();
@@ -53,8 +60,23 @@ export async function POST(req: Request) {
       { status: 409 }
     );
   }
+  // Uniqueness check on employee_number before creating anything
+  const { count: existing } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("employee_number", employee_number);
+  if (existing && existing > 0) {
+    return NextResponse.json(
+      { error: `Employee number "${employee_number}" is already in use` },
+      { status: 409 }
+    );
+  }
+
+  // Synthesize an internal Supabase Auth email from the employee number.
+  // Staff never see or type this; the login form translates back at sign-in.
+  const synthEmail = resolveAuthEmail(employee_number);
   const { data: created, error: cErr } = await admin.auth.admin.createUser({
-    email,
+    email: synthEmail,
     password,
     email_confirm: true,
   });
@@ -66,6 +88,7 @@ export async function POST(req: Request) {
     id: created.user.id,
     role,
     full_name,
+    employee_number,
     active: true,
   });
   if (pErr) {
@@ -90,7 +113,7 @@ export async function POST(req: Request) {
     action: "create_staff",
     entity_type: "profile",
     entity_id: created.user.id,
-    after_data: { role, full_name, email },
+    after_data: { role, full_name, employee_number },
   });
 
   return NextResponse.json({ ok: true });

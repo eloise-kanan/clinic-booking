@@ -49,33 +49,50 @@ const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
 // ─── Sample data (Malaysian dental clinic, mirrors sample_data.py) ────────
 
+// Employee numbers — clinic-issued, staff use these to log in.
+// Synthetic auth email is `${empNo}@kanan-clinic.local` (matches lib/login-id.ts).
 const DOCTORS = [
-  { name: "Dr. Lee Chee Hong",  email: "lee.chee.hong@democlinic.my",  slot: 30 },
-  { name: "Dr. Sarah Wong",     email: "sarah.wong@democlinic.my",     slot: 30 },
-  { name: "Dr. Aiman Rashid",   email: "aiman.rashid@democlinic.my",   slot: 45 },
-  { name: "Dr. Tan Mei Yee",    email: "tan.mei.yee@democlinic.my",    slot: 30 },
+  { name: "Dr. Lee Chee Hong",  empNo: "1001", slot: 30 },
+  { name: "Dr. Sarah Wong",     empNo: "1002", slot: 30 },
+  { name: "Dr. Aiman Rashid",   empNo: "1003", slot: 45 },
+  { name: "Dr. Tan Mei Yee",    empNo: "1004", slot: 30 },
 ];
 
 const NURSES = [
-  { name: "Norhaiza Binti Ismail", email: "norhaiza@democlinic.my" },
-  { name: "Jenny Tan Hui Mei",     email: "jenny.tan@democlinic.my" },
-  { name: "Priya Devi",            email: "priya.devi@democlinic.my" },
-  { name: "Aini Salleh",           email: "aini.salleh@democlinic.my" },
-  { name: "Chong Li Wen",          email: "chong.li.wen@democlinic.my" },
-  { name: "Farah Liyana",          email: "farah.liyana@democlinic.my" },
+  { name: "Norhaiza Binti Ismail", empNo: "2001" },
+  { name: "Jenny Tan Hui Mei",     empNo: "2002" },
+  { name: "Priya Devi",            empNo: "2003" },
+  { name: "Aini Salleh",           empNo: "2004" },
+  { name: "Chong Li Wen",          empNo: "2005" },
+  { name: "Farah Liyana",          empNo: "2006" },
 ];
 
+const SYNTH_DOMAIN = "kanan-clinic.local";
+function authEmail(empNo) { return `${empNo}@${SYNTH_DOMAIN}`; }
+
+// last_visit_days drives the recall worklist: anyone past their 6-month
+// (=183 days) recall_interval shows up as "due" with overdue colour-coding.
 const PATIENTS = [
-  { ic: "920311145421", name: "Tan Wei Ming",              phone: "+60122345678", visits: 5,  last_visit_days: 180 },
-  { ic: "880425083217", name: "Siti Aisyah Binti Hassan",  phone: "+60174551289", visits: 3,  last_visit_days: 215 },
-  { ic: "950712102245", name: "Lim Hui Ling",              phone: "+60168824471", visits: 2,  last_visit_days: 14  },
-  { ic: "010305061129", name: "Muhammad Daniel",           phone: "+60112345689", visits: 1,  last_visit_days: 5   },
-  { ic: "780921147765", name: "Rajesh A/L Subramaniam",    phone: "+60196640023", visits: 8,  last_visit_days: 395 },
-  { ic: "991108025544", name: "Chong Mei Xuan",            phone: "+60139987765", visits: 4,  last_visit_days: 305 },
-  { ic: "850304079912", name: "Nurul Aini Abdullah",       phone: "+60145528821", visits: 6,  last_visit_days: 90  },
-  { ic: "030519093344", name: "Aaron Cheong",              phone: "+60184411122", visits: 1,  last_visit_days: 2   },
-  { ic: "770618081188", name: "Ng Boon Keat",              phone: "+60128876655", visits: 7,  last_visit_days: 240 },
-  { ic: "961122054476", name: "Devi A/P Krishnan",         phone: "+60163309981", visits: 2,  last_visit_days: 30  },
+  // Recently visited — NOT on recall yet
+  { ic: "950712102245", name: "Lim Hui Ling",              phone: "+60168824471", visits: 2, last_visit_days: 14  },
+  { ic: "010305061129", name: "Muhammad Daniel",           phone: "+60112345689", visits: 1, last_visit_days: 5   },
+  { ic: "030519093344", name: "Aaron Cheong",              phone: "+60184411122", visits: 1, last_visit_days: 2   },
+  { ic: "961122054476", name: "Devi A/P Krishnan",         phone: "+60163309981", visits: 2, last_visit_days: 30  },
+  { ic: "850304079912", name: "Nurul Aini Abdullah",       phone: "+60145528821", visits: 6, last_visit_days: 90  },
+
+  // Due / overdue for recall (last visit > 183 days = 6 months)
+  { ic: "920311145421", name: "Tan Wei Ming",              phone: "+60122345678", visits: 5, last_visit_days: 195 },
+  { ic: "880425083217", name: "Siti Aisyah Binti Hassan",  phone: "+60174551289", visits: 3, last_visit_days: 215 },
+  { ic: "770618081188", name: "Ng Boon Keat",              phone: "+60128876655", visits: 7, last_visit_days: 240 },
+  { ic: "991108025544", name: "Chong Mei Xuan",            phone: "+60139987765", visits: 4, last_visit_days: 305 },
+  { ic: "780921147765", name: "Rajesh A/L Subramaniam",    phone: "+60196640023", visits: 8, last_visit_days: 395 },
+
+  // Extra patients for fuller demo (~15 total)
+  { ic: "871015082266", name: "Goh Choon Lai",             phone: "+60123887766", visits: 3, last_visit_days: 21  },
+  { ic: "940228145533", name: "Wong Su Lin",               phone: "+60176551144", visits: 4, last_visit_days: 7   },
+  { ic: "820507093398", name: "Kuhan A/L Maniam",          phone: "+60195442031", visits: 5, last_visit_days: 250 },
+  { ic: "961204023311", name: "Ahmad Faizal Bin Razak",    phone: "+60133229988", visits: 2, last_visit_days: 18  },
+  { ic: "750822081144", name: "Chong Pei Ling",            phone: "+60128876654", visits: 9, last_visit_days: 280 },
 ];
 
 const TREATMENTS = ["Scaling", "Root canal treatment", "Whitening", "Wisdom tooth surgery", "Crown fitting"];
@@ -118,13 +135,20 @@ async function wipeData(ownerId) {
 async function createStaff(role, list) {
   const created = [];
   for (const s of list) {
+    const email = authEmail(s.empNo);
     const { data: user, error: cErr } = await admin.auth.admin.createUser({
-      email: s.email,
+      email,
       password: STAFF_PASSWORD,
       email_confirm: true,
     });
-    if (cErr || !user.user) { console.warn(`  ! ${s.email}: ${cErr?.message}`); continue; }
-    await admin.from("profiles").insert({ id: user.user.id, role, full_name: s.name, active: true });
+    if (cErr || !user.user) { console.warn(`  ! ${s.empNo}: ${cErr?.message}`); continue; }
+    await admin.from("profiles").insert({
+      id: user.user.id,
+      role,
+      full_name: s.name,
+      employee_number: s.empNo,
+      active: true,
+    });
     if (role === "doctor") {
       await admin.from("doctors").insert({
         profile_id: user.user.id,
@@ -134,7 +158,7 @@ async function createStaff(role, list) {
       });
     }
     created.push({ ...s, profileId: user.user.id });
-    console.log(`  ✓ ${role} ${s.name}`);
+    console.log(`  ✓ ${role} ${s.empNo} — ${s.name}`);
   }
   return created;
 }
@@ -198,6 +222,21 @@ async function seedBookings(doctors, patients, ownerId, nurses) {
     { patient: "Rajesh A/L Subramaniam",   status: "confirmed", date: daysAhead(1), time: [11, 0], doc: 3, treatment: "Crown fitting" },
     { patient: "Nurul Aini Abdullah",      status: "confirmed", date: daysAhead(1), time: [14, 0], doc: 2, treatment: "Wisdom tooth surgery" },
     { patient: "Ng Boon Keat",             status: "confirmed", date: daysAhead(1), time: [15, 30],doc: 1, treatment: "Scaling" },
+  );
+
+  // ── CONFIRMED — spread across next 7 days for "upcoming" view
+  bookings.push(
+    { patient: "Goh Choon Lai",            status: "confirmed", date: daysAhead(2), time: [9, 30], doc: 0, treatment: "Scaling" },
+    { patient: "Wong Su Lin",              status: "confirmed", date: daysAhead(2), time: [11, 0], doc: 2, treatment: "Whitening" },
+    { patient: "Ahmad Faizal Bin Razak",   status: "confirmed", date: daysAhead(2), time: [14, 30],doc: 1, treatment: "Scaling" },
+    { patient: "Devi A/P Krishnan",        status: "confirmed", date: daysAhead(3), time: [10, 0], doc: 3, treatment: "Root canal treatment" },
+    { patient: "Aaron Cheong",             status: "confirmed", date: daysAhead(3), time: [15, 30],doc: 0, treatment: "Scaling" },
+    { patient: "Muhammad Daniel",          status: "confirmed", date: daysAhead(4), time: [9, 0],  doc: 1, treatment: "Wisdom tooth surgery" },
+    { patient: "Tan Wei Ming",             status: "confirmed", date: daysAhead(4), time: [14, 0], doc: 2, treatment: "Crown fitting" },
+    { patient: "Chong Pei Ling",           status: "confirmed", date: daysAhead(5), time: [10, 30],doc: 0, treatment: "Scaling" },
+    { patient: "Nurul Aini Abdullah",      status: "confirmed", date: daysAhead(5), time: [15, 0], doc: 3, treatment: "Whitening" },
+    { patient: "Wong Su Lin",              status: "confirmed", date: daysAhead(6), time: [11, 0], doc: 1, treatment: "Scaling" },
+    { patient: "Goh Choon Lai",            status: "confirmed", date: daysAhead(7), time: [9, 30], doc: 2, treatment: "Root canal treatment" },
   );
 
   // ── ATTENDED — last 30 days, drives analytics
@@ -316,10 +355,10 @@ async function main() {
   console.log("");
 
   console.log("✓ Done.");
-  console.log(`\nStaff logins (password: ${STAFF_PASSWORD}):`);
-  for (const d of DOCTORS) console.log(`  doctor   ${d.email}`);
-  for (const n of NURSES)  console.log(`  nurse    ${n.email}`);
-  console.log(`  owner    (unchanged — your existing owner)`);
+  console.log(`\nStaff logins (employee number + password '${STAFF_PASSWORD}'):`);
+  for (const d of DOCTORS) console.log(`  doctor   ${d.empNo}  ${d.name}`);
+  for (const n of NURSES)  console.log(`  nurse    ${n.empNo}  ${n.name}`);
+  console.log(`  owner    (unchanged — log in with your email as before)`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

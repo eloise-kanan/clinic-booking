@@ -14,6 +14,17 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   if (!user.email) return NextResponse.json({ error: "Account has no email" }, { status: 400 });
 
+  // Email change is owner-only — staff log in by employee number and don't
+  // have a real email to change.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if (profile?.role !== "owner") {
+    return NextResponse.json({ error: "Only the owner can change their login email" }, { status: 403 });
+  }
+
   const body = await req.json();
   const { current_password, new_email } = body;
   if (!current_password || !new_email) {

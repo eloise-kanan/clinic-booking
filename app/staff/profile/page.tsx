@@ -42,7 +42,7 @@ export default async function ProfilePage() {
       <p className="text-xs text-stone-500 mb-4">
         Change your password or login email.
       </p>
-      <ProfileForm email={user.email || ""} />
+      <ProfileForm email={user.email || ""} isOwner={profile.role === "owner"} />
 
       {profile.role === "owner" && doctors.length > 0 && (
         <div className="mt-8 max-w-md">
