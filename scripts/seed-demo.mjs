@@ -204,6 +204,19 @@ async function createStaff(role, list) {
 }
 
 async function seedWorkingHours(doctors) {
+  // A DB trigger auto-creates default 09:00–21:00 rows for every weekday
+  // when a doctor is inserted. We delete those first, then insert our
+  // demo-friendly schedule (Mon–Fri 09–18, Sat 09–13, closed Sun).
+  for (const doc of doctors) {
+    const { data: d } = await admin.from("doctors").select("id").eq("profile_id", doc.profileId).single();
+    if (!d) continue;
+    // Drop trigger-created defaults for this doctor
+    const { data: existing } = await admin.from("working_hours").select("id").eq("doctor_id", d.id);
+    if (existing?.length) {
+      await admin.from("working_hours").delete().in("id", existing.map((r) => r.id));
+    }
+  }
+
   const rows = [];
   for (const doc of doctors) {
     const { data: d } = await admin.from("doctors").select("id").eq("profile_id", doc.profileId).single();
@@ -212,10 +225,11 @@ async function seedWorkingHours(doctors) {
       rows.push({ doctor_id: d.id, weekday, start_time: "09:00", end_time: "18:00" });
     }
     rows.push({ doctor_id: d.id, weekday: 6, start_time: "09:00", end_time: "13:00" });  // Saturday half-day
+    // Sunday left out → closed
   }
   const { error } = await admin.from("working_hours").insert(rows);
   if (error) throw new Error(`Working hours insert failed: ${error.message}`);
-  console.log(`  ✓ working hours for ${doctors.length} doctors`);
+  console.log(`  ✓ working hours for ${doctors.length} doctors (Mon–Fri 09–18, Sat 09–13, closed Sun)`);
 }
 
 async function seedPatients() {
