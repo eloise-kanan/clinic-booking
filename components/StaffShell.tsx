@@ -232,11 +232,13 @@ export function StaffShell({
         />
       )}
 
-      <div className="max-w-7xl mx-auto md:flex">
+      <div className="max-w-7xl mx-auto md:flex md:items-start">
         <aside
           className={`
             bg-white py-4 overflow-y-auto
-            md:w-56 md:flex-shrink-0 md:border-r md:border-stone-200 md:min-h-[calc(100dvh-49px)] md:static md:translate-x-0 md:block
+            md:w-56 md:flex-shrink-0 md:border-r md:border-stone-200
+            md:sticky md:top-[49px] md:h-[calc(100dvh-49px)]
+            md:translate-x-0 md:block
             fixed top-[49px] left-0 z-40 w-64 max-w-[85vw] h-[calc(100dvh-49px)] border-r border-stone-200
             transition-transform duration-200 ease-out
             ${mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
