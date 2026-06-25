@@ -44,10 +44,10 @@ textarea {
   min-width: 0;
 }
 
-/* Floor: never let the page itself horizontal-scroll. */
-html, body {
-  overflow-x: hidden;
-}
+/* Don't set `overflow-x: hidden` on html/body — it scopes sticky positioning
+ * to the body and disables `position: sticky` for everything inside (header,
+ * sidebar, etc.). If a specific container's content overflows horizontally,
+ * give that container its own `overflow-x` rule instead. */
 
 /* Hide scrollbars but keep scrollability — used by horizontal calendars
    so a thin scrollbar doesn't show below content that barely overflows. */
