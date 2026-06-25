@@ -67,15 +67,30 @@ export function StaffShell({
     setMobileNavOpen(false);
   }, [pathname]);
 
-  // Lock body scroll while the drawer is open
+  // Lock body scroll while the mobile drawer is open. iOS Safari ignores
+  // `body { overflow: hidden }` for touch scrolling, so we pin the body with
+  // position:fixed + restore the original scrollY when the drawer closes.
   useEffect(() => {
-    if (mobileNavOpen) {
-      const orig = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-      return () => {
-        document.body.style.overflow = orig;
-      };
-    }
+    if (!mobileNavOpen) return;
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const orig = {
+      overflow: body.style.overflow,
+      position: body.style.position,
+      top: body.style.top,
+      width: body.style.width,
+    };
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    return () => {
+      body.style.overflow = orig.overflow;
+      body.style.position = orig.position;
+      body.style.top = orig.top;
+      body.style.width = orig.width;
+      window.scrollTo(0, scrollY);
+    };
   }, [mobileNavOpen]);
 
   async function signOut() {
