@@ -8,7 +8,7 @@ export default async function BookPage() {
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Our Clinic";
   const branding = await loadBranding();
   return (
-    <main className="min-h-screen bg-stone-50">
+    <main className="min-h-dvh bg-stone-50">
       <div className="max-w-xl mx-auto px-5 py-10">
         <header className="mb-8 text-center">
           {branding.logo_url ? (

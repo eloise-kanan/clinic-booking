@@ -194,7 +194,7 @@ export function StaffShell({
   );
 
   return (
-    <div className="min-h-screen bg-stone-50">
+    <div className="min-h-dvh bg-stone-50">
       <header className="bg-white border-b border-stone-200 sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-3 md:px-5 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
@@ -236,8 +236,8 @@ export function StaffShell({
         <aside
           className={`
             bg-white py-4 overflow-y-auto
-            md:w-56 md:flex-shrink-0 md:border-r md:border-stone-200 md:min-h-[calc(100vh-49px)] md:static md:translate-x-0 md:block
-            fixed top-[49px] left-0 z-40 w-64 max-w-[85vw] h-[calc(100vh-49px)] border-r border-stone-200
+            md:w-56 md:flex-shrink-0 md:border-r md:border-stone-200 md:min-h-[calc(100dvh-49px)] md:static md:translate-x-0 md:block
+            fixed top-[49px] left-0 z-40 w-64 max-w-[85vw] h-[calc(100dvh-49px)] border-r border-stone-200
             transition-transform duration-200 ease-out
             ${mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
           `}

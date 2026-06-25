@@ -5,7 +5,7 @@ import { PoweredByKanan } from "@/components/PoweredByKanan";
 export default function LoginPage() {
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Clinic";
   return (
-    <main className="min-h-screen bg-stone-50 flex items-center justify-center px-5">
+    <main className="min-h-dvh bg-stone-50 flex items-center justify-center px-5">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <h1 className="text-xl font-medium">{clinicName}</h1>
