@@ -21,7 +21,10 @@ function monthsBetween(from: Date, to: Date): number {
 }
 
 export default async function RecallsPage() {
-  const { profile } = await requireStaff(["nurse", "owner"]);
+  // Terminal lands here from the lockscreen tile. Read-only by default —
+  // Send recall buttons trigger the PIN modal.
+  const { profile } = await requireStaff(["nurse", "owner", "terminal"]);
+  const isTerminal = profile.role === "terminal";
   const admin = createAdminClient();
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Our Clinic";
 
@@ -66,9 +69,9 @@ export default async function RecallsPage() {
   if (error) {
     return (
       <StaffShell
-        role={profile.role as "owner" | "nurse"}
-        userName={profile.full_name}
-        nav={await staffNav(profile.role, pendingBookings || 0)}
+        role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+        userName={isTerminal ? "Clinic terminal" : profile.full_name}
+        nav={await staffNav(isTerminal ? "terminal" : profile.role, pendingBookings || 0)}
       >
         <p className="text-sm text-red-600">Error loading patients: {error.message}</p>
       </StaffShell>
@@ -91,6 +94,7 @@ export default async function RecallsPage() {
         initial={due}
         templateBody={recallTpl?.body || ""}
         clinicName={clinicName}
+        isTerminal={isTerminal}
       />
     </StaffShell>
   );

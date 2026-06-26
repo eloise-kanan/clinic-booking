@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { resolveActor } from "@/lib/pin";
 
 // POST /api/patients/recall-sent
-// body: { patient_id }
-// Records when a recall WhatsApp was opened from the worklist + who sent it.
-// Idempotent — resending updates the timestamp + actor.
+// body: { patient_id, pin_profile_id?, pin? }
+// Records when a recall WhatsApp was opened + who sent it. Nurse-only.
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -18,28 +18,33 @@ export async function POST(req: Request) {
     .select("role, active")
     .eq("id", user.id)
     .single();
-  if (!profile?.active || !["nurse", "owner"].includes(profile.role)) {
+  if (!profile?.active || !["nurse", "owner", "terminal"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { patient_id } = await req.json();
+  const body = await req.json();
+  const { patient_id } = body;
   if (!patient_id) return NextResponse.json({ error: "patient_id required" }, { status: 400 });
+
+  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse"] });
+  if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
 
   const admin = createAdminClient();
   const { error } = await admin
     .from("patients")
     .update({
       recall_reminder_sent_at: new Date().toISOString(),
-      recall_reminder_sent_by: user.id,
+      recall_reminder_sent_by: actor.actorId,
     })
     .eq("id", patient_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await admin.from("audit_log").insert({
-    actor_id: user.id,
+    actor_id: actor.actorId,
     action: "patient_recall_sent",
     entity_type: "patient",
     entity_id: patient_id,
+    after_data: { via_terminal: actor.isTerminal },
   });
 
   return NextResponse.json({ ok: true });

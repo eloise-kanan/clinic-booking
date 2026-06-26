@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { applyTemplate, waLink } from "@/lib/utils";
+import { usePinGuardedFetch } from "@/components/usePinGuardedFetch";
 
 type Row = {
   id: string;
@@ -28,15 +29,18 @@ export default function RecallsList({
   initial,
   templateBody,
   clinicName,
+  isTerminal,
 }: {
   initial: Row[];
   templateBody: string;
   clinicName: string;
+  isTerminal: boolean;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState<Row[]>(initial);
   const [query, setQuery] = useState("");
   const [hideRecentlySent, setHideRecentlySent] = useState(true);
+  const { guardedFetch, pinModal } = usePinGuardedFetch({ isTerminal });
 
   async function sendRecall(row: Row) {
     if (!row.whatsapp_number) {
@@ -48,15 +52,20 @@ export default function RecallsList({
       clinic_name: clinicName,
       months_since_visit: String(row.months_since_visit),
     });
-    // Fire-and-forget marking
-    fetch("/api/patients/recall-sent", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ patient_id: row.id }),
-      keepalive: true,
-    }).catch(() => {});
+    // PIN-gated marking — opens the modal on terminal sessions if the
+    // grace window is missing/expired/wrong-role.
+    const res = await guardedFetch(
+      "/api/patients/recall-sent",
+      { patient_id: row.id },
+      { allowedRoles: ["nurse"], actionLabel: "to send this recall — nurses only" }
+    );
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      // Status 401 is the "PIN cancelled" sentinel from the hook — silent
+      if (res.status !== 401) alert(data.error || "Failed to record recall");
+      return;
+    }
     window.open(waLink(row.whatsapp_number, body), "_blank");
-    // Optimistically mark sent in local state
     setRows((prev) =>
       prev.map((r) =>
         r.id === row.id
@@ -178,6 +187,7 @@ export default function RecallsList({
           })}
         </ul>
       )}
+      {pinModal}
     </div>
   );
 }

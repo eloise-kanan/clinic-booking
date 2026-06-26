@@ -4,8 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
 import { logWaSent } from "@/lib/wa-track";
-import PinChallenge from "@/components/PinChallenge";
-import { readPinSession, writePinSession, refreshPinSession } from "@/lib/pin-client";
+import { usePinGuardedFetch } from "@/components/usePinGuardedFetch";
 
 const FALLBACK_TEMPLATES: Record<string, string> = {
   check:
@@ -65,54 +64,23 @@ export default function PendingQueue({
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState<{ [k: string]: string }>({});
-  // PIN flow state: when the user clicks Approve in terminal mode without a
-  // current grace window, we stash the intended action and open the modal.
-  const [pinPrompt, setPinPrompt] = useState<{
-    action: "approve" | "reject";
-    id: string;
-    notes?: string;
-  } | null>(null);
+  const { guardedFetch, pinModal } = usePinGuardedFetch({ isTerminal });
 
   async function act(id: string, action: "approve" | "reject", notes?: string) {
-    // Terminal sessions need a {pin_profile_id, pin}. Check the grace window
-    // first — if expired, empty, OR belongs to a non-nurse, open the modal.
-    // Booking confirmation/rejection is nurse-only (clinic policy).
-    if (isTerminal) {
-      const sess = readPinSession();
-      if (!sess || sess.role !== "nurse") {
-        setPinPrompt({ action, id, notes });
-        return;
-      }
-      return doAct(id, action, notes, sess.profile_id, sess.pin);
-    }
-    return doAct(id, action, notes);
-  }
-
-  async function doAct(
-    id: string,
-    action: "approve" | "reject",
-    notes?: string,
-    pin_profile_id?: string,
-    pin?: string
-  ) {
     setBusy(id);
     try {
-      const res = await fetch(`/api/bookings/${action}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          booking_id: id,
-          notes,
-          pin_profile_id,
-          pin,
-        }),
-      });
+      const res = await guardedFetch(
+        `/api/bookings/${action}`,
+        { booking_id: id, notes },
+        {
+          allowedRoles: ["nurse"],
+          actionLabel: action === "approve" ? "to confirm this booking — nurses only" : "to reject this booking — nurses only",
+        }
+      );
       if (!res.ok) {
-        const data = await res.json();
-        alert(data.error || "Action failed");
+        const data = await res.json().catch(() => ({}));
+        if (res.status !== 401) alert(data.error || "Action failed");
       } else {
-        // Each PIN-attributed action extends the grace window by another 90s.
-        if (pin_profile_id) refreshPinSession();
         router.refresh();
       }
     } finally {
@@ -258,22 +226,7 @@ export default function PendingQueue({
         );
       })}
 
-      <PinChallenge
-        open={!!pinPrompt}
-        allowedRoles={["nurse"]}
-        actionLabel={
-          pinPrompt?.action === "approve"
-            ? "to confirm this booking — nurses only"
-            : "to reject this booking — nurses only"
-        }
-        onClose={() => setPinPrompt(null)}
-        onVerified={({ profile_id, pin, full_name, role }) => {
-          writePinSession({ profile_id, pin, full_name, role });
-          const p = pinPrompt;
-          setPinPrompt(null);
-          if (p) doAct(p.id, p.action, p.notes, profile_id, pin);
-        }}
-      />
+      {pinModal}
     </div>
   );
 }

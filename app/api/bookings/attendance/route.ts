@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { resolveActor } from "@/lib/pin";
 
 // POST /api/bookings/attendance
-// body: { booking_id, mark: "attended" | "no_show" | "clear" }
-// Nurses + owners can mark attendance.
+// body: { booking_id, mark: "attended" | "no_show" | "clear", pin_profile_id?, pin? }
+// Nurses + owners can mark attendance. On the shared clinic terminal,
+// a nurse or doctor PIN must accompany the request (audit attribution).
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -17,15 +19,21 @@ export async function POST(req: Request) {
     .select("role, active")
     .eq("id", user.id)
     .single();
-  if (!profile?.active || !["nurse", "owner"].includes(profile.role)) {
+  if (!profile?.active || !["nurse", "owner", "terminal"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { booking_id, mark } = await req.json();
+  const body = await req.json();
+  const { booking_id, mark } = body;
   if (!booking_id) return NextResponse.json({ error: "booking_id required" }, { status: 400 });
   if (!["attended", "no_show", "clear"].includes(mark)) {
     return NextResponse.json({ error: "mark must be 'attended', 'no_show', or 'clear'" }, { status: 400 });
   }
+
+  // Attendance may be marked by either a nurse (front desk) or a doctor
+  // (after consultation).
+  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse", "doctor"] });
+  if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
 
   const admin = createAdminClient();
   const now = new Date().toISOString();
@@ -34,7 +42,7 @@ export async function POST(req: Request) {
     mark === "attended"
       ? {
           attended_at: now,
-          attended_by: user.id,
+          attended_by: actor.actorId,
           no_show: false,
           no_show_at: null,
           no_show_by: null,
@@ -43,7 +51,7 @@ export async function POST(req: Request) {
         ? {
             no_show: true,
             no_show_at: now,
-            no_show_by: user.id,
+            no_show_by: actor.actorId,
             attended_at: null,
             attended_by: null,
           }
@@ -100,10 +108,11 @@ export async function POST(req: Request) {
   }
 
   await admin.from("audit_log").insert({
-    actor_id: user.id,
+    actor_id: actor.actorId,
     action: `booking_${mark}`,
     entity_type: "booking",
     entity_id: booking_id,
+    after_data: { mark, via_terminal: actor.isTerminal },
   });
 
   return NextResponse.json({ ok: true });

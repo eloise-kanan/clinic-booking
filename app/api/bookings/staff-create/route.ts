@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { normalizePhone, validateBookingInput } from "@/lib/utils";
+import { resolveActor } from "@/lib/pin";
 
-// Staff create / reschedule on behalf of a patient. Always lands as
-// status='confirmed' — the patient does not need to verify.
+// Staff create / reschedule on behalf of a patient. Nurse-only. On the
+// shared terminal, a nurse PIN is required and is recorded as the booker.
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -17,11 +18,13 @@ export async function POST(req: Request) {
     .select("role, active")
     .eq("id", user.id)
     .single();
-  if (!profile?.active || !["nurse", "owner"].includes(profile.role)) {
+  if (!profile?.active || !["nurse", "owner", "terminal"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const body = await req.json();
+  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse"] });
+  if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
   const {
     full_name,
     nationality,
@@ -113,7 +116,7 @@ export async function POST(req: Request) {
       is_first_time: !!is_first_time,
       parent_booking_id: parent_booking_id || null,
       reviewed_at: new Date().toISOString(),
-      reviewed_by: user.id,
+      reviewed_by: actor.actorId,
       reviewer_notes: "[STAFF BOOKING]",
     })
     .select("id")
@@ -133,11 +136,11 @@ export async function POST(req: Request) {
   // actual attended visits only and is updated by /api/bookings/attendance.
 
   await admin.from("audit_log").insert({
-    actor_id: user.id,
+    actor_id: actor.actorId,
     action: parent_booking_id ? "staff_reschedule" : "staff_create",
     entity_type: "booking",
     entity_id: inserted?.id,
-    after_data: { status: "confirmed", parent_booking_id: parent_booking_id || null },
+    after_data: { status: "confirmed", parent_booking_id: parent_booking_id || null, via_terminal: actor.isTerminal },
   });
 
   return NextResponse.json({ ok: true, booking_id: inserted?.id });

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { resolveActor } from "@/lib/pin";
 
-// Staff-driven cancellation. Works on any pending or confirmed booking.
-// Owner can also use /api/bookings/override; this endpoint exists so nurses
-// can cancel without owner involvement.
+// Staff-driven cancellation. Nurse-only — owner can also use override.
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -17,12 +16,16 @@ export async function POST(req: Request) {
     .select("role, active")
     .eq("id", user.id)
     .single();
-  if (!profile?.active || !["nurse", "owner"].includes(profile.role)) {
+  if (!profile?.active || !["nurse", "owner", "terminal"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { booking_id, notes } = await req.json();
+  const body = await req.json();
+  const { booking_id, notes } = body;
   if (!booking_id) return NextResponse.json({ error: "booking_id is required" }, { status: 400 });
+
+  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse"] });
+  if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
 
   const admin = createAdminClient();
   const { data: before } = await admin
@@ -40,19 +43,19 @@ export async function POST(req: Request) {
     .update({
       status: "cancelled",
       reviewed_at: new Date().toISOString(),
-      reviewed_by: user.id,
+      reviewed_by: actor.actorId,
       reviewer_notes: notes ? `[STAFF CANCEL] ${notes}` : "[STAFF CANCEL]",
     })
     .eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await admin.from("audit_log").insert({
-    actor_id: user.id,
+    actor_id: actor.actorId,
     action: "staff_cancel",
     entity_type: "booking",
     entity_id: booking_id,
     before_data: { status: before.status },
-    after_data: { status: "cancelled", notes },
+    after_data: { status: "cancelled", notes, via_terminal: actor.isTerminal },
   });
 
   return NextResponse.json({ ok: true });

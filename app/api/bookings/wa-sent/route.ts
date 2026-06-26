@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { resolveActor } from "@/lib/pin";
 
 const KIND_TO_COLUMNS: Record<string, { at: string; by: string }> = {
   check: { at: "check_sent_at", by: "check_sent_by" },
@@ -11,8 +12,8 @@ const KIND_TO_COLUMNS: Record<string, { at: string; by: string }> = {
 };
 
 // POST /api/bookings/wa-sent
-// body: { booking_id, kind: "check" | "confirm" | "reject" | "cancel" | "reminder" }
-// Updates the corresponding columns to record who sent the WhatsApp message.
+// body: { booking_id, kind, pin_profile_id?, pin? }
+// Records who sent the WhatsApp message. Nurse-only.
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
@@ -25,11 +26,12 @@ export async function POST(req: Request) {
     .select("role, active")
     .eq("id", user.id)
     .single();
-  if (!profile?.active || !["nurse", "owner"].includes(profile.role)) {
+  if (!profile?.active || !["nurse", "owner", "terminal"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { booking_id, kind } = await req.json();
+  const body = await req.json();
+  const { booking_id, kind } = body;
   if (!booking_id) return NextResponse.json({ error: "booking_id required" }, { status: 400 });
   const cols = KIND_TO_COLUMNS[kind];
   if (!cols) {
@@ -39,10 +41,13 @@ export async function POST(req: Request) {
     );
   }
 
+  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse"] });
+  if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
+
   const admin = createAdminClient();
   const { error } = await admin
     .from("bookings")
-    .update({ [cols.at]: new Date().toISOString(), [cols.by]: user.id })
+    .update({ [cols.at]: new Date().toISOString(), [cols.by]: actor.actorId })
     .eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true });
