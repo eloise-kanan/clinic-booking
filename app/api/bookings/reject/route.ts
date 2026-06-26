@@ -22,7 +22,8 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { booking_id, notes } = body;
 
-  const actor = await resolveActor(user.id, body);
+  // Booking reject is nurse-only — same clinic policy as approve.
+  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse"] });
   if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
 
   const admin = createAdminClient();

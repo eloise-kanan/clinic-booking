@@ -75,10 +75,11 @@ export default function PendingQueue({
 
   async function act(id: string, action: "approve" | "reject", notes?: string) {
     // Terminal sessions need a {pin_profile_id, pin}. Check the grace window
-    // first — if expired or empty, open the modal and continue once verified.
+    // first — if expired, empty, OR belongs to a non-nurse, open the modal.
+    // Booking confirmation/rejection is nurse-only (clinic policy).
     if (isTerminal) {
       const sess = readPinSession();
-      if (!sess) {
+      if (!sess || sess.role !== "nurse") {
         setPinPrompt({ action, id, notes });
         return;
       }
@@ -259,10 +260,11 @@ export default function PendingQueue({
 
       <PinChallenge
         open={!!pinPrompt}
+        allowedRoles={["nurse"]}
         actionLabel={
           pinPrompt?.action === "approve"
-            ? "to confirm this booking"
-            : "to reject this booking"
+            ? "to confirm this booking — nurses only"
+            : "to reject this booking — nurses only"
         }
         onClose={() => setPinPrompt(null)}
         onVerified={({ profile_id, pin, full_name, role }) => {

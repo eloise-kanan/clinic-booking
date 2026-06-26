@@ -15,16 +15,25 @@ import { createAdminClient } from "@/lib/supabase-admin";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Optional ?roles=nurse or ?roles=nurse,doctor — narrows the picker to
+  // staff who are allowed to perform a specific action (e.g. booking
+  // confirmation is nurse-only).
+  const url = new URL(req.url);
+  const rolesParam = url.searchParams.get("roles");
+  const roles = rolesParam
+    ? rolesParam.split(",").filter((r) => r === "nurse" || r === "doctor")
+    : ["nurse", "doctor"];
 
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("profiles")
     .select("id, role, full_name, pin_hash, pin_locked_until")
-    .in("role", ["nurse", "doctor"])
+    .in("role", roles)
     .eq("active", true)
     .order("role")
     .order("full_name");

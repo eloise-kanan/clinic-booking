@@ -24,7 +24,9 @@ export async function POST(req: Request) {
 
   // If we're on the shared terminal, demand a {pin_profile_id, pin} pair —
   // the action is attributed to the PIN holder, not the terminal account.
-  const actor = await resolveActor(user.id, body);
+  // Booking confirmation is nurse-only (clinic policy), so doctor PINs are
+  // rejected at this gate even though they're valid PINs.
+  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse"] });
   if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
 
   const admin = createAdminClient();

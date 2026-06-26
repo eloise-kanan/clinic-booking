@@ -33,19 +33,20 @@ export async function hashPin(pin: string): Promise<string> {
 }
 
 export type PinVerifyResult =
-  | { ok: true; profileId: string }
+  | { ok: true; profileId: string; role: "nurse" | "doctor" | "owner" }
   | { ok: false; reason: "no_pin_set" | "wrong_pin" | "locked"; lockedUntil?: string };
 
 // Verify a PIN for a specific profile. Increments failure counter on miss,
-// resets it on success. Returns either a success with the profile_id (the
-// caller can attribute audit-log entries to this identity) or a typed reason.
+// resets it on success. Returns either a success with the profile_id + role
+// (the caller can attribute audit-log entries to this identity and enforce
+// per-action role restrictions) or a typed reason.
 export async function verifyPin(profileId: string, pin: string): Promise<PinVerifyResult> {
   if (!isValidPinFormat(pin)) return { ok: false, reason: "wrong_pin" };
 
   const admin = createAdminClient();
   const { data: profile } = await admin
     .from("profiles")
-    .select("id, pin_hash, pin_failed_attempts, pin_locked_until")
+    .select("id, role, pin_hash, pin_failed_attempts, pin_locked_until")
     .eq("id", profileId)
     .single();
 
@@ -81,7 +82,7 @@ export async function verifyPin(profileId: string, pin: string): Promise<PinVeri
       .update({ pin_failed_attempts: 0, pin_locked_until: null })
       .eq("id", profileId);
   }
-  return { ok: true, profileId: profile.id };
+  return { ok: true, profileId: profile.id, role: profile.role };
 }
 
 // Returns true if the auth user is signed in as the shared terminal account
@@ -112,17 +113,28 @@ export async function isTerminalSession(userId: string): Promise<boolean> {
 // The pin_profile_id + pin are expected at the top level of the request
 // body. Write routes call this helper before any side effects.
 export type PinActor =
-  | { ok: true; actorId: string; isTerminal: boolean }
+  | { ok: true; actorId: string; isTerminal: boolean; role: "nurse" | "doctor" | "owner" | null }
   | { ok: false; status: number; error: string };
 
+// resolveActor resolves who's performing a write action.
+//   • On a personal device → the signed-in user is the actor (no PIN check).
+//   • On the shared terminal → the {pin_profile_id, pin} in the body must
+//     verify; the action is attributed to the PIN holder.
+//
+// allowedPinRoles narrows WHICH PIN holders may perform this action — e.g.
+// booking confirmation is nurse-only, so doctor PINs are rejected even if
+// valid. Personal-device users aren't affected by this restriction.
 export async function resolveActor(
   userId: string,
-  body: { pin_profile_id?: string; pin?: string }
+  body: { pin_profile_id?: string; pin?: string },
+  opts?: { allowedPinRoles?: ("nurse" | "doctor")[] }
 ): Promise<PinActor> {
   const isTerminal = await isTerminalSession(userId);
   if (!isTerminal) {
-    // Personal device — the auth user is the actor.
-    return { ok: true, actorId: userId, isTerminal: false };
+    // Personal device — the auth user is the actor; we don't know the role
+    // here, but the calling route already checked it via the requireStaff
+    // role gate further up.
+    return { ok: true, actorId: userId, isTerminal: false, role: null };
   }
   if (!body.pin_profile_id || !body.pin) {
     return { ok: false, status: 401, error: "PIN required for this action on the shared clinic terminal." };
@@ -137,5 +149,12 @@ export async function resolveActor(
           : "Wrong PIN.";
     return { ok: false, status: result.reason === "locked" ? 423 : 403, error };
   }
-  return { ok: true, actorId: result.profileId, isTerminal: true };
+  if (opts?.allowedPinRoles && !opts.allowedPinRoles.includes(result.role as "nurse" | "doctor")) {
+    return {
+      ok: false,
+      status: 403,
+      error: `This action requires a ${opts.allowedPinRoles.join(" or ")} PIN.`,
+    };
+  }
+  return { ok: true, actorId: result.profileId, isTerminal: true, role: result.role };
 }

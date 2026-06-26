@@ -24,11 +24,13 @@ export default function PinChallenge({
   onClose,
   onVerified,
   actionLabel,
+  allowedRoles,
 }: {
   open: boolean;
   onClose: () => void;
   onVerified: (s: { profile_id: string; pin: string; full_name: string; role: "nurse" | "doctor" }) => void;
   actionLabel?: string;  // e.g. "to confirm this booking"
+  allowedRoles?: ("nurse" | "doctor")[]; // narrows the picker (default: nurse + doctor)
 }) {
   const [staff, setStaff] = useState<StaffCard[] | null>(null);
   const [selected, setSelected] = useState<StaffCard | null>(null);
@@ -42,11 +44,14 @@ export default function PinChallenge({
     setSelected(null);
     setPin("");
     setErr(null);
-    fetch("/api/pin/staff-list")
+    const q = allowedRoles && allowedRoles.length > 0
+      ? `?roles=${allowedRoles.join(",")}`
+      : "";
+    fetch(`/api/pin/staff-list${q}`)
       .then((r) => r.json())
       .then((d) => setStaff(d.staff || []))
       .catch(() => setStaff([]));
-  }, [open]);
+  }, [open, allowedRoles]);
 
   // Auto-submit when 6 digits typed
   useEffect(() => {
