@@ -161,12 +161,15 @@ export default function ClinicConsole({
     ? now.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
     : "";
 
-  // Shared background — gradient is painted directly on the parent (via
-  // `parentStyle` below) so it always shows. Photo (if any) is layered on
-  // top as an absolute sibling with the theme's tinted overlay.
+  // Shared background — solid navy via Tailwind arbitrary-value class as
+  // a guaranteed fallback (in case the inline gradient style is stripped
+  // or cached oddly), then the theme gradient layered via inline style on
+  // top. Photo (if any) is rendered as an absolute sibling with the
+  // theme-tinted overlay above it.
+  const parentBgClass = "bg-[#1B2A4A]";
   const parentStyle = !backgroundUrl
     ? { backgroundImage: theme.gradient, backgroundSize: "cover" as const }
-    : { background: "#1B2A4A" };
+    : undefined;
 
   const bg = (
     <>
@@ -198,7 +201,10 @@ export default function ClinicConsole({
   // ── IDENTIFIED LAYOUT ────────────────────────────────────────────────────
   if (session) {
     return (
-      <div className="min-h-dvh relative overflow-hidden text-white" style={parentStyle}>
+      <div
+        className={`min-h-dvh relative overflow-hidden text-white ${parentBgClass}`}
+        style={parentStyle}
+      >
         {bg}
         {/* Compact header (relative + z-10 stacks above the absolute bg layers) */}
         <div className="relative z-10 px-4 pt-6 pb-4 sm:px-6 sm:pt-8 sm:pb-6 flex items-start justify-between gap-3">
@@ -272,7 +278,10 @@ export default function ClinicConsole({
 
   // ── LOCKED LAYOUT ────────────────────────────────────────────────────────
   return (
-    <div className="fixed inset-0 flex flex-col text-white overflow-hidden">
+    <div
+      className={`fixed inset-0 flex flex-col text-white overflow-hidden ${parentBgClass}`}
+      style={parentStyle}
+    >
       {bg}
 
       {/* Corner end-session — terminal full sign-out */}
