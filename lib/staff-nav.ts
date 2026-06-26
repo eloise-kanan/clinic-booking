@@ -36,7 +36,13 @@ export async function staffNav(role: string, pendingCount = 0): Promise<NavSecti
 function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[] {
   let sections: NavSection[] = [];
 
-  if (role === "doctor") {
+  if (role === "terminal") {
+    // Shared clinic terminal — kiosk mode. Sidebar is minimal: just the
+    // console view itself. All actions on the console require PIN unlock,
+    // and HR/staff pages are unreachable from this account (auth redirects
+    // any non-/home navigation back to /home).
+    sections = [{ items: [{ href: "/home", label: "🏠 Clinic console" }] }];
+  } else if (role === "doctor") {
     sections = [
       // Top-level (always visible)
       {
