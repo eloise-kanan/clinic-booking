@@ -161,28 +161,32 @@ export default function ClinicConsole({
     ? now.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })
     : "";
 
-  // Shared background — gradient or blurred photo + tinted overlay.
+  // Shared background — gradient is painted directly on the parent (via
+  // `parentStyle` below) so it always shows. Photo (if any) is layered on
+  // top as an absolute sibling with the theme's tinted overlay.
+  const parentStyle = !backgroundUrl
+    ? { backgroundImage: theme.gradient, backgroundSize: "cover" as const }
+    : { background: "#1B2A4A" };
+
   const bg = (
     <>
-      {backgroundUrl ? (
-        <div
-          className="absolute inset-0 -z-10 scale-110 blur-2xl"
-          style={{
-            backgroundImage: `url('${backgroundUrl}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 -z-10" style={{ backgroundImage: theme.gradient }} />
-      )}
       {backgroundUrl && (
-        <div
-          className="absolute inset-0 -z-10"
-          style={{
-            backgroundImage: `linear-gradient(180deg, ${theme.overlayTop} 0%, ${theme.overlayBottom} 100%)`,
-          }}
-        />
+        <>
+          <div
+            className="absolute inset-0 scale-110 blur-2xl"
+            style={{
+              backgroundImage: `url('${backgroundUrl}')`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `linear-gradient(180deg, ${theme.overlayTop} 0%, ${theme.overlayBottom} 100%)`,
+            }}
+          />
+        </>
       )}
       <div className="absolute top-0 inset-x-0 h-[3px]" style={{ background: theme.accent }} />
     </>
@@ -194,11 +198,10 @@ export default function ClinicConsole({
   // ── IDENTIFIED LAYOUT ────────────────────────────────────────────────────
   if (session) {
     return (
-      <div className="min-h-dvh relative text-white">
+      <div className="min-h-dvh relative overflow-hidden text-white" style={parentStyle}>
         {bg}
-
-        {/* Compact header */}
-        <div className="px-4 pt-6 pb-4 sm:px-6 sm:pt-8 sm:pb-6 flex items-start justify-between gap-3">
+        {/* Compact header (relative + z-10 stacks above the absolute bg layers) */}
+        <div className="relative z-10 px-4 pt-6 pb-4 sm:px-6 sm:pt-8 sm:pb-6 flex items-start justify-between gap-3">
           <div>
             <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.35em] text-white/60">
               {clinicName}
@@ -237,7 +240,7 @@ export default function ClinicConsole({
         </div>
 
         {/* Category cards */}
-        <div className="px-4 pb-6 sm:px-6 sm:pb-8 space-y-4">
+        <div className="relative z-10 px-4 pb-6 sm:px-6 sm:pb-8 space-y-4">
           {categories.map((cat) => (
             <section key={cat.title}>
               <h3 className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-white/55 mb-2 px-1">
