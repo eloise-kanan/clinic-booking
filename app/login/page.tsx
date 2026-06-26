@@ -52,9 +52,7 @@ export default async function LoginPage() {
         <Suspense fallback={<div className="bg-white text-stone-900 rounded-2xl shadow-2xl p-6">Loading…</div>}>
           <LoginForm />
         </Suspense>
-        <div className="text-white/70">
-          <PoweredByKanan />
-        </div>
+        <PoweredByKanan variant="light" />
       </div>
     </main>
   );
