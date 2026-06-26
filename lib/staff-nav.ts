@@ -80,15 +80,19 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
     ];
   } else if (role === "owner") {
     sections = [
-      // Top-level — Overview + performance dashboards + utilization. All
-      // analytics surfaces sit here, one click from Home.
+      // Top-level
       {
+        items: [{ href: "/home", label: "🏠 Home" }],
+      },
+      // Expandable: Performance — all analytics surfaces nested here.
+      {
+        title: "Performance",
+        expandable: true,
         items: [
-          { href: "/home", label: "🏠 Home" },
-          { href: "/owner", label: "📊 Overview", feature: "analytics.overview" },
-          { href: "/owner/utilization", label: "📈 Utilization", feature: "analytics.utilization" },
-          { href: "/owner/doctor-performance", label: "👨‍⚕️ Doctor performance", feature: "analytics.doctor_perf" },
-          { href: "/owner/nurse-performance", label: "👩‍⚕️ Nurse performance", feature: "analytics.nurse_perf" },
+          { href: "/owner", label: "Overview", feature: "analytics.overview" },
+          { href: "/owner/utilization", label: "Utilization", feature: "analytics.utilization" },
+          { href: "/owner/doctor-performance", label: "Doctors", feature: "analytics.doctor_perf" },
+          { href: "/owner/nurse-performance", label: "Nurses", feature: "analytics.nurse_perf" },
         ],
       },
       // Expandable: Bookings (patient-facing booking ops)
