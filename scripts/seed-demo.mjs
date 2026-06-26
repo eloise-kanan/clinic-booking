@@ -20,9 +20,11 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
+import bcrypt from "bcryptjs";
 
 const CONFIRM = process.argv.includes("--confirm");
 const STAFF_PASSWORD = "demo1234";
+const TERMINAL_PASSWORD = "terminal123";  // owner can change later via /owner/staff
 
 // ─── Load env from .env.local ─────────────────────────────────────────────
 function loadEnv() {
@@ -51,21 +53,24 @@ const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
 // Login IDs derived from full names (algorithm: lib/login-id.ts).
 // Synthetic auth email is `${loginId}@kanan-clinic.local`.
+// Demo PINs follow a memorable scheme: doctors 60000X, nurses 70000X.
 const DOCTORS = [
-  { name: "Dr. Lee Chee Hong",  loginId: "cheehong_lee", slot: 30 },
-  { name: "Dr. Sarah Wong",     loginId: "sarah_wong",   slot: 30 },  // Western order — manually corrected
-  { name: "Dr. Aiman Rashid",   loginId: "aiman_rashid", slot: 45 },  // Malay no particle — manually given_family
-  { name: "Dr. Tan Mei Yee",    loginId: "meiyee_tan",   slot: 30 },
+  { name: "Dr. Lee Chee Hong",  loginId: "cheehong_lee", slot: 30, pin: "600001" },
+  { name: "Dr. Sarah Wong",     loginId: "sarah_wong",   slot: 30, pin: "600002" },  // Western order — manually corrected
+  { name: "Dr. Aiman Rashid",   loginId: "aiman_rashid", slot: 45, pin: "600003" },  // Malay no particle — manually given_family
+  { name: "Dr. Tan Mei Yee",    loginId: "meiyee_tan",   slot: 30, pin: "600004" },
 ];
 
 const NURSES = [
-  { name: "Norhaiza Binti Ismail", loginId: "norhaiza_ismail" },
-  { name: "Jenny Tan Hui Mei",     loginId: "jenny_tan" },        // Western+Chinese mix — simplified
-  { name: "Priya Devi",            loginId: "priya_devi" },       // Indian no particle — manually given_family
-  { name: "Aini Salleh",           loginId: "aini_salleh" },      // Malay no particle — manually given_family
-  { name: "Chong Li Wen",          loginId: "liwen_chong" },
-  { name: "Farah Liyana",          loginId: "farah_liyana" },     // Malay no particle — manually given_family
+  { name: "Norhaiza Binti Ismail", loginId: "norhaiza_ismail", pin: "700001" },
+  { name: "Jenny Tan Hui Mei",     loginId: "jenny_tan",       pin: "700002" },        // Western+Chinese mix — simplified
+  { name: "Priya Devi",            loginId: "priya_devi",      pin: "700003" },       // Indian no particle — manually given_family
+  { name: "Aini Salleh",           loginId: "aini_salleh",     pin: "700004" },      // Malay no particle — manually given_family
+  { name: "Chong Li Wen",          loginId: "liwen_chong",     pin: "700005" },
+  { name: "Farah Liyana",          loginId: "farah_liyana",    pin: "700006" },     // Malay no particle — manually given_family
 ];
+
+const TERMINAL = { loginId: "terminal", name: "Clinic Terminal" };
 
 const SYNTH_DOMAIN = "kanan-clinic.local";
 function authEmail(loginId) { return `${loginId}@${SYNTH_DOMAIN}`; }
@@ -177,16 +182,23 @@ async function createStaff(role, list) {
     if (cErr || !user.user) {
       throw new Error(`Auth create failed for ${s.loginId}: ${cErr?.message}`);
     }
-    const { error: pErr } = await admin.from("profiles").insert({
+    const profileRow = {
       id: user.user.id,
       role,
       full_name: s.name,
       login_id: s.loginId,
       active: true,
-    });
+    };
+    // Set demo PIN for nurse/doctor (hash with bcrypt — same as the runtime
+    // helper uses). Owner has no PIN; terminal authenticates by password.
+    if (s.pin) {
+      profileRow.pin_hash = await bcrypt.hash(s.pin, 10);
+      profileRow.pin_set_at = new Date().toISOString();
+    }
+    const { error: pErr } = await admin.from("profiles").insert(profileRow);
     if (pErr) {
       await admin.auth.admin.deleteUser(user.user.id).catch(() => {});
-      throw new Error(`Profile insert failed for ${s.loginId}: ${pErr.message}. Did the login_id migration run?`);
+      throw new Error(`Profile insert failed for ${s.loginId}: ${pErr.message}. Did the login_id + terminal_pin migrations run?`);
     }
     if (role === "doctor") {
       const { error: dErr } = await admin.from("doctors").insert({
@@ -198,9 +210,34 @@ async function createStaff(role, list) {
       if (dErr) throw new Error(`Doctor insert failed for ${s.loginId}: ${dErr.message}`);
     }
     created.push({ ...s, profileId: user.user.id });
-    console.log(`  ✓ ${role.padEnd(7)} ${s.loginId.padEnd(20)} ${s.name}`);
+    console.log(`  ✓ ${role.padEnd(7)} ${s.loginId.padEnd(20)} ${s.name}${s.pin ? "  PIN " + s.pin : ""}`);
   }
   return created;
+}
+
+async function createTerminal() {
+  const email = authEmail(TERMINAL.loginId);
+  const { data: user, error: cErr } = await admin.auth.admin.createUser({
+    email,
+    password: TERMINAL_PASSWORD,
+    email_confirm: true,
+  });
+  if (cErr || !user.user) {
+    throw new Error(`Terminal auth create failed: ${cErr?.message}`);
+  }
+  const { error: pErr } = await admin.from("profiles").insert({
+    id: user.user.id,
+    role: "terminal",
+    full_name: TERMINAL.name,
+    login_id: TERMINAL.loginId,
+    active: true,
+  });
+  if (pErr) {
+    await admin.auth.admin.deleteUser(user.user.id).catch(() => {});
+    throw new Error(`Terminal profile insert failed: ${pErr.message}. Did the terminal_pin migration run?`);
+  }
+  console.log(`  ✓ terminal ${TERMINAL.loginId.padEnd(20)} ${TERMINAL.name}  pwd "${TERMINAL_PASSWORD}"`);
+  return user.user.id;
 }
 
 async function seedWorkingHours(doctors) {
@@ -415,6 +452,7 @@ async function main() {
   console.log("Creating staff...");
   const doctors = await createStaff("doctor", DOCTORS);
   const nurses  = await createStaff("nurse",  NURSES);
+  await createTerminal();
   console.log("");
 
   console.log("Seeding working hours...");
@@ -434,10 +472,14 @@ async function main() {
   console.log("");
 
   console.log("✓ Done.");
-  console.log(`\nStaff logins (login ID + password '${STAFF_PASSWORD}'):`);
-  for (const d of DOCTORS) console.log(`  doctor   ${d.loginId.padEnd(20)} ${d.name}`);
-  for (const n of NURSES)  console.log(`  nurse    ${n.loginId.padEnd(20)} ${n.name}`);
-  console.log(`  owner    (unchanged — log in with your email as before)`);
+  console.log(`\nClinic terminal (shared reception sign-in):`);
+  console.log(`  identifier: terminal`);
+  console.log(`  password:   ${TERMINAL_PASSWORD}`);
+
+  console.log(`\nIndividual logins (login ID + password '${STAFF_PASSWORD}', + 6-digit PIN for actions):`);
+  for (const d of DOCTORS) console.log(`  doctor   ${d.loginId.padEnd(20)} PIN ${d.pin}  ${d.name}`);
+  for (const n of NURSES)  console.log(`  nurse    ${n.loginId.padEnd(20)} PIN ${n.pin}  ${n.name}`);
+  console.log(`  owner    (unchanged — log in with your email as before; no PIN)`);
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
