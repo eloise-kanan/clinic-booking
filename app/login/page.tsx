@@ -8,29 +8,34 @@ export default async function LoginPage() {
   const { theme, backgroundUrl } = await loadTerminalConfig();
 
   return (
-    <main className="relative min-h-dvh flex items-center justify-center px-5 py-10 text-white overflow-hidden">
-      {/* Themed background — gradient OR blurred photo + tinted overlay,
-          identical to the clinic-terminal lockscreen so the sign-in flow
-          feels like the doorway to the same console. */}
-      {backgroundUrl ? (
-        <div
-          className="absolute inset-0 -z-10 scale-110 blur-2xl"
-          style={{
-            backgroundImage: `url('${backgroundUrl}')`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-      ) : (
-        <div className="absolute inset-0 -z-10" style={{ backgroundImage: theme.gradient }} />
-      )}
+    <main
+      className="relative min-h-dvh flex items-center justify-center px-5 py-10 text-white overflow-hidden"
+      // Theme gradient applied directly to <main> so it always paints, even
+      // when no custom photo URL is set. Photo (if any) is layered on top
+      // with blur + the theme's dark overlay for legibility.
+      style={
+        !backgroundUrl
+          ? { backgroundImage: theme.gradient, backgroundSize: "cover" }
+          : undefined
+      }
+    >
       {backgroundUrl && (
-        <div
-          className="absolute inset-0 -z-10"
-          style={{
-            backgroundImage: `linear-gradient(180deg, ${theme.overlayTop} 0%, ${theme.overlayBottom} 100%)`,
-          }}
-        />
+        <>
+          <div
+            className="absolute inset-0 scale-110 blur-2xl"
+            style={{
+              backgroundImage: `url('${backgroundUrl}')`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: `linear-gradient(180deg, ${theme.overlayTop} 0%, ${theme.overlayBottom} 100%)`,
+            }}
+          />
+        </>
       )}
       <div className="absolute top-0 inset-x-0 h-[3px]" style={{ background: theme.accent }} />
 
