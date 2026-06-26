@@ -133,6 +133,7 @@ export default async function HomePage() {
       >
         <ClinicConsole
           clinicName={clinicName}
+          backgroundUrl={process.env.NEXT_PUBLIC_TERMINAL_BG_URL || null}
           pending={(pendingList || []).map((b) => ({
             id: b.id,
             slot_start: b.slot_start,

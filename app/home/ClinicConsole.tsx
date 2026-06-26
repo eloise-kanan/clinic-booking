@@ -4,6 +4,7 @@
 // PIN unlock (added in Phase 4). Read-only here.
 
 import Link from "next/link";
+import ClinicConsoleHero from "./ClinicConsoleHero";
 
 type PendingBooking = {
   id: string;
@@ -66,12 +67,14 @@ function daysAgo(iso: string | null): number | null {
 
 export default function ClinicConsole({
   clinicName,
+  backgroundUrl,
   pending,
   today,
   recalls,
   doctors,
 }: {
   clinicName: string;
+  backgroundUrl?: string | null;
   pending: PendingBooking[];
   today: TodayBooking[];
   recalls: RecallPatient[];
@@ -95,17 +98,10 @@ export default function ClinicConsole({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">{clinicName} — Clinic console</h2>
-          <p className="text-xs text-stone-500">
-            Read-only overview. Confirming bookings, sending reminders, opening HR pages require your 6-digit PIN.
-          </p>
-        </div>
-        <div className="text-xs text-stone-500">
-          {new Date().toLocaleString("en-GB", { weekday: "long", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hour12: false })}
-        </div>
-      </div>
+      <ClinicConsoleHero clinicName={clinicName} backgroundUrl={backgroundUrl} />
+      <p className="text-[11px] text-stone-500 text-center -mt-2 mb-1">
+        Read-only overview. Confirming bookings, sending reminders, opening HR pages require your 6-digit PIN.
+      </p>
 
       {/* Pending bookings */}
       <section className="bg-white border border-stone-200 rounded-lg p-4">
