@@ -9,7 +9,8 @@ import DutyCalendar from "./DutyCalendar";
 export const dynamic = "force-dynamic";
 
 export default async function DutyCalendarPage() {
-  const { profile } = await requireStaff(["nurse", "owner", "doctor"]);
+  const { profile } = await requireStaff(["nurse", "owner", "doctor", "terminal"]);
+  const isTerminal = profile.role === "terminal";
   const admin = createAdminClient();
 
   const { count } = await admin
@@ -25,9 +26,9 @@ export default async function DutyCalendarPage() {
 
   return (
     <StaffShell
-      role={profile.role as "owner" | "nurse" | "doctor"}
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, count || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse" | "doctor")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
     >
       <h2 className="text-base font-medium mb-1">Duty calendar</h2>
       <p className="text-xs text-stone-500 mb-4">

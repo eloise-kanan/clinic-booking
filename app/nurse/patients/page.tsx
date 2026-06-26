@@ -6,7 +6,8 @@ import { staffNav } from "@/lib/staff-nav";
 export const dynamic = "force-dynamic";
 
 export default async function PatientsPage() {
-  const { profile } = await requireStaff(["nurse", "owner"]);
+  const { profile } = await requireStaff(["nurse", "owner", "terminal"]);
+  const isTerminal = profile.role === "terminal";
   const admin = createAdminClient();
   const { data: patients } = await admin
     .from("patients")
@@ -20,9 +21,9 @@ export default async function PatientsPage() {
 
   return (
     <StaffShell
-      role="nurse"
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, count || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
     >
       <h2 className="text-base font-medium mb-4">Patients</h2>
       <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">

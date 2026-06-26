@@ -1,0 +1,497 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Goodcare Dental PJ — Mayang Plaza, SS26 · Open Till 9pm, 7 Days</title>
+<meta name="description" content="Goodcare Dental PJ — neighbourhood dentists in Taman Mayang Jaya, SS26 Petaling Jaya. General dentistry, braces, implants, whitening. Open Mon–Sat 9am–9pm, Sun 9am–8pm." />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          navy: { DEFAULT: '#1B2A4A', 700: '#243559', 800: '#1B2A4A', 900: '#121E36' },
+          gold: { DEFAULT: '#C9A227', 600: '#B8901E', 100: '#F4E7BE' },
+          paper: { DEFAULT: '#F4F1EA', 100: '#FAF8F2' }
+        },
+        fontFamily: {
+          sans: ['Inter', 'ui-sans-serif', 'system-ui'],
+          display: ['Fraunces', 'ui-serif', 'Georgia']
+        }
+      }
+    }
+  };
+</script>
+<style>
+  html { scroll-behavior: smooth; }
+  body { background: #F4F1EA; color: #1B2A4A; }
+  .grain {
+    background-image:
+      radial-gradient(circle at 20% 30%, rgba(201,162,39,0.06), transparent 40%),
+      radial-gradient(circle at 80% 70%, rgba(27,42,74,0.05), transparent 45%);
+  }
+  .hero-pattern {
+    background:
+      linear-gradient(135deg, #1B2A4A 0%, #243559 60%, #1B2A4A 100%);
+  }
+  .hero-pattern::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(244,231,190,0.08) 1px, transparent 0);
+    background-size: 24px 24px;
+    pointer-events: none;
+  }
+  .gold-rule { background: linear-gradient(90deg, transparent, #C9A227, transparent); }
+  .card { transition: transform .2s ease, box-shadow .2s ease; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px -10px rgba(27,42,74,0.18); }
+  .pill { background: rgba(244,231,190,0.18); color: #F4E7BE; border: 1px solid rgba(201,162,39,0.3); }
+</style>
+</head>
+<body class="font-sans antialiased">
+
+<!-- ============== HEADER ============== -->
+<header class="sticky top-0 z-40 backdrop-blur bg-paper/85 border-b border-navy/10">
+  <div class="max-w-6xl mx-auto px-5 h-16 flex items-center justify-between">
+    <a href="#top" class="flex items-center gap-2.5">
+      <span class="w-9 h-9 rounded-full bg-navy text-paper grid place-items-center font-display text-lg font-semibold">G</span>
+      <span class="font-display text-lg font-medium tracking-tight">Goodcare<span class="text-gold"> · </span>PJ</span>
+    </a>
+    <nav class="hidden md:flex items-center gap-7 text-sm text-navy/80">
+      <a href="#services" class="hover:text-navy">Services</a>
+      <a href="#doctors" class="hover:text-navy">Doctors</a>
+      <a href="#why" class="hover:text-navy">Why us</a>
+      <a href="#visit" class="hover:text-navy">Visit</a>
+      <a href="#faq" class="hover:text-navy">FAQ</a>
+    </nav>
+    <div class="flex items-center gap-2">
+      <div class="hidden sm:inline-flex items-center rounded-full border border-navy/15 text-xs overflow-hidden">
+        <button class="px-2.5 py-1 bg-navy text-paper">EN</button>
+        <button class="px-2.5 py-1 text-navy/70 hover:bg-navy/5">中文</button>
+        <button class="px-2.5 py-1 text-navy/70 hover:bg-navy/5">BM</button>
+      </div>
+      <a href="/book" class="inline-flex items-center gap-1.5 rounded-full bg-gold text-navy-900 font-semibold text-sm px-4 py-2 hover:bg-gold-600 hover:text-paper transition">Book now →</a>
+    </div>
+  </div>
+</header>
+
+<!-- ============== HERO ============== -->
+<section id="top" class="hero-pattern relative overflow-hidden text-paper">
+  <div class="relative max-w-6xl mx-auto px-5 pt-16 pb-24 md:pt-24 md:pb-32 grid md:grid-cols-12 gap-10 items-center">
+    <div class="md:col-span-7">
+      <span class="inline-flex items-center gap-2 pill rounded-full px-3 py-1 text-xs tracking-wide">
+        <span class="w-1.5 h-1.5 rounded-full bg-gold"></span>
+        Open 7 days · Mayang Plaza, SS26
+      </span>
+      <h1 class="font-display text-4xl md:text-6xl leading-[1.05] tracking-tight mt-5">
+        Your neighbourhood dentist in PJ — <span class="text-gold">open till 9pm,</span> every day.
+      </h1>
+      <p class="mt-5 text-paper/85 text-lg max-w-xl leading-relaxed">
+        Friendly, family-run dental care at Taman Mayang Jaya. Walk-ins welcome,
+        WhatsApp us, or book a slot online in under a minute.
+      </p>
+      <div class="mt-7 flex flex-wrap gap-3">
+        <a href="https://wa.me/601110628168?text=Hi%20Goodcare%2C%20I%27d%20like%20to%20book%20an%20appointment." class="inline-flex items-center gap-2 rounded-full bg-paper text-navy font-semibold px-5 py-3 hover:bg-paper-100 transition">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.5 3.5A11.5 11.5 0 0 0 3 18l-1 5 5.2-1.4A11.5 11.5 0 1 0 20.5 3.5Zm-8.6 18a9.5 9.5 0 0 1-5-1.4l-.3-.2-3 .8.8-3-.2-.3a9.5 9.5 0 1 1 7.7 4.1Zm5.5-7.1c-.3-.2-1.8-.9-2-1s-.5-.2-.7.1-.8 1-1 1.2-.4.2-.7.1a7.7 7.7 0 0 1-3.9-3.4c-.3-.5.3-.4.8-1.4a.4.4 0 0 0 0-.4l-1-2.3c-.2-.5-.5-.4-.7-.4h-.6a1.1 1.1 0 0 0-.8.4 3.4 3.4 0 0 0-1 2.4c0 1.4 1 2.7 1.2 2.9s2 3.1 4.9 4.4a17.5 17.5 0 0 0 1.6.6 4 4 0 0 0 1.8.1 3 3 0 0 0 2-1.4 2.5 2.5 0 0 0 .1-1.4c0-.1-.2-.2-.5-.4Z"/></svg>
+          WhatsApp us
+        </a>
+        <a href="/book" class="inline-flex items-center gap-2 rounded-full border border-paper/40 text-paper font-semibold px-5 py-3 hover:bg-paper/10 transition">
+          Book online
+        </a>
+      </div>
+      <div class="mt-8 flex flex-wrap items-center gap-x-7 gap-y-3 text-sm text-paper/75">
+        <div class="flex items-center gap-2">
+          <span class="text-gold">★★★★★</span>
+          <span>100% recommended on Hokucare</span>
+        </div>
+        <div class="hidden sm:block w-px h-4 bg-paper/20"></div>
+        <div>Two BDS dentists on staff</div>
+        <div class="hidden sm:block w-px h-4 bg-paper/20"></div>
+        <div>EN · 中文 · BM</div>
+      </div>
+    </div>
+    <div class="md:col-span-5">
+      <div class="relative">
+        <div class="absolute -inset-3 bg-gold/15 rounded-3xl blur-2xl"></div>
+        <div class="relative aspect-[4/5] rounded-3xl bg-gradient-to-br from-paper-100 to-paper border border-paper/30 shadow-2xl overflow-hidden">
+          <div class="absolute inset-0 grid place-items-center">
+            <!-- Stylized tooth + sparkle mark -->
+            <svg viewBox="0 0 200 240" class="w-3/5 text-navy/90" fill="none" stroke="currentColor" stroke-width="3">
+              <path d="M60 30c-18 0-30 14-30 36 0 30 14 56 24 96 4 16 10 30 18 30 8 0 10-22 14-36 4-14 12-14 16 0 4 14 6 36 14 36 8 0 14-14 18-30 10-40 24-66 24-96 0-22-12-36-30-36-12 0-18 6-30 6s-18-6-30-6Z" stroke-linejoin="round"/>
+              <path d="M150 60l4 10 10 4-10 4-4 10-4-10-10-4 10-4z" fill="#C9A227" stroke="#C9A227"/>
+              <path d="M50 100l2 6 6 2-6 2-2 6-2-6-6-2 6-2z" fill="#C9A227" stroke="#C9A227"/>
+            </svg>
+          </div>
+          <div class="absolute bottom-5 left-5 right-5 bg-navy text-paper rounded-2xl p-4 shadow-lg">
+            <div class="text-[11px] uppercase tracking-wider text-gold/90">Today</div>
+            <div class="text-sm mt-0.5 font-medium">9:00 AM – 9:00 PM</div>
+            <div class="text-xs text-paper/70 mt-1">Walk-in or book online</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="h-px gold-rule"></div>
+</section>
+
+<!-- ============== TRUST STRIP ============== -->
+<section class="bg-paper-100 border-b border-navy/10">
+  <div class="max-w-6xl mx-auto px-5 py-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+    <div>
+      <div class="font-display text-3xl text-navy">9–9</div>
+      <div class="text-xs text-navy/60 mt-1">Mon–Sat opening</div>
+    </div>
+    <div>
+      <div class="font-display text-3xl text-navy">7 days</div>
+      <div class="text-xs text-navy/60 mt-1">Open every week</div>
+    </div>
+    <div>
+      <div class="font-display text-3xl text-navy">3 langs</div>
+      <div class="text-xs text-navy/60 mt-1">EN · 中文 · BM</div>
+    </div>
+    <div>
+      <div class="font-display text-3xl text-navy">100%</div>
+      <div class="text-xs text-navy/60 mt-1">Patient recommended</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== SERVICES ============== -->
+<section id="services" class="grain">
+  <div class="max-w-6xl mx-auto px-5 py-20">
+    <div class="max-w-2xl">
+      <div class="text-xs uppercase tracking-[0.2em] text-gold-600 font-semibold">What we do</div>
+      <h2 class="font-display text-3xl md:text-4xl mt-2 tracking-tight">Everyday dentistry, done properly.</h2>
+      <p class="mt-3 text-navy/70">From a routine clean to a wisdom-tooth surgery, you can see one of our dentists without leaving SS26.</p>
+    </div>
+
+    <div class="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <!-- 12 standard treatments -->
+      <!-- Repeat the card markup; service.title / service.desc / icon path differ -->
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3h8l3 5-7 13L5 8z"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Scaling &amp; polishing</h3>
+        <p class="mt-1.5 text-sm text-navy/70">A routine deep clean — recommended every six months.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Fillings</h3>
+        <p class="mt-1.5 text-sm text-navy/70">Tooth-coloured composite fillings for cavities and chips.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M6 6v12a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3V6"/><path d="M10 10v6M14 10v6"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Root canal</h3>
+        <p class="mt-1.5 text-sm text-navy/70">Save a badly decayed tooth instead of pulling it out.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l3 6 6 1-4.5 4.5L18 21l-6-3-6 3 1.5-6.5L3 10l6-1z"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Wisdom tooth surgery</h3>
+        <p class="mt-1.5 text-sm text-navy/70">Routine extraction or surgical removal of impacted molars.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M2 12h4M18 12h4M5 5l3 3M16 16l3 3M5 19l3-3M16 8l3-3"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Teeth whitening</h3>
+        <p class="mt-1.5 text-sm text-navy/70">In-chair whitening for a noticeably brighter smile.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h16"/><path d="M7 4v16M17 4v16"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Braces</h3>
+        <p class="mt-1.5 text-sm text-navy/70">Traditional metal &amp; ceramic braces for teens and adults.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6c4 0 4 12 8 12s4-12 8-12"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Clear aligners</h3>
+        <p class="mt-1.5 text-sm text-navy/70">Invisible aligners — straighten your teeth, quietly.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M9 6h6M8 21h8"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Implants</h3>
+        <p class="mt-1.5 text-sm text-navy/70">A permanent replacement for one or more lost teeth.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="3"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Crowns &amp; veneers</h3>
+        <p class="mt-1.5 text-sm text-navy/70">Restore broken teeth, or reshape the front ones.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3a4 4 0 0 1 4 4c0 2-1 3-1 5s2 4 2 6a3 3 0 0 1-5 2 3 3 0 0 1-5-2c0-2 2-4 2-6s-1-3-1-5a4 4 0 0 1 4-4z"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Children's dentistry</h3>
+        <p class="mt-1.5 text-sm text-navy/70">Gentle care for first visits, fillings, and sealants.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l4-7h10l4 7-9 9z"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Gum treatment</h3>
+        <p class="mt-1.5 text-sm text-navy/70">For bleeding gums, bad breath, and periodontal disease.</p>
+      </div>
+      <div class="card bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="w-10 h-10 rounded-lg bg-paper grid place-items-center text-navy"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v6M12 14v8M2 12h6M16 12h6"/></svg></div>
+        <h3 class="mt-4 font-display text-lg">Emergency &amp; after-hours</h3>
+        <p class="mt-1.5 text-sm text-navy/70">Sudden pain or knocked-out tooth? Call us — we're open late.</p>
+      </div>
+    </div>
+
+    <p class="mt-8 text-sm text-navy/60">
+      Not sure what you need? <a href="https://wa.me/601110628168" class="text-gold-600 font-medium underline underline-offset-4 hover:text-gold">WhatsApp us</a> and we'll help you figure it out.
+    </p>
+  </div>
+</section>
+
+<!-- ============== DOCTORS ============== -->
+<section id="doctors" class="bg-navy text-paper">
+  <div class="max-w-6xl mx-auto px-5 py-20">
+    <div class="max-w-2xl">
+      <div class="text-xs uppercase tracking-[0.2em] text-gold font-semibold">Meet your dentists</div>
+      <h2 class="font-display text-3xl md:text-4xl mt-2 tracking-tight">Two dentists. One small clinic. Every patient seen by name.</h2>
+      <p class="mt-3 text-paper/70">No revolving door of locums. You'll see the same dentist for your follow-ups.</p>
+    </div>
+
+    <div class="mt-10 grid md:grid-cols-2 gap-5">
+      <div class="bg-navy-700 rounded-3xl p-7 border border-paper/10 flex gap-5 items-start">
+        <div class="shrink-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-paper/15 to-paper/5 grid place-items-center font-display text-3xl text-gold border border-paper/10">AL</div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-gold/90">Dr.</div>
+          <h3 class="font-display text-xl mt-0.5">April Lim Zhi Xin</h3>
+          <div class="text-paper/70 text-sm">Bachelor of Dental Surgery (BDS)</div>
+          <p class="mt-3 text-sm text-paper/75 leading-relaxed">Special interest in orthodontics and aesthetic dentistry. Patient, methodical, and especially good with nervous first-timers.</p>
+        </div>
+      </div>
+      <div class="bg-navy-700 rounded-3xl p-7 border border-paper/10 flex gap-5 items-start">
+        <div class="shrink-0 w-24 h-24 rounded-2xl bg-gradient-to-br from-paper/15 to-paper/5 grid place-items-center font-display text-3xl text-gold border border-paper/10">TK</div>
+        <div>
+          <div class="text-xs uppercase tracking-wider text-gold/90">Dr.</div>
+          <h3 class="font-display text-xl mt-0.5">Teo Kee Khing</h3>
+          <div class="text-paper/70 text-sm">Bachelor of Dental Surgery (BDS)</div>
+          <p class="mt-3 text-sm text-paper/75 leading-relaxed">Handles wisdom-tooth surgery, implants, and most of the after-hours emergency cases. Speaks English, Mandarin, and Bahasa.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== WHY US ============== -->
+<section id="why" class="grain">
+  <div class="max-w-6xl mx-auto px-5 py-20">
+    <div class="max-w-2xl">
+      <div class="text-xs uppercase tracking-[0.2em] text-gold-600 font-semibold">Why Goodcare</div>
+      <h2 class="font-display text-3xl md:text-4xl mt-2 tracking-tight">Built around your schedule, not ours.</h2>
+    </div>
+    <div class="mt-10 grid md:grid-cols-3 gap-5">
+      <div class="bg-white rounded-2xl p-7 border border-navy/8">
+        <div class="w-11 h-11 rounded-xl bg-gold-100 grid place-items-center text-gold-600 font-display font-semibold">01</div>
+        <h3 class="font-display text-xl mt-4">Late, every day</h3>
+        <p class="mt-2 text-sm text-navy/70 leading-relaxed">9am–9pm Mon–Sat, 9am–8pm Sun. You don't need to take leave from work to see a dentist.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-7 border border-navy/8">
+        <div class="w-11 h-11 rounded-xl bg-gold-100 grid place-items-center text-gold-600 font-display font-semibold">02</div>
+        <h3 class="font-display text-xl mt-4">Same dentist, every visit</h3>
+        <p class="mt-2 text-sm text-navy/70 leading-relaxed">A two-dentist family clinic. Your fillings and follow-ups are seen through by the person who started them.</p>
+      </div>
+      <div class="bg-white rounded-2xl p-7 border border-navy/8">
+        <div class="w-11 h-11 rounded-xl bg-gold-100 grid place-items-center text-gold-600 font-display font-semibold">03</div>
+        <h3 class="font-display text-xl mt-4">Clear, upfront pricing</h3>
+        <p class="mt-2 text-sm text-navy/70 leading-relaxed">We tell you the cost before the procedure starts. WhatsApp us first for an estimate — no surprises.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============== REVIEWS ============== -->
+<section class="bg-paper-100 border-y border-navy/10">
+  <div class="max-w-6xl mx-auto px-5 py-20">
+    <div class="flex items-end justify-between flex-wrap gap-3">
+      <div class="max-w-2xl">
+        <div class="text-xs uppercase tracking-[0.2em] text-gold-600 font-semibold">From our patients</div>
+        <h2 class="font-display text-3xl md:text-4xl mt-2 tracking-tight">14 reviews. 100% would recommend.</h2>
+      </div>
+      <a href="https://www.hokucare.com/a/1210/klinik-pergigian-goodcare-dental-pj" class="text-sm text-navy/70 hover:text-navy underline underline-offset-4">Read all on Hokucare →</a>
+    </div>
+    <div class="mt-10 grid md:grid-cols-3 gap-5">
+      <figure class="bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="text-gold">★★★★★</div>
+        <blockquote class="mt-3 text-navy/85 leading-relaxed">"Came in for scaling after work — they were still open at 8:30pm. Dentist was thorough and not pushy about extra treatments. Will be coming back."</blockquote>
+        <figcaption class="mt-4 text-xs text-navy/55">— Patient review, SS2</figcaption>
+      </figure>
+      <figure class="bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="text-gold">★★★★★</div>
+        <blockquote class="mt-3 text-navy/85 leading-relaxed">"Brought my mum for a wisdom-tooth extraction. Dr. Teo explained every step in Mandarin so she felt at ease. Healing was uneventful."</blockquote>
+        <figcaption class="mt-4 text-xs text-navy/55">— Patient review, Damansara Utama</figcaption>
+      </figure>
+      <figure class="bg-white rounded-2xl p-6 border border-navy/8">
+        <div class="text-gold">★★★★★</div>
+        <blockquote class="mt-3 text-navy/85 leading-relaxed">"Started Invisalign here last year. Dr. April is patient about answering my many questions and the price was honest from the start."</blockquote>
+        <figcaption class="mt-4 text-xs text-navy/55">— Patient review, Kelana Jaya</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ============== VISIT / LOCATION ============== -->
+<section id="visit">
+  <div class="max-w-6xl mx-auto px-5 py-20 grid md:grid-cols-2 gap-12 items-start">
+    <div>
+      <div class="text-xs uppercase tracking-[0.2em] text-gold-600 font-semibold">Visit us</div>
+      <h2 class="font-display text-3xl md:text-4xl mt-2 tracking-tight">Mayang Plaza, SS26.</h2>
+      <p class="mt-3 text-navy/70">Ground-floor unit on Jalan SS26/9. Plenty of street parking out front; we're a 5-min walk from Kelana Jaya LRT.</p>
+
+      <dl class="mt-8 space-y-5 text-sm">
+        <div class="flex gap-4">
+          <dt class="w-24 shrink-0 text-navy/55 uppercase text-xs tracking-wider mt-0.5">Address</dt>
+          <dd class="text-navy/90 leading-relaxed">1B-1, Jalan SS26/9, Mayang Plaza,<br>Taman Mayang Jaya, 47301 Petaling Jaya, Selangor</dd>
+        </div>
+        <div class="flex gap-4">
+          <dt class="w-24 shrink-0 text-navy/55 uppercase text-xs tracking-wider mt-0.5">Hours</dt>
+          <dd class="text-navy/90 leading-relaxed">
+            Mon – Sat &nbsp;&nbsp; 9:00 AM – 9:00 PM<br>
+            Sunday &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 9:00 AM – 8:00 PM
+          </dd>
+        </div>
+        <div class="flex gap-4">
+          <dt class="w-24 shrink-0 text-navy/55 uppercase text-xs tracking-wider mt-0.5">Phone</dt>
+          <dd class="text-navy/90"><a href="tel:+601110628168" class="hover:text-gold-600">+60 11-1062 8168</a></dd>
+        </div>
+        <div class="flex gap-4">
+          <dt class="w-24 shrink-0 text-navy/55 uppercase text-xs tracking-wider mt-0.5">Email</dt>
+          <dd class="text-navy/90"><a href="mailto:goodcaredentalpj@gmail.com" class="hover:text-gold-600">goodcaredentalpj@gmail.com</a></dd>
+        </div>
+      </dl>
+
+      <div class="mt-8 flex flex-wrap gap-3">
+        <a href="https://wa.me/601110628168" class="inline-flex items-center gap-2 rounded-full bg-navy text-paper font-semibold px-5 py-3 hover:bg-navy-700 transition">WhatsApp us</a>
+        <a href="/book" class="inline-flex items-center gap-2 rounded-full border border-navy/20 text-navy font-semibold px-5 py-3 hover:bg-navy/5 transition">Book online</a>
+      </div>
+    </div>
+
+    <div class="rounded-3xl overflow-hidden border border-navy/10 shadow-lg aspect-[4/3] bg-paper-100">
+      <iframe
+        title="Goodcare Dental PJ on Google Maps"
+        src="https://www.google.com/maps?q=Mayang+Plaza+Jalan+SS26%2F9+Petaling+Jaya&output=embed"
+        class="w-full h-full"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"></iframe>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FAQ ============== -->
+<section id="faq" class="bg-paper-100 border-t border-navy/10">
+  <div class="max-w-3xl mx-auto px-5 py-20">
+    <div class="text-xs uppercase tracking-[0.2em] text-gold-600 font-semibold">FAQ</div>
+    <h2 class="font-display text-3xl md:text-4xl mt-2 tracking-tight">Common questions.</h2>
+
+    <div class="mt-10 divide-y divide-navy/10 border-y border-navy/10">
+      <details class="group py-5">
+        <summary class="flex justify-between items-center cursor-pointer list-none">
+          <span class="font-display text-lg">Do I need an appointment, or can I walk in?</span>
+          <span class="text-gold transition group-open:rotate-45">+</span>
+        </summary>
+        <p class="mt-3 text-sm text-navy/75 leading-relaxed">Walk-ins are welcome, but you'll wait less if you book. WhatsApp us or use the online form — it takes under a minute.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex justify-between items-center cursor-pointer list-none">
+          <span class="font-display text-lg">How much does scaling / extraction / whitening cost?</span>
+          <span class="text-gold transition group-open:rotate-45">+</span>
+        </summary>
+        <p class="mt-3 text-sm text-navy/75 leading-relaxed">It depends on the case — gum condition for scaling, whether the tooth is impacted for extraction, single-visit vs. take-home for whitening. WhatsApp us your situation and we'll give an upfront estimate.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex justify-between items-center cursor-pointer list-none">
+          <span class="font-display text-lg">Which languages do the dentists speak?</span>
+          <span class="text-gold transition group-open:rotate-45">+</span>
+        </summary>
+        <p class="mt-3 text-sm text-navy/75 leading-relaxed">English, Mandarin, and Bahasa Malaysia. Some Cantonese on request.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex justify-between items-center cursor-pointer list-none">
+          <span class="font-display text-lg">Do you take insurance or company panels?</span>
+          <span class="text-gold transition group-open:rotate-45">+</span>
+        </summary>
+        <p class="mt-3 text-sm text-navy/75 leading-relaxed">We can issue receipts for reimbursement; for direct panel billing, message us with your insurer's name and we'll confirm.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex justify-between items-center cursor-pointer list-none">
+          <span class="font-display text-lg">Is there parking?</span>
+          <span class="text-gold transition group-open:rotate-45">+</span>
+        </summary>
+        <p class="mt-3 text-sm text-navy/75 leading-relaxed">Yes — street parking along Jalan SS26/9 and the Mayang Plaza shoplots. Plenty of space outside peak hours.</p>
+      </details>
+      <details class="group py-5">
+        <summary class="flex justify-between items-center cursor-pointer list-none">
+          <span class="font-display text-lg">Do you see children?</span>
+          <span class="text-gold transition group-open:rotate-45">+</span>
+        </summary>
+        <p class="mt-3 text-sm text-navy/75 leading-relaxed">Yes — gentle paediatric care including first visits, fluoride treatments, and fissure sealants. Dr. April is especially good with younger patients.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FINAL CTA ============== -->
+<section class="hero-pattern relative text-paper">
+  <div class="relative max-w-4xl mx-auto px-5 py-20 text-center">
+    <h2 class="font-display text-3xl md:text-5xl tracking-tight">Pain doesn't keep office hours. <span class="text-gold">Neither do we.</span></h2>
+    <p class="mt-5 text-paper/80 max-w-xl mx-auto">Goodcare Dental PJ — open till 9pm, every day of the week.</p>
+    <div class="mt-8 flex flex-wrap gap-3 justify-center">
+      <a href="https://wa.me/601110628168?text=Hi%20Goodcare%2C%20I%27d%20like%20to%20book%20an%20appointment." class="inline-flex items-center gap-2 rounded-full bg-gold text-navy-900 font-semibold px-6 py-3 hover:bg-gold-600 hover:text-paper transition">WhatsApp us</a>
+      <a href="/book" class="inline-flex items-center gap-2 rounded-full border border-paper/40 text-paper font-semibold px-6 py-3 hover:bg-paper/10 transition">Book online</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============== FOOTER ============== -->
+<footer class="bg-navy-900 text-paper/70 text-sm">
+  <div class="max-w-6xl mx-auto px-5 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-2">
+      <div class="flex items-center gap-2.5">
+        <span class="w-9 h-9 rounded-full bg-paper text-navy grid place-items-center font-display text-lg font-semibold">G</span>
+        <span class="font-display text-lg font-medium text-paper">Goodcare<span class="text-gold"> · </span>PJ</span>
+      </div>
+      <p class="mt-4 max-w-sm leading-relaxed">A neighbourhood dental clinic at Mayang Plaza, Taman Mayang Jaya. Open every day until 9pm.</p>
+    </div>
+    <div>
+      <div class="text-paper text-xs uppercase tracking-wider font-semibold">Visit</div>
+      <ul class="mt-3 space-y-1.5">
+        <li>1B-1, Jalan SS26/9</li>
+        <li>Mayang Plaza, Taman Mayang Jaya</li>
+        <li>47301 Petaling Jaya</li>
+        <li>Selangor, Malaysia</li>
+      </ul>
+    </div>
+    <div>
+      <div class="text-paper text-xs uppercase tracking-wider font-semibold">Reach us</div>
+      <ul class="mt-3 space-y-1.5">
+        <li><a href="tel:+601110628168" class="hover:text-gold">+60 11-1062 8168</a></li>
+        <li><a href="https://wa.me/601110628168" class="hover:text-gold">WhatsApp</a></li>
+        <li><a href="mailto:goodcaredentalpj@gmail.com" class="hover:text-gold">Email</a></li>
+        <li><a href="https://www.instagram.com/goodcaredentalpj/" class="hover:text-gold">Instagram</a></li>
+        <li><a href="https://www.facebook.com/p/Goodcare-Dental-PJ-100082972790591/" class="hover:text-gold">Facebook</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="border-t border-paper/10">
+    <div class="max-w-6xl mx-auto px-5 py-5 flex flex-wrap justify-between items-center gap-3 text-xs text-paper/55">
+      <div>© <span id="year"></span> Klinik Pergigian Goodcare Dental PJ. All rights reserved.</div>
+      <div>Made with care in Petaling Jaya.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+  // Language toggle is decorative for now — wire up to a dictionary swap when CH/BM copy is ready.
+  document.querySelectorAll('header button').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('header button').forEach((b) => {
+        b.classList.remove('bg-navy', 'text-paper');
+        b.classList.add('text-navy/70');
+      });
+      btn.classList.add('bg-navy', 'text-paper');
+      btn.classList.remove('text-navy/70');
+    });
+  });
+</script>
+</body>
+</html>

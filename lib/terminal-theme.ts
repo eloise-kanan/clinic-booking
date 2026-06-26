@@ -26,6 +26,7 @@ export type TerminalTheme = {
   staffAccent: string;    // active nav border, top header rail
   staffAccentSoft: string;// active nav background tint
   staffActiveText: string;// active nav label color
+  staffHeaderBg: string;  // top header band background (matches console)
 };
 
 export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
@@ -41,6 +42,7 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     staffAccent: "#C9A227",
     staffAccentSoft: "#FBF6E5",
     staffActiveText: "#1B2A4A",
+    staffHeaderBg: "linear-gradient(90deg, #1B2A4A 0%, #2B3F70 100%)",
   },
   midnight: {
     name: "midnight",
@@ -54,6 +56,7 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     staffAccent: "#475569",
     staffAccentSoft: "#E2E8F0",
     staffActiveText: "#0F172A",
+    staffHeaderBg: "linear-gradient(90deg, #0F172A 0%, #1E293B 100%)",
   },
   dawn: {
     name: "dawn",
@@ -67,6 +70,7 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     staffAccent: "#C2410C",
     staffAccentSoft: "#FFEDD5",
     staffActiveText: "#7C2D12",
+    staffHeaderBg: "linear-gradient(90deg, #5B2A1F 0%, #8B3A1F 100%)",
   },
   sage: {
     name: "sage",
@@ -80,6 +84,7 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     staffAccent: "#15803D",
     staffAccentSoft: "#DCFCE7",
     staffActiveText: "#14532D",
+    staffHeaderBg: "linear-gradient(90deg, #2D4A3E 0%, #4A6B5D 100%)",
   },
   mono: {
     name: "mono",
@@ -93,6 +98,7 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     staffAccent: "#404040",
     staffAccentSoft: "#E5E5E5",
     staffActiveText: "#171717",
+    staffHeaderBg: "linear-gradient(90deg, #0A0A0A 0%, #1F1F1F 100%)",
   },
 };
 
@@ -105,6 +111,7 @@ export function themeToCss(theme: TerminalTheme): string {
       --staff-accent: ${theme.staffAccent};
       --staff-accent-soft: ${theme.staffAccentSoft};
       --staff-active-text: ${theme.staffActiveText};
+      --staff-header-bg: ${theme.staffHeaderBg};
     }
   `.trim();
 }

@@ -94,6 +94,12 @@ export function StaffShell({
   }, [mobileNavOpen]);
 
   async function signOut() {
+    // Clear PIN artefacts before sign-out so the next user signing in at a
+    // shared terminal doesn't inherit the previous PIN holder's cookie.
+    try {
+      sessionStorage.removeItem("kanan_pin_session");
+    } catch {}
+    await fetch("/api/pin/lock-token", { method: "DELETE" }).catch(() => {});
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
@@ -227,14 +233,19 @@ export function StaffShell({
 
   return (
     <div className="min-h-dvh" style={{ background: "var(--staff-bg, #fafaf9)" }}>
-      {/* Themed accent rail — same color as the terminal lockscreen accent */}
+      {/* Themed accent rail — gold/slate/etc. depending on active theme */}
       <div className="h-[3px] w-full sticky top-0 z-40" style={{ background: "var(--staff-accent, transparent)" }} />
-      <header className="bg-white border-b border-stone-200 sticky top-[3px] z-30">
+      {/* Header band — dark themed gradient so the staff backend visually
+          echoes the terminal lockscreen. Header text + icons are white. */}
+      <header
+        className="border-b border-black/10 sticky top-[3px] z-30 text-white"
+        style={{ background: "var(--staff-header-bg, #1B2A4A)" }}
+      >
         <div className="max-w-7xl mx-auto px-3 md:px-5 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <button
               type="button"
-              className="md:hidden p-1.5 -ml-1.5 text-stone-700 hover:bg-stone-100 rounded"
+              className="md:hidden p-1.5 -ml-1.5 text-white/80 hover:bg-white/10 rounded"
               onClick={() => setMobileNavOpen(true)}
               aria-label="Open menu"
             >
@@ -247,9 +258,9 @@ export function StaffShell({
             <span className="text-sm font-medium truncate">Clinic Console</span>
             <span className={`pill ${roleColor} hidden sm:inline-block`}>{roleLabel}</span>
           </div>
-          <div className="flex items-center gap-2 md:gap-3 text-xs text-stone-600 flex-shrink-0">
+          <div className="flex items-center gap-2 md:gap-3 text-xs text-white/80 flex-shrink-0">
             <span className="hidden sm:inline truncate max-w-[160px]">{userName}</span>
-            <button onClick={signOut} className="text-stone-500 hover:text-stone-900">
+            <button onClick={signOut} className="text-white/70 hover:text-white">
               Sign out
             </button>
           </div>

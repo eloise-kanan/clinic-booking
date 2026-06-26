@@ -8,7 +8,8 @@ import FilterableBookingsTable from "@/components/FilterableBookingsTable";
 export const dynamic = "force-dynamic";
 
 export default async function AllBookingsPage() {
-  const { profile } = await requireStaff(["nurse", "owner"]);
+  const { profile } = await requireStaff(["nurse", "owner", "terminal"]);
+  const isTerminal = profile.role === "terminal";
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Our Clinic";
   const admin = createAdminClient();
   const { data } = await admin
@@ -28,15 +29,16 @@ export default async function AllBookingsPage() {
 
   return (
     <StaffShell
-      role="nurse"
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, count || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
     >
       <h2 className="text-base font-medium mb-4">All bookings</h2>
       <FilterableBookingsTable
         rows={(data as any) || []}
         clinicName={clinicName}
         templates={templates}
+        isTerminal={isTerminal}
       />
     </StaffShell>
   );

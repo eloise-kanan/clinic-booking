@@ -30,8 +30,19 @@ type Counts = {
 
 // Role-specific category cards on the identified screen. Kept lightweight
 // (no DB lookups) — labels/links mirror the staff sidebar nav structure.
+// Context-specific noun for each count key so the sub-line on a category
+// card reads naturally ("5 awaiting", "3 due") instead of a generic "items".
+type CountSemantics = "awaiting" | "due" | "today" | "to send";
+
 type CategoryItem = { href: string; label: string; countKey?: keyof Counts };
 type Category = { title: string; items: CategoryItem[] };
+
+const COUNT_SEMANTICS: Record<keyof Counts, CountSemantics> = {
+  pending: "awaiting",
+  recalls: "due",
+  today: "today",
+  reminders: "to send",
+};
 
 const NURSE_CATEGORIES: Category[] = [
   {
@@ -63,30 +74,35 @@ const NURSE_CATEGORIES: Category[] = [
     items: [
       { href: "/staff/leave", label: "Leave" },
       { href: "/staff/duty", label: "Shift changes" },
-      { href: "/staff/profile", label: "My account" },
     ],
   },
 ];
 
+// Doctor PIN holders on the shared terminal point to the same booking ops
+// pages as nurses — the actions still attribute correctly to the doctor's
+// PIN. Personal /doctor/* pages (own calendar, breaks) require the doctor
+// to sign in on their personal device with login_id + password.
 const DOCTOR_CATEGORIES: Category[] = [
   {
-    title: "My day",
+    title: "Today",
     items: [
-      { href: "/doctor", label: "Today's patients" },
-      { href: "/doctor/calendar", label: "My calendar" },
-      { href: "/doctor/breaks", label: "Block time" },
+      { href: "/nurse/calendar", label: "Clinical calendar", countKey: "today" },
+      { href: "/staff/duty-calendar", label: "Duty calendar" },
+      { href: "/nurse/all", label: "All bookings" },
     ],
   },
   {
     title: "Patients",
-    items: [{ href: "/doctor/patients", label: "My patients" }],
+    items: [
+      { href: "/nurse/patients", label: "Patient list" },
+      { href: "/staff/recalls", label: "Send recalls", countKey: "recalls" },
+    ],
   },
   {
     title: "HR",
     items: [
       { href: "/staff/leave", label: "Leave" },
       { href: "/staff/duty", label: "Shift changes" },
-      { href: "/staff/profile", label: "My account" },
     ],
   },
 ];
@@ -124,6 +140,10 @@ export default function ClinicConsole({
   }, []);
 
   async function endSession() {
+    // Clear PIN artefacts BEFORE signing out so the next user signing in
+    // at this terminal doesn't inherit the previous PIN holder's cookie.
+    clearPinSession();
+    await fetch("/api/pin/lock-token", { method: "DELETE" }).catch(() => {});
     const supabase = createClient();
     await supabase.auth.signOut();
     router.replace("/login");
@@ -250,6 +270,7 @@ export default function ClinicConsole({
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                 {cat.items.map((item) => {
                   const count = item.countKey ? counts[item.countKey] : null;
+                  const semantic = item.countKey ? COUNT_SEMANTICS[item.countKey] : null;
                   return (
                     <Link
                       key={item.href}
@@ -257,8 +278,10 @@ export default function ClinicConsole({
                       className="block bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 hover:border-white/30 rounded-xl px-3 py-3 transition-colors"
                     >
                       <div className="text-sm font-medium leading-tight">{item.label}</div>
-                      {count != null && (
-                        <div className="mt-1 text-[11px] text-white/70 tabular-nums">{count} pending</div>
+                      {count != null && count > 0 && (
+                        <div className="mt-1 text-[11px] text-white/80 tabular-nums">
+                          {count} {semantic}
+                        </div>
                       )}
                     </Link>
                   );
@@ -322,18 +345,19 @@ export default function ClinicConsole({
         </div>
       </div>
 
-      {/* Counts strip */}
+      {/* Counts strip — tiles trigger the PIN modal so users can tap a
+          specific concern (e.g. "5 pending") to authenticate. */}
       <div className="px-4 pb-4 sm:px-6 sm:pb-6">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl">
           <div className="grid grid-cols-4 divide-x divide-white/15">
-            <CountTile label="Pending" value={counts.pending} />
-            <CountTile label="Recalls due" value={counts.recalls} />
-            <CountTile label="Today" value={counts.today} />
-            <CountTile label="Reminders" value={counts.reminders} />
+            <CountTile label="Pending" value={counts.pending} onClick={() => setPinOpen(true)} />
+            <CountTile label="Recalls due" value={counts.recalls} onClick={() => setPinOpen(true)} />
+            <CountTile label="Today" value={counts.today} onClick={() => setPinOpen(true)} />
+            <CountTile label="Reminders" value={counts.reminders} onClick={() => setPinOpen(true)} />
           </div>
         </div>
         <p className="text-[10px] sm:text-[11px] text-white/55 text-center mt-3">
-          Tap <strong>Sign in</strong> with your staff PIN to take action on these.
+          Tap any tile to <strong>sign in</strong> with your staff PIN, then act on it.
         </p>
       </div>
 
@@ -370,14 +394,26 @@ export default function ClinicConsole({
   );
 }
 
-function CountTile({ label, value }: { label: string; value: number }) {
+function CountTile({
+  label,
+  value,
+  onClick,
+}: {
+  label: string;
+  value: number;
+  onClick?: () => void;
+}) {
   return (
-    <div className="block px-3 py-4 sm:py-5 text-center first:rounded-l-2xl last:rounded-r-2xl">
+    <button
+      type="button"
+      onClick={onClick}
+      className="block w-full px-3 py-4 sm:py-5 text-center first:rounded-l-2xl last:rounded-r-2xl hover:bg-white/5 transition-colors"
+    >
       <div className="text-3xl sm:text-4xl font-light tabular-nums leading-none">{value}</div>
       <div className="mt-1 sm:mt-1.5 text-[10px] sm:text-[11px] uppercase tracking-wider text-white/70">
         {label}
       </div>
-    </div>
+    </button>
   );
 }
 

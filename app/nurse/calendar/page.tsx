@@ -8,7 +8,8 @@ import AddToHomeScreenButton from "@/components/AddToHomeScreenButton";
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
-  const { profile } = await requireStaff(["nurse", "owner"]);
+  const { profile } = await requireStaff(["nurse", "owner", "terminal"]);
+  const isTerminal = profile.role === "terminal";
   const admin = createAdminClient();
   const { data: doctors } = await admin
     .from("doctors")
@@ -21,9 +22,9 @@ export default async function CalendarPage() {
     .eq("status", "pending");
   return (
     <StaffShell
-      role="nurse"
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, count || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
     >
       <div className="flex items-center justify-between mb-4 gap-3">
         <h2 className="text-base font-medium">All doctors — calendar view</h2>

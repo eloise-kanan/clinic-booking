@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 type Template = { key: string; body: string; updated_at: string };
 
 export default async function TemplatesPage() {
-  const { profile } = await requireStaff(["nurse", "owner"]);
+  const { profile } = await requireStaff(["nurse", "owner", "terminal"]);
+  const isTerminal = profile.role === "terminal";
   const admin = createAdminClient();
 
   const { data: templates } = await admin
@@ -26,9 +27,9 @@ export default async function TemplatesPage() {
 
   return (
     <StaffShell
-      role={profile.role as "owner" | "nurse"}
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, count || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
     >
       <h2 className="text-base font-medium mb-1">WhatsApp templates</h2>
       <p className="text-xs text-stone-500 mb-4">
