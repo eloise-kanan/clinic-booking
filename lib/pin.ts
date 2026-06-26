@@ -85,6 +85,51 @@ export async function verifyPin(profileId: string, pin: string): Promise<PinVeri
   return { ok: true, profileId: profile.id, role: profile.role };
 }
 
+// Page-level identity resolution for the shared terminal. Returns the
+// "effective" identity that a page should use for scoping:
+//   • On a personal device (nurse / doctor / owner) → the signed-in user.
+//   • On the terminal with a valid PIN-lock cookie → the PIN holder.
+//   • On the terminal WITHOUT a valid cookie → null (caller renders
+//     <PinGateChallenge/>).
+export type EffectiveProfile = {
+  id: string;
+  role: "nurse" | "doctor" | "owner";
+  full_name: string;
+  fromPin: boolean;
+};
+
+export async function effectiveProfile(
+  userId: string,
+  userRole: string,
+  userFullName: string
+): Promise<EffectiveProfile | null> {
+  if (userRole !== "terminal") {
+    return {
+      id: userId,
+      role: userRole as "nurse" | "doctor" | "owner",
+      full_name: userFullName,
+      fromPin: false,
+    };
+  }
+  // Terminal session — must have a valid pin-lock cookie to proceed.
+  const { readPinCookie } = await import("./pin-cookie");
+  const cookie = await readPinCookie();
+  if (!cookie) return null;
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("id, role, full_name, active")
+    .eq("id", cookie.profileId)
+    .single();
+  if (!data || !data.active) return null;
+  return {
+    id: data.id,
+    role: data.role as "nurse" | "doctor" | "owner",
+    full_name: data.full_name,
+    fromPin: true,
+  };
+}
+
 // Returns true if the auth user is signed in as the shared terminal account
 // (role = 'terminal'). The login form auto-resolves a bare "terminal"
 // identifier to terminal@kanan-clinic.local under our existing synthesizer.
