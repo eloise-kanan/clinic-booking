@@ -7,6 +7,7 @@ import { TREATMENTS, treatmentMinutes } from "@/lib/treatments";
 import { composePhone, normalizeIc } from "@/lib/utils";
 import { localYmd } from "@/lib/local-date";
 import Calendar from "@/components/Calendar";
+import { usePinGuardedFetch } from "@/components/usePinGuardedFetch";
 
 type Doctor = { id: string; display_name: string };
 type Slot = { slot_start: string; slot_end: string };
@@ -36,11 +37,14 @@ function stripDial(phone: string, dial: string): string {
 export default function StaffBookingForm({
   prefill,
   role,
+  isTerminal = false,
 }: {
   prefill: ParentBooking;
   role: "nurse" | "owner";
+  isTerminal?: boolean;
 }) {
   const router = useRouter();
+  const { guardedFetch, pinModal } = usePinGuardedFetch({ isTerminal });
 
   const initialNationality = prefill?.patient?.nationality || "Malaysia";
   const initialDial = dialCodeFor(initialNationality) || "+60";
@@ -169,14 +173,14 @@ export default function StaffBookingForm({
         parent_booking_id: prefill?.id,
       };
 
-      const res = await fetch("/api/bookings/staff-create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      const data = await res.json();
+      const res = await guardedFetch(
+        "/api/bookings/staff-create",
+        payload,
+        { allowedRoles: ["nurse"], actionLabel: "to create this booking — nurses only" }
+      );
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Failed to create");
+        if (res.status !== 401) setError(data.error || "Failed to create");
       } else {
         setDone(true);
         setTimeout(() => {
@@ -418,6 +422,7 @@ export default function StaffBookingForm({
       <button type="submit" disabled={submitting || !canSubmit} className="btn-primary w-full">
         {submitting ? "Saving…" : prefill ? "Confirm reschedule" : "Confirm booking"}
       </button>
+      {pinModal}
     </form>
   );
 }

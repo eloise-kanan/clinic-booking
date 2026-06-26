@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
 import { logWaSent } from "@/lib/wa-track";
+import { usePinGuardedFetch } from "@/components/usePinGuardedFetch";
 
 type Row = {
   id: string;
@@ -31,16 +32,19 @@ export default function RemindersList({
   initialRows,
   templateBody,
   clinicName,
+  isTerminal,
 }: {
   initialDate: string;
   initialRows: Row[];
   templateBody: string;
   clinicName: string;
+  isTerminal: boolean;
 }) {
   const router = useRouter();
   const [date, setDate] = useState<string>(initialDate);
   const [rows, setRows] = useState<Row[]>(initialRows);
   const [loading, setLoading] = useState(false);
+  const { guardedFetch, pinModal } = usePinGuardedFetch({ isTerminal });
 
   // Re-fetch when the date picker changes
   useEffect(() => {
@@ -79,7 +83,20 @@ export default function RemindersList({
         clinic_name: clinicName,
       })
     );
-    logWaSent(row.id, "reminder");
+    // PIN-gated on terminal — modal opens before the WA link is launched
+    // so the audit log captures the nurse who sent it.
+    const res = await guardedFetch(
+      "/api/bookings/reminder-sent",
+      { booking_id: row.id },
+      { allowedRoles: ["nurse"], actionLabel: "to send this reminder — nurses only" }
+    );
+    if (!res.ok) {
+      if (res.status !== 401) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Couldn't record the reminder send");
+      }
+      return;
+    }
     window.open(waLink(row.patient.whatsapp_number, body), "_blank");
     setTimeout(() => router.refresh(), 200);
   }
@@ -155,6 +172,7 @@ export default function RemindersList({
           })}
         </ul>
       )}
+      {pinModal}
     </div>
   );
 }

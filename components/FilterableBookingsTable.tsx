@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { applyTemplate, bookingVars, formatSlotLabel, waLink } from "@/lib/utils";
 import { logWaSent } from "@/lib/wa-track";
 import { WhatsAppActions } from "@/components/WhatsAppActions";
+import { usePinGuardedFetch } from "@/components/usePinGuardedFetch";
 
 const REMINDER_FALLBACK =
   "Hi {patient_name},\n\nFriendly reminder of your appointment:\n• Doctor: {doctor_name}\n• Date & time: {slot_label}\n\nPlease arrive 10 minutes early.\n— {clinic_name}";
@@ -122,14 +123,17 @@ export default function FilterableBookingsTable({
   clinicName,
   enableOverride = false,
   templates,
+  isTerminal = false,
 }: {
   rows: BookingRow[];
   clinicName: string;
   enableOverride?: boolean;
   templates?: Record<string, string>;
+  isTerminal?: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
+  const { guardedFetch, pinModal } = usePinGuardedFetch({ isTerminal });
 
   // Quick filter (high-level)
   const [quickFilter, setQuickFilter] = useState<QuickFilter>("upcoming");
@@ -272,17 +276,20 @@ export default function FilterableBookingsTable({
     if (!confirm("Cancel this booking? The slot will be freed.")) return;
     const notes = prompt("Optional note (e.g. patient called):") || "";
     setBusy(id);
-    const res = await fetch("/api/bookings/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: id, notes }),
-    });
-    setBusy(null);
-    if (!res.ok) {
-      const data = await res.json();
-      alert(data.error || "Failed");
-    } else {
-      router.refresh();
+    try {
+      const res = await guardedFetch(
+        "/api/bookings/cancel",
+        { booking_id: id, notes },
+        { allowedRoles: ["nurse"], actionLabel: "to cancel this booking — nurses only" }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.status !== 401) alert(data.error || "Failed");
+      } else {
+        router.refresh();
+      }
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -315,17 +322,28 @@ export default function FilterableBookingsTable({
     };
     if (!confirm(labels[mark])) return;
     setBusy(id);
-    const res = await fetch("/api/bookings/attendance", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ booking_id: id, mark }),
-    });
-    setBusy(null);
-    if (!res.ok) {
-      const data = await res.json();
-      alert(data.error || "Failed");
-    } else {
-      router.refresh();
+    try {
+      const res = await guardedFetch(
+        "/api/bookings/attendance",
+        { booking_id: id, mark },
+        {
+          allowedRoles: ["nurse", "doctor"],
+          actionLabel:
+            mark === "attended"
+              ? "to mark this patient attended"
+              : mark === "no_show"
+                ? "to record this no-show"
+                : "to clear the attendance status",
+        }
+      );
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (res.status !== 401) alert(data.error || "Failed");
+      } else {
+        router.refresh();
+      }
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -595,6 +613,7 @@ export default function FilterableBookingsTable({
           </tbody>
         </table>
       </div>
+      {pinModal}
     </div>
   );
 }

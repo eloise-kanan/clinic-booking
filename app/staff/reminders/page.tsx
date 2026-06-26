@@ -11,7 +11,8 @@ function ymd(d: Date) {
 }
 
 export default async function RemindersPage() {
-  const { profile } = await requireStaff(["nurse", "owner"]);
+  const { profile } = await requireStaff(["nurse", "owner", "terminal"]);
+  const isTerminal = profile.role === "terminal";
   const admin = createAdminClient();
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Our Clinic";
 
@@ -46,9 +47,9 @@ export default async function RemindersPage() {
 
   return (
     <StaffShell
-      role={profile.role as "owner" | "nurse"}
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, count || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
     >
       <h2 className="text-base font-medium mb-1">Send reminders</h2>
       <p className="text-xs text-stone-500 mb-4">
@@ -60,6 +61,7 @@ export default async function RemindersPage() {
         initialRows={(bookings as any[]) || []}
         templateBody={reminderTpl?.body || ""}
         clinicName={clinicName}
+        isTerminal={isTerminal}
       />
     </StaffShell>
   );

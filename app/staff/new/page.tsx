@@ -11,7 +11,8 @@ export default async function StaffNewBookingPage({
 }: {
   searchParams: Promise<{ reschedule?: string }>;
 }) {
-  const { profile } = await requireStaff(["nurse", "owner"]);
+  const { profile } = await requireStaff(["nurse", "owner", "terminal"]);
+  const isTerminal = profile.role === "terminal";
   const params = await searchParams;
   const rescheduleId = params.reschedule;
 
@@ -29,9 +30,9 @@ export default async function StaffNewBookingPage({
 
   return (
     <StaffShell
-      role={profile.role as "owner" | "nurse"}
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, pendingCount || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, pendingCount || 0)}
     >
       <h2 className="text-base font-medium mb-1">
         {prefill ? "Reschedule on behalf of patient" : "New booking on behalf of patient"}
@@ -39,7 +40,11 @@ export default async function StaffNewBookingPage({
       <p className="text-xs text-stone-500 mb-4">
         Submitted bookings are <strong>confirmed immediately</strong> — the patient does not need to verify on WhatsApp.
       </p>
-      <StaffBookingForm prefill={prefill} role={profile.role as "owner" | "nurse"} />
+      <StaffBookingForm
+        prefill={prefill}
+        role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+        isTerminal={isTerminal}
+      />
     </StaffShell>
   );
 }
