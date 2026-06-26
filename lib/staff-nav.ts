@@ -80,17 +80,18 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
     ];
   } else if (role === "owner") {
     sections = [
-      // Top-level — Overview + the two performance dashboards lifted out of
-      // Staff so they're one click away (analytics, not staff management).
+      // Top-level — Overview + performance dashboards + utilization. All
+      // analytics surfaces sit here, one click from Home.
       {
         items: [
           { href: "/home", label: "🏠 Home" },
           { href: "/owner", label: "📊 Overview", feature: "analytics.overview" },
+          { href: "/owner/utilization", label: "📈 Utilization", feature: "analytics.utilization" },
           { href: "/owner/doctor-performance", label: "👨‍⚕️ Doctor performance", feature: "analytics.doctor_perf" },
           { href: "/owner/nurse-performance", label: "👩‍⚕️ Nurse performance", feature: "analytics.nurse_perf" },
         ],
       },
-      // Expandable: Bookings (includes patients + WhatsApp templates)
+      // Expandable: Bookings (patient-facing booking ops)
       {
         title: "Bookings",
         expandable: true,
@@ -100,7 +101,6 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
           { href: "/staff/reminders", label: "Send reminders", feature: "bookings.reminders" },
           { href: "/staff/recalls", label: "Send recalls", feature: "recall" },
           { href: "/owner/patients", label: "Patients", feature: "patients" },
-          { href: "/staff/templates", label: "WhatsApp templates", feature: "settings.templates" },
         ],
       },
       // Expandable: Calendar (schedules — view, not configure)
@@ -110,7 +110,6 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
         items: [
           { href: "/owner/calendar", label: "Clinical calendar", feature: "calendar.clinical" },
           { href: "/staff/duty-calendar", label: "Duty calendar", feature: "calendar.duty" },
-          { href: "/owner/utilization", label: "Utilization", feature: "analytics.utilization" },
         ],
       },
       // Expandable: Staff (managing doctors + nurses — accounts, hours, approvals)
@@ -124,7 +123,9 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
           { href: "/staff/leave", label: "Leave", feature: "staff.leave" },
         ],
       },
-      // Expandable: Settings (clinic-level configuration — non-staff)
+      // Expandable: Settings (clinic-level configuration — non-staff).
+      // WhatsApp templates moved here from Bookings (they're a setting,
+      // not an action).
       {
         title: "Settings",
         expandable: true,
@@ -132,6 +133,7 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
           { href: "/staff/profile", label: "My account" },
           { href: "/owner/plan", label: "Plan & tier" },
           { href: "/owner/branding", label: "Branding & theme", feature: "settings.branding" },
+          { href: "/staff/templates", label: "WhatsApp templates", feature: "settings.templates" },
           { href: "/owner/backup", label: "Backup & export", feature: "backup" },
           { href: "/owner/audit", label: "Audit log", feature: "settings.audit_log" },
         ],

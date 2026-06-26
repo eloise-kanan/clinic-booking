@@ -101,7 +101,7 @@ export default function PinChallenge({
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto">
+      <div className="bg-white text-stone-900 rounded-2xl shadow-2xl w-full max-w-md max-h-[90dvh] overflow-y-auto">
         <div className="p-5 border-b border-stone-200">
           <h3 className="text-base font-semibold">
             {selected ? `Enter PIN — ${selected.full_name}` : "Who's doing this action?"}
