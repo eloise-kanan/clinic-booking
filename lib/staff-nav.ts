@@ -80,11 +80,14 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
     ];
   } else if (role === "owner") {
     sections = [
-      // Top-level
+      // Top-level — Overview + the two performance dashboards lifted out of
+      // Staff so they're one click away (analytics, not staff management).
       {
         items: [
           { href: "/home", label: "🏠 Home" },
           { href: "/owner", label: "📊 Overview", feature: "analytics.overview" },
+          { href: "/owner/doctor-performance", label: "👨‍⚕️ Doctor performance", feature: "analytics.doctor_perf" },
+          { href: "/owner/nurse-performance", label: "👩‍⚕️ Nurse performance", feature: "analytics.nurse_perf" },
         ],
       },
       // Expandable: Bookings (includes patients + WhatsApp templates)
@@ -110,8 +113,7 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
           { href: "/owner/utilization", label: "Utilization", feature: "analytics.utilization" },
         ],
       },
-      // Expandable: Staff (everything about managing doctors + nurses —
-      // accounts, hours, approvals, performance)
+      // Expandable: Staff (managing doctors + nurses — accounts, hours, approvals)
       {
         title: "Staff",
         expandable: true,
@@ -120,8 +122,6 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
           { href: "/owner/working-hours", label: "Working hours", feature: "staff.working_hours" },
           { href: "/staff/duty", label: "Shift changes", feature: "staff.shift_changes" },
           { href: "/staff/leave", label: "Leave", feature: "staff.leave" },
-          { href: "/owner/doctor-performance", label: "Doctor performance", feature: "analytics.doctor_perf" },
-          { href: "/owner/nurse-performance", label: "Nurse performance", feature: "analytics.nurse_perf" },
         ],
       },
       // Expandable: Settings (clinic-level configuration — non-staff)
