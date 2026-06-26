@@ -8,7 +8,10 @@ import PendingQueue from "./PendingQueue";
 export const dynamic = "force-dynamic";
 
 export default async function NursePage() {
-  const { profile } = await requireStaff(["nurse", "owner"]);
+  // Terminal users can land here from the lockscreen's "Pending bookings"
+  // tile. Read-only by default — the Approve/Reject buttons trigger a PIN
+  // challenge before firing.
+  const { profile } = await requireStaff(["nurse", "owner", "terminal"]);
   const supabase = createAdminClient();
 
   const { data: pending } = await supabase
@@ -26,17 +29,24 @@ export default async function NursePage() {
 
   const templates = await loadTemplates();
 
+  const isTerminal = profile.role === "terminal";
   return (
     <StaffShell
-      role="nurse"
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, pendingCount || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, pendingCount || 0)}
     >
       <h2 className="text-base font-medium mb-4">Pending approvals</h2>
+      {isTerminal && (
+        <p className="text-[11px] text-stone-500 mb-3">
+          Tap Approve / Reject to be prompted for your PIN. After verification you have a 90-second window where back-to-back actions don&apos;t re-prompt.
+        </p>
+      )}
       <PendingQueue
         initial={(pending as any[]) || []}
         clinicName={process.env.NEXT_PUBLIC_CLINIC_NAME || "the clinic"}
         templates={templates}
+        isTerminal={isTerminal}
       />
     </StaffShell>
   );

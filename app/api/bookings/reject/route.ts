@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { resolveActor } from "@/lib/pin";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -14,11 +15,16 @@ export async function POST(req: Request) {
     .select("role, active")
     .eq("id", user.id)
     .single();
-  if (!profile?.active || !["nurse", "owner"].includes(profile.role)) {
+  if (!profile?.active || !["nurse", "owner", "terminal"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { booking_id, notes } = await req.json();
+  const body = await req.json();
+  const { booking_id, notes } = body;
+
+  const actor = await resolveActor(user.id, body);
+  if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
+
   const admin = createAdminClient();
 
   const { data: booking } = await admin
@@ -36,18 +42,18 @@ export async function POST(req: Request) {
     .update({
       status: "rejected",
       reviewed_at: new Date().toISOString(),
-      reviewed_by: user.id,
+      reviewed_by: actor.actorId,
       reviewer_notes: notes || null,
     })
     .eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   await admin.from("audit_log").insert({
-    actor_id: user.id,
+    actor_id: actor.actorId,
     action: `reject_${booking.type}`,
     entity_type: "booking",
     entity_id: booking_id,
-    after_data: { status: "rejected", notes },
+    after_data: { status: "rejected", notes, via_terminal: actor.isTerminal },
   });
 
   return NextResponse.json({ ok: true });

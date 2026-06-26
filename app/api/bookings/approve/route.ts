@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { resolveActor } from "@/lib/pin";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -14,11 +15,18 @@ export async function POST(req: Request) {
     .select("role, active")
     .eq("id", user.id)
     .single();
-  if (!profile?.active || !["nurse", "owner"].includes(profile.role)) {
+  if (!profile?.active || !["nurse", "owner", "terminal"].includes(profile.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { booking_id, notes } = await req.json();
+  const body = await req.json();
+  const { booking_id, notes } = body;
+
+  // If we're on the shared terminal, demand a {pin_profile_id, pin} pair —
+  // the action is attributed to the PIN holder, not the terminal account.
+  const actor = await resolveActor(user.id, body);
+  if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
+
   const admin = createAdminClient();
 
   const { data: booking } = await admin
@@ -44,7 +52,7 @@ export async function POST(req: Request) {
     .update({
       status: newStatus,
       reviewed_at: new Date().toISOString(),
-      reviewed_by: user.id,
+      reviewed_by: actor.actorId,
       reviewer_notes: notes || null,
     })
     .eq("id", booking_id);
@@ -53,13 +61,14 @@ export async function POST(req: Request) {
   // visit_count is no longer touched on confirmation. It now reflects actual
   // attended visits only and is updated by /api/bookings/attendance.
 
-  // Audit
+  // Audit — uses the PIN-resolved actor when this came from the shared
+  // terminal, so the log captures the actual staff member, not the kiosk.
   await admin.from("audit_log").insert({
-    actor_id: user.id,
+    actor_id: actor.actorId,
     action: `approve_${booking.type}`,
     entity_type: "booking",
     entity_id: booking_id,
-    after_data: { status: newStatus },
+    after_data: { status: newStatus, via_terminal: actor.isTerminal },
   });
 
   return NextResponse.json({ ok: true });

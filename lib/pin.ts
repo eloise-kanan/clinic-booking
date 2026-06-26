@@ -96,3 +96,46 @@ export async function isTerminalSession(userId: string): Promise<boolean> {
     .single();
   return data?.role === "terminal";
 }
+
+// Used by write API routes to resolve the *acting* profile when the request
+// is made from a terminal session.
+//
+// Returns:
+//   • If the signed-in user is NOT a terminal session (nurse/doctor/owner
+//     on a personal device) → returns { actorId: <user.id> } so the action
+//     gets attributed to that user. No PIN required.
+//   • If the signed-in user IS the terminal account → validates the
+//     supplied pin_profile_id + pin in the body. On success, the action is
+//     attributed to the PIN holder. On miss → returns an Error response
+//     the route can short-circuit on.
+//
+// The pin_profile_id + pin are expected at the top level of the request
+// body. Write routes call this helper before any side effects.
+export type PinActor =
+  | { ok: true; actorId: string; isTerminal: boolean }
+  | { ok: false; status: number; error: string };
+
+export async function resolveActor(
+  userId: string,
+  body: { pin_profile_id?: string; pin?: string }
+): Promise<PinActor> {
+  const isTerminal = await isTerminalSession(userId);
+  if (!isTerminal) {
+    // Personal device — the auth user is the actor.
+    return { ok: true, actorId: userId, isTerminal: false };
+  }
+  if (!body.pin_profile_id || !body.pin) {
+    return { ok: false, status: 401, error: "PIN required for this action on the shared clinic terminal." };
+  }
+  const result = await verifyPin(body.pin_profile_id, body.pin);
+  if (!result.ok) {
+    const error =
+      result.reason === "locked"
+        ? "Too many wrong PIN attempts — locked. Try again in a few minutes."
+        : result.reason === "no_pin_set"
+          ? "That staff member has no PIN set yet. Ask the owner."
+          : "Wrong PIN.";
+    return { ok: false, status: result.reason === "locked" ? 423 : 403, error };
+  }
+  return { ok: true, actorId: result.profileId, isTerminal: true };
+}
