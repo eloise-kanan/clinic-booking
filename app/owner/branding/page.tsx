@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/auth";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
 import { loadBranding } from "@/lib/branding-server";
+import { loadTerminalConfig } from "@/lib/terminal-theme";
 import BrandingEditor from "./BrandingEditor";
 
 export const dynamic = "force-dynamic";
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function BrandingPage() {
   const { profile } = await requireStaff(["owner"]);
   const branding = await loadBranding();
+  const terminalCfg = await loadTerminalConfig();
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Your Clinic";
 
   return (
@@ -18,7 +20,14 @@ export default async function BrandingPage() {
         Customise how the booking page looks. Changes apply across the system instantly — no rebuild needed.
         Refresh after saving to see the new theme everywhere.
       </p>
-      <BrandingEditor initial={branding} clinicName={clinicName} />
+      <BrandingEditor
+        initial={{
+          ...branding,
+          terminal_theme: terminalCfg.theme.name,
+          terminal_background_url: terminalCfg.backgroundUrl,
+        }}
+        clinicName={clinicName}
+      />
     </StaffShell>
   );
 }

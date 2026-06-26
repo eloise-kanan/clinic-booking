@@ -8,7 +8,30 @@ type Branding = {
   font_family: string;
   button_radius: "sharp" | "rounded" | "pill";
   logo_url: string | null;
+  terminal_theme: "navy" | "midnight" | "dawn" | "sage" | "mono";
+  terminal_background_url: string | null;
 };
+
+// Mirrors lib/terminal-theme.ts — kept here for the live preview chip
+// without having to import server-only code into the editor.
+const TERMINAL_THEME_OPTIONS: Array<{
+  value: Branding["terminal_theme"];
+  label: string;
+  description: string;
+  gradient: string;
+  accent: string;
+}> = [
+  { value: "navy",     label: "Kanan navy",  description: "Default — deep navy + gold accent",
+    gradient: "linear-gradient(135deg, #1B2A4A 0%, #2B3F70 60%, #C9A227 220%)", accent: "#C9A227" },
+  { value: "midnight", label: "Midnight",    description: "Pure deep blue, no gold tint",
+    gradient: "linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #334155 130%)", accent: "#64748B" },
+  { value: "dawn",     label: "Dawn",        description: "Warm terracotta → navy",
+    gradient: "linear-gradient(135deg, #5B2A1F 0%, #8B3A1F 35%, #1B2A4A 100%)", accent: "#E08855" },
+  { value: "sage",     label: "Sage",        description: "Muted green → navy",
+    gradient: "linear-gradient(135deg, #2D4A3E 0%, #4A6B5D 50%, #1B2A4A 100%)", accent: "#7BA88A" },
+  { value: "mono",     label: "Monochrome",  description: "Black → charcoal, minimalist",
+    gradient: "linear-gradient(135deg, #0A0A0A 0%, #1F1F1F 60%, #333333 130%)", accent: "#737373" },
+];
 
 const FONT_OPTIONS = [
   { value: "Inter", label: "Inter — clean modern (default)" },
@@ -72,6 +95,8 @@ export default function BrandingEditor({
   const [font, setFont] = useState(initial.font_family);
   const [radius, setRadius] = useState<Branding["button_radius"]>(initial.button_radius);
   const [logo, setLogo] = useState(initial.logo_url || "");
+  const [terminalTheme, setTerminalTheme] = useState<Branding["terminal_theme"]>(initial.terminal_theme || "navy");
+  const [terminalBg, setTerminalBg] = useState(initial.terminal_background_url || "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
@@ -107,6 +132,8 @@ export default function BrandingEditor({
           font_family: font,
           button_radius: radius,
           logo_url: logo.trim() || null,
+          terminal_theme: terminalTheme,
+          terminal_background_url: terminalBg.trim() || null,
         }),
       });
       const data = await res.json();
@@ -214,6 +241,45 @@ export default function BrandingEditor({
             Paste a direct link to your logo image. PNG with transparent background, ~200px square works
             best. Leave blank to show the clinic name as text.
           </p>
+        </div>
+
+        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-medium">Terminal lockscreen</h3>
+          <p className="text-[11px] text-stone-500 -mt-1">
+            The shared clinic-reception console (sign in as <code className="bg-stone-100 px-1 rounded">terminal</code>) shows a giant clock + a row of pending-action tiles. Pick a theme below; optionally drop in a photo URL — it&apos;ll be blurred so the clock stays readable.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {TERMINAL_THEME_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setTerminalTheme(opt.value)}
+                className={`relative text-left p-3 border rounded-lg transition-colors overflow-hidden ${
+                  terminalTheme === opt.value
+                    ? "border-stone-900 ring-2 ring-stone-900/20"
+                    : "border-stone-200 hover:border-stone-400"
+                }`}
+                style={{ backgroundImage: opt.gradient, backgroundSize: "cover" }}
+              >
+                <div className="absolute top-0 inset-x-0 h-[2px]" style={{ background: opt.accent }} />
+                <div className="text-xs font-medium text-white drop-shadow">{opt.label}</div>
+                <div className="text-[10px] text-white/80 drop-shadow mt-0.5">{opt.description}</div>
+              </button>
+            ))}
+          </div>
+          <div>
+            <label className="label">Custom background photo URL (optional)</label>
+            <input
+              type="url"
+              className="input"
+              value={terminalBg}
+              onChange={(e) => setTerminalBg(e.target.value)}
+              placeholder="https://example.com/photo.jpg"
+            />
+            <p className="text-[11px] text-stone-500 mt-1">
+              When set, this photo replaces the theme gradient — but is automatically blurred + tinted with the theme&apos;s overlay so the clock + tiles remain readable. Wide landscape photos (≥1920×1080) work best.
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">

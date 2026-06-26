@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
 import { loadPlan } from "@/lib/branding-server";
+import { loadTerminalConfig } from "@/lib/terminal-theme";
 import HomeLauncher from "./HomeLauncher";
 import ClinicConsole from "./ClinicConsole";
 
@@ -91,10 +92,12 @@ export default async function HomePage() {
       return monthsSince >= (p.recall_interval_months || 6);
     }).length;
 
+    const terminalCfg = await loadTerminalConfig();
     return (
       <ClinicConsole
         clinicName={clinicName}
-        backgroundUrl={process.env.NEXT_PUBLIC_TERMINAL_BG_URL || null}
+        theme={terminalCfg.theme}
+        backgroundUrl={terminalCfg.backgroundUrl}
         counts={{
           pending: pendingCount || 0,
           recalls: recallsDue,

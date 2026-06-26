@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase-browser";
 import { useRouter } from "next/navigation";
+import type { TerminalTheme } from "@/lib/terminal-theme";
 
 type Counts = {
   pending: number;       // pending bookings awaiting confirmation
@@ -19,10 +20,12 @@ type Counts = {
 
 export default function ClinicConsoleLockscreen({
   clinicName,
+  theme,
   backgroundUrl,
   counts,
 }: {
   clinicName: string;
+  theme: TerminalTheme;
   backgroundUrl?: string | null;
   counts: Counts;
 }) {
@@ -49,18 +52,38 @@ export default function ClinicConsoleLockscreen({
     : "";
 
   return (
-    <div
-      className="fixed inset-0 flex flex-col text-white overflow-hidden"
-      style={{
-        backgroundImage: backgroundUrl
-          ? `linear-gradient(180deg, rgba(27,42,74,0.55) 0%, rgba(27,42,74,0.78) 100%), url('${backgroundUrl}')`
-          : "linear-gradient(135deg, #1B2A4A 0%, #2B3F70 60%, #C9A227 220%)",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
-      {/* gold accent rail */}
-      <div className="absolute top-0 inset-x-0 h-[3px] bg-[#C9A227]" />
+    <div className="fixed inset-0 flex flex-col text-white overflow-hidden">
+      {/* Background layer 1: either the theme's gradient OR the uploaded photo.
+          Photo is heavily blurred + scaled (scale-110 prevents blur-edge gaps). */}
+      {backgroundUrl ? (
+        <div
+          className="absolute inset-0 -z-10 scale-110 blur-2xl"
+          style={{
+            backgroundImage: `url('${backgroundUrl}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        />
+      ) : (
+        <div
+          className="absolute inset-0 -z-10"
+          style={{ backgroundImage: theme.gradient }}
+        />
+      )}
+      {/* Background layer 2: theme-tinted dark overlay so the clock reads
+          clearly on top of any image. Only painted when a photo is set;
+          gradients are already dark enough. */}
+      {backgroundUrl && (
+        <div
+          className="absolute inset-0 -z-10"
+          style={{
+            backgroundImage: `linear-gradient(180deg, ${theme.overlayTop} 0%, ${theme.overlayBottom} 100%)`,
+          }}
+        />
+      )}
+
+      {/* themed accent rail */}
+      <div className="absolute top-0 inset-x-0 h-[3px]" style={{ background: theme.accent }} />
 
       {/* Corner sign-out — small, unobtrusive */}
       <button
