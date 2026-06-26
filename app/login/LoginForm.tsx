@@ -28,7 +28,7 @@ export default function LoginForm() {
       setError(
         isEmail(identifier)
           ? error.message
-          : "Wrong employee number or password. Ask your owner if you've forgotten."
+          : "Wrong login ID or password. Ask your owner if you've forgotten."
       );
       return;
     }
@@ -36,20 +36,23 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-6 space-y-4">
+    <form
+      onSubmit={submit}
+      className="bg-white text-stone-900 rounded-2xl shadow-2xl p-6 space-y-4 backdrop-blur-md"
+    >
       <div>
-        <label className="label">Login ID or owner email</label>
+        <label className="label">Login ID or email</label>
         <input
           className="input"
           type="text"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
-          placeholder="e.g. tan_ming — or your email"
+          placeholder="terminal — or your login ID / email"
           autoComplete="username"
           required
         />
         <p className="text-[11px] text-stone-500 mt-1">
-          Staff: use the login ID your clinic owner gave you. Owner: enter your email.
+          Most teams sign in here as <code className="bg-stone-100 px-1 rounded">terminal</code>, then identify themselves with a personal PIN on the console.
         </p>
       </div>
       <div>

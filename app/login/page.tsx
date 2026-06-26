@@ -1,20 +1,55 @@
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
 import { PoweredByKanan } from "@/components/PoweredByKanan";
+import { loadTerminalConfig } from "@/lib/terminal-theme";
 
-export default function LoginPage() {
+export default async function LoginPage() {
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Clinic";
+  const { theme, backgroundUrl } = await loadTerminalConfig();
+
   return (
-    <main className="min-h-dvh bg-stone-50 flex items-center justify-center px-5">
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-8">
-          <h1 className="text-xl font-medium">{clinicName}</h1>
-          <p className="text-sm text-stone-500 mt-1">Staff login</p>
+    <main className="relative min-h-dvh flex items-center justify-center px-5 py-10 text-white overflow-hidden">
+      {/* Themed background — gradient OR blurred photo + tinted overlay,
+          identical to the clinic-terminal lockscreen so the sign-in flow
+          feels like the doorway to the same console. */}
+      {backgroundUrl ? (
+        <div
+          className="absolute inset-0 -z-10 scale-110 blur-2xl"
+          style={{
+            backgroundImage: `url('${backgroundUrl}')`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          }}
+        />
+      ) : (
+        <div className="absolute inset-0 -z-10" style={{ backgroundImage: theme.gradient }} />
+      )}
+      {backgroundUrl && (
+        <div
+          className="absolute inset-0 -z-10"
+          style={{
+            backgroundImage: `linear-gradient(180deg, ${theme.overlayTop} 0%, ${theme.overlayBottom} 100%)`,
+          }}
+        />
+      )}
+      <div className="absolute top-0 inset-x-0 h-[3px]" style={{ background: theme.accent }} />
+
+      <div className="w-full max-w-sm relative">
+        <div className="text-center mb-7">
+          <div className="text-[10px] sm:text-[11px] uppercase tracking-[0.35em] text-white/60 mb-2">
+            Clinic console
+          </div>
+          <h1 className="text-2xl font-semibold mb-3">{clinicName}</h1>
+          <p className="text-sm text-white/80 leading-relaxed">
+            Welcome back. Sign in below to open your clinic console.
+          </p>
         </div>
-        <Suspense fallback={<div className="bg-white rounded-xl border border-stone-200 p-6">Loading…</div>}>
+        <Suspense fallback={<div className="bg-white text-stone-900 rounded-2xl shadow-2xl p-6">Loading…</div>}>
           <LoginForm />
         </Suspense>
-        <PoweredByKanan />
+        <div className="text-white/70">
+          <PoweredByKanan />
+        </div>
       </div>
     </main>
   );
