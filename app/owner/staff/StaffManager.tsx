@@ -6,11 +6,12 @@ import { fullNameToLoginId } from "@/lib/login-id";
 
 type Member = {
   id: string;
-  role: "owner" | "nurse" | "doctor";
+  role: "owner" | "nurse" | "doctor" | "terminal";
   full_name: string;
   active: boolean;
   email: string;             // owner's real email; synthetic @kanan-clinic.local for staff (never shown)
-  login_id: string | null;   // null for owner; e.g. "tan_ming" for staff
+  login_id: string | null;   // null for owner; e.g. "tan_ming" for staff; "terminal" for the shared console
+  pin_set: boolean;          // true if staff has a PIN configured
   doctor: { id: string; display_name: string; default_slot_minutes: number; active: boolean } | null;
 };
 
@@ -69,6 +70,44 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ profile_id: m.id, active: !m.active }),
     });
+    router.refresh();
+  }
+
+  async function setPin(m: Member) {
+    const pin = prompt(
+      `Set 6-digit PIN for ${m.full_name}.\n\nThis is what they'll type at the clinic terminal to confirm bookings, send reminders, unlock HR pages, etc.\n\nGive them the PIN privately.`
+    );
+    if (!pin) return;
+    if (!/^\d{6}$/.test(pin)) {
+      alert("PIN must be exactly 6 digits");
+      return;
+    }
+    const res = await fetch(`/api/staff/${m.id}/pin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Failed");
+      return;
+    }
+    alert(`PIN set for ${m.full_name}. They use ${pin} at the clinic terminal.`);
+    router.refresh();
+  }
+
+  async function clearPin(m: Member) {
+    if (!confirm(`Clear PIN for ${m.full_name}? They won't be able to do PIN-gated actions until you set a new one.`)) return;
+    const res = await fetch(`/api/staff/${m.id}/pin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clear: true }),
+    });
+    if (!res.ok) {
+      const data = await res.json();
+      alert(data.error || "Failed");
+      return;
+    }
     router.refresh();
   }
 
@@ -169,6 +208,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
               <th className="px-4 py-2.5 font-medium">Name</th>
               <th className="px-4 py-2.5 font-medium">Role</th>
               <th className="px-4 py-2.5 font-medium">Login</th>
+              <th className="px-4 py-2.5 font-medium">PIN</th>
               <th className="px-4 py-2.5 font-medium">Status</th>
               <th className="px-4 py-2.5 font-medium"></th>
             </tr>
@@ -186,6 +226,15 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
                 <td className="px-4 py-3 text-xs">
                   {m.role === "owner" ? m.email : (m.login_id || "—")}
                 </td>
+                <td className="px-4 py-3 text-xs">
+                  {m.role === "owner" || m.role === "terminal" ? (
+                    <span className="text-stone-400">—</span>
+                  ) : m.pin_set ? (
+                    <span className="text-emerald-700">● set</span>
+                  ) : (
+                    <span className="text-stone-400">not set</span>
+                  )}
+                </td>
                 <td className="px-4 py-3">
                   <span className={`pill ${m.active ? "pill-confirmed" : "pill-cancelled"}`}>
                     {m.active ? "Active" : "Inactive"}
@@ -193,12 +242,24 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-3">
-                    {m.role !== "owner" && (
+                    {(m.role === "doctor" || m.role === "nurse") && (
+                      <>
+                        <button onClick={() => setPin(m)} className="text-xs text-stone-600 hover:text-stone-900">
+                          {m.pin_set ? "Reset PIN" : "Set PIN"}
+                        </button>
+                        {m.pin_set && (
+                          <button onClick={() => clearPin(m)} className="text-xs text-red-600 hover:text-red-800" title="Clear PIN (can't do PIN actions)">
+                            Clear
+                          </button>
+                        )}
+                      </>
+                    )}
+                    {m.role !== "owner" && m.role !== "terminal" && (
                       <button onClick={() => resetPassword(m)} className="text-xs text-stone-600 hover:text-stone-900">
-                        Reset password
+                        Reset pwd
                       </button>
                     )}
-                    {m.role !== "owner" && (
+                    {m.role !== "owner" && m.role !== "terminal" && (
                       <button onClick={() => toggleActive(m)} className="text-xs text-stone-600 hover:text-stone-900">
                         {m.active ? "Deactivate" : "Reactivate"}
                       </button>

@@ -16,7 +16,7 @@ export default async function StaffPage() {
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, role, full_name, active, login_id")
+    .select("id, role, full_name, active, login_id, pin_hash")
     .order("role");
 
   // For each doctor profile, fetch their doctor row
@@ -34,6 +34,8 @@ export default async function StaffPage() {
   const enriched = (profiles || []).map((p) => ({
     ...p,
     email: emailById.get(p.id) || "",
+    pin_set: !!p.pin_hash,
+    pin_hash: undefined, // Don't leak the hash to the client
     doctor: doctors?.find((d) => d.profile_id === p.id) || null,
   }));
 

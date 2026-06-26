@@ -16,6 +16,15 @@ export default async function ProfilePage() {
     .select("id", { count: "exact", head: true })
     .eq("status", "pending");
 
+  // Look up whether this staff member has a PIN set (drives the
+  // "Set PIN" vs "Change PIN" tab label and current-PIN requirement).
+  const { data: pinRow } = await admin
+    .from("profiles")
+    .select("pin_hash")
+    .eq("id", user.id)
+    .single();
+  const hasPin = !!pinRow?.pin_hash;
+
   // For owners, load the doctor roster so they can manage default slot lengths
   // here without jumping over to the Staff page.
   let doctors: { profile_id: string; display_name: string; default_slot_minutes: number }[] = [];
@@ -40,9 +49,15 @@ export default async function ProfilePage() {
     >
       <h2 className="text-base font-medium mb-1">My account</h2>
       <p className="text-xs text-stone-500 mb-4">
-        Change your password or login email.
+        {profile.role === "owner"
+          ? "Change your password or login email."
+          : "Change your password or your 6-digit PIN."}
       </p>
-      <ProfileForm email={user.email || ""} isOwner={profile.role === "owner"} />
+      <ProfileForm
+        email={user.email || ""}
+        isOwner={profile.role === "owner"}
+        hasPin={hasPin}
+      />
 
       {profile.role === "owner" && doctors.length > 0 && (
         <div className="mt-8 max-w-md">

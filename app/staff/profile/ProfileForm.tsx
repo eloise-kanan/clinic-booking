@@ -3,16 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-type Tab = "password" | "email";
+type Tab = "password" | "email" | "pin";
 
 export default function ProfileForm({
   email,
   isOwner,
+  hasPin,
 }: {
   email: string;
   isOwner: boolean;
+  hasPin: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("password");
+  const showPinTab = !isOwner;
+  const showEmailTab = isOwner;
 
   return (
     <div className="max-w-md">
@@ -20,13 +24,20 @@ export default function ProfileForm({
         <TabBtn active={tab === "password"} onClick={() => setTab("password")}>
           Change password
         </TabBtn>
-        {isOwner && (
+        {showPinTab && (
+          <TabBtn active={tab === "pin"} onClick={() => setTab("pin")}>
+            {hasPin ? "Change PIN" : "Set PIN"}
+          </TabBtn>
+        )}
+        {showEmailTab && (
           <TabBtn active={tab === "email"} onClick={() => setTab("email")}>
             Change email
           </TabBtn>
         )}
       </div>
-      {tab === "password" || !isOwner ? <PasswordSection /> : <EmailSection currentEmail={email} />}
+      {tab === "password" && <PasswordSection />}
+      {tab === "pin" && showPinTab && <PinSection hasPin={hasPin} />}
+      {tab === "email" && showEmailTab && <EmailSection currentEmail={email} />}
     </div>
   );
 }
@@ -138,6 +149,112 @@ function PasswordSection() {
       )}
       <button type="submit" disabled={busy} className="btn-primary">
         {busy ? "Changing…" : "Change password"}
+      </button>
+    </form>
+  );
+}
+
+function PinSection({ hasPin }: { hasPin: boolean }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
+  const router = useRouter();
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    if (!/^\d{6}$/.test(next)) {
+      setMsg({ type: "err", text: "PIN must be exactly 6 digits" });
+      return;
+    }
+    if (next !== confirm) {
+      setMsg({ type: "err", text: "New PIN and confirmation don't match" });
+      return;
+    }
+    if (hasPin && !/^\d{6}$/.test(current)) {
+      setMsg({ type: "err", text: "Current PIN required" });
+      return;
+    }
+    setBusy(true);
+    try {
+      const res = await fetch("/api/account/pin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          current_pin: hasPin ? current : undefined,
+          new_pin: next,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg({ type: "err", text: data.error || "Failed to change PIN" });
+        return;
+      }
+      setMsg({ type: "ok", text: hasPin ? "PIN changed." : "PIN set. Use this PIN at the clinic terminal." });
+      setCurrent("");
+      setNext("");
+      setConfirm("");
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-5 space-y-3">
+      <p className="text-[12px] text-stone-600 -mt-1">
+        Your 6-digit PIN unlocks actions at the shared clinic terminal — confirming bookings, sending reminders, opening HR pages. Don&apos;t share it.
+      </p>
+      {hasPin && (
+        <div>
+          <label className="label">Current PIN</label>
+          <input
+            type="password"
+            inputMode="numeric"
+            pattern="\d{6}"
+            maxLength={6}
+            className="input tracking-widest text-center text-lg"
+            value={current}
+            onChange={(e) => setCurrent(e.target.value.replace(/\D/g, "").slice(0, 6))}
+            required
+          />
+        </div>
+      )}
+      <div>
+        <label className="label">New PIN (6 digits)</label>
+        <input
+          type="password"
+          inputMode="numeric"
+          pattern="\d{6}"
+          maxLength={6}
+          className="input tracking-widest text-center text-lg"
+          value={next}
+          onChange={(e) => setNext(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          required
+        />
+      </div>
+      <div>
+        <label className="label">Confirm new PIN</label>
+        <input
+          type="password"
+          inputMode="numeric"
+          pattern="\d{6}"
+          maxLength={6}
+          className="input tracking-widest text-center text-lg"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value.replace(/\D/g, "").slice(0, 6))}
+          required
+        />
+      </div>
+      {msg && (
+        <p className={`text-xs ${msg.type === "ok" ? "text-emerald-700" : "text-red-600"}`}>
+          {msg.text}
+        </p>
+      )}
+      <button type="submit" disabled={busy} className="btn-primary">
+        {busy ? "Saving…" : hasPin ? "Change PIN" : "Set PIN"}
       </button>
     </form>
   );
