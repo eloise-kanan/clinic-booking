@@ -251,9 +251,15 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
                   {m.role === "owner" || m.role === "terminal" ? (
                     <span className="text-stone-400">—</span>
                   ) : m.pin_set ? (
-                    <span className="text-emerald-700">● set</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                      PIN set
+                    </span>
                   ) : (
-                    <span className="text-stone-400">not set</span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      not set
+                    </span>
                   )}
                 </td>
                 <td className="px-4 py-3">

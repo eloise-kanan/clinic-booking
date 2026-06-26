@@ -53,21 +53,25 @@ const admin = createClient(url, serviceKey, { auth: { persistSession: false } })
 
 // Login IDs derived from full names (algorithm: lib/login-id.ts).
 // Synthetic auth email is `${loginId}@kanan-clinic.local`.
-// Demo PINs follow a memorable scheme: doctors 60000X, nurses 70000X.
+// Every staff PIN is the same demo value so the presenter only has to
+// remember one number on stage. Change DEMO_PIN below if you want them
+// distinct again.
+const DEMO_PIN = "123456";
+
 const DOCTORS = [
-  { name: "Dr. Lee Chee Hong",  loginId: "cheehong_lee", slot: 30, pin: "600001" },
-  { name: "Dr. Sarah Wong",     loginId: "sarah_wong",   slot: 30, pin: "600002" },  // Western order — manually corrected
-  { name: "Dr. Aiman Rashid",   loginId: "aiman_rashid", slot: 45, pin: "600003" },  // Malay no particle — manually given_family
-  { name: "Dr. Tan Mei Yee",    loginId: "meiyee_tan",   slot: 30, pin: "600004" },
+  { name: "Dr. Lee Chee Hong",  loginId: "cheehong_lee", slot: 30, pin: DEMO_PIN },
+  { name: "Dr. Sarah Wong",     loginId: "sarah_wong",   slot: 30, pin: DEMO_PIN },
+  { name: "Dr. Aiman Rashid",   loginId: "aiman_rashid", slot: 45, pin: DEMO_PIN },
+  { name: "Dr. Tan Mei Yee",    loginId: "meiyee_tan",   slot: 30, pin: DEMO_PIN },
 ];
 
 const NURSES = [
-  { name: "Norhaiza Binti Ismail", loginId: "norhaiza_ismail", pin: "700001" },
-  { name: "Jenny Tan Hui Mei",     loginId: "jenny_tan",       pin: "700002" },        // Western+Chinese mix — simplified
-  { name: "Priya Devi",            loginId: "priya_devi",      pin: "700003" },       // Indian no particle — manually given_family
-  { name: "Aini Salleh",           loginId: "aini_salleh",     pin: "700004" },      // Malay no particle — manually given_family
-  { name: "Chong Li Wen",          loginId: "liwen_chong",     pin: "700005" },
-  { name: "Farah Liyana",          loginId: "farah_liyana",    pin: "700006" },     // Malay no particle — manually given_family
+  { name: "Norhaiza Binti Ismail", loginId: "norhaiza_ismail", pin: DEMO_PIN },
+  { name: "Jenny Tan Hui Mei",     loginId: "jenny_tan",       pin: DEMO_PIN },
+  { name: "Priya Devi",            loginId: "priya_devi",      pin: DEMO_PIN },
+  { name: "Aini Salleh",           loginId: "aini_salleh",     pin: DEMO_PIN },
+  { name: "Chong Li Wen",          loginId: "liwen_chong",     pin: DEMO_PIN },
+  { name: "Farah Liyana",          loginId: "farah_liyana",    pin: DEMO_PIN },
 ];
 
 const TERMINAL = { loginId: "terminal", name: "Clinic Terminal" };
