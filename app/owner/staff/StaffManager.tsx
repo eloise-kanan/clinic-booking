@@ -133,9 +133,20 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
     alert(`Password updated. Share the new password with ${m.full_name} securely.`);
   }
 
+  async function signOutTerminals() {
+    if (!confirm("Sign out the shared clinic terminal? Any device currently signed in as the terminal will need to re-enter the terminal password to continue.")) return;
+    const res = await fetch("/api/admin/terminal-signout", { method: "POST" });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || "Failed");
+      return;
+    }
+    alert("All terminal sessions signed out. The next pageload on any terminal device kicks back to /login.");
+  }
+
   return (
     <div>
-      <div className="mb-4">
+      <div className="mb-4 flex items-center gap-3">
         {!show ? (
           <button onClick={() => setShow(true)} className="btn-primary">
             + Add staff
@@ -198,6 +209,16 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
               </button>
             </div>
           </form>
+        )}
+        {!show && (
+          <button
+            type="button"
+            onClick={signOutTerminals}
+            className="ml-auto text-xs text-stone-600 hover:text-red-700 border border-stone-200 hover:border-red-300 rounded px-2.5 py-1.5"
+            title="Forcibly sign out every device currently logged in as the shared terminal account"
+          >
+            Sign out all terminals
+          </button>
         )}
       </div>
 

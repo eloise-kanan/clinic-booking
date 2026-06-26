@@ -44,6 +44,27 @@ export default function ClinicConsoleLockscreen({
     router.replace("/login");
   }
 
+  // Idle auto-signout — if no user input for 30 min, end the session. Guards
+  // against the clinic leaving the terminal unattended after closing time.
+  useEffect(() => {
+    const IDLE_MS = 30 * 60_000;
+    let timer: ReturnType<typeof setTimeout>;
+    function reset() {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        endSession();
+      }, IDLE_MS);
+    }
+    const events = ["mousemove", "keydown", "touchstart", "click", "scroll"];
+    events.forEach((e) => window.addEventListener(e, reset, { passive: true }));
+    reset();
+    return () => {
+      clearTimeout(timer);
+      events.forEach((e) => window.removeEventListener(e, reset));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const hh = now ? String(now.getHours()).padStart(2, "0") : "--";
   const mm = now ? String(now.getMinutes()).padStart(2, "0") : "--";
   const weekday = now ? now.toLocaleDateString("en-GB", { weekday: "long" }) : "";

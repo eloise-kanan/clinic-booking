@@ -66,6 +66,15 @@ export async function verifyPin(profileId: string, pin: string): Promise<PinVeri
       updates.pin_locked_until = lockUntil.toISOString();
     }
     await admin.from("profiles").update(updates).eq("id", profileId);
+    // Audit — gives the owner visibility into shoulder-surfing or PIN
+    // guessing attempts at the shared terminal.
+    await admin.from("audit_log").insert({
+      actor_id: profileId,
+      action: attempts >= MAX_FAILED_ATTEMPTS ? "pin_locked" : "pin_wrong",
+      entity_type: "profile",
+      entity_id: profileId,
+      after_data: { attempts, locked_until: updates.pin_locked_until || null },
+    });
     return attempts >= MAX_FAILED_ATTEMPTS
       ? {
           ok: false,
