@@ -244,9 +244,9 @@ export default function BrandingEditor({
         </div>
 
         <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
-          <h3 className="text-sm font-medium">Terminal lockscreen</h3>
+          <h3 className="text-sm font-medium">Theme</h3>
           <p className="text-[11px] text-stone-500 -mt-1">
-            The shared clinic-reception console (sign in as <code className="bg-stone-100 px-1 rounded">terminal</code>) shows a giant clock + a row of pending-action tiles. Pick a theme below; optionally drop in a photo URL — it&apos;ll be blurred so the clock stays readable.
+            Drives the staff backend look (page background, active nav highlight, top accent rail) <em>and</em> the terminal lockscreen gradient. Optionally drop in a photo URL — used only on the terminal, auto-blurred so the clock stays readable.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {TERMINAL_THEME_OPTIONS.map((opt) => (

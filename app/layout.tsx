@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { loadBranding, brandingToCss, fontStylesheetUrl } from "@/lib/branding-server";
+import { loadTerminalConfig, themeToCss } from "@/lib/terminal-theme";
 
 export const metadata: Metadata = {
   title: "Clinic Booking",
@@ -18,7 +19,8 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const branding = await loadBranding();
-  const css = brandingToCss(branding);
+  const terminalCfg = await loadTerminalConfig();
+  const css = `${brandingToCss(branding)}\n${themeToCss(terminalCfg.theme)}`;
   const fontUrl = fontStylesheetUrl(branding.font_family);
 
   return (

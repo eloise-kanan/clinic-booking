@@ -119,9 +119,18 @@ export function StaffShell({
         onClick={() => setMobileNavOpen(false)}
         className={`block px-4 py-2 text-sm flex items-center justify-between ${
           active
-            ? "bg-stone-100 text-stone-900 font-medium border-l-2 border-stone-900 pl-[14px]"
+            ? "font-medium border-l-2 pl-[14px]"
             : "text-stone-600 hover:bg-stone-50"
         }`}
+        style={
+          active
+            ? {
+                background: "var(--staff-accent-soft, #f5f5f4)",
+                color: "var(--staff-active-text, #1c1917)",
+                borderLeftColor: "var(--staff-accent, #1c1917)",
+              }
+            : undefined
+        }
       >
         <span>{item.label}</span>
         {item.badge ? (
@@ -165,11 +174,19 @@ export function StaffShell({
               aria-expanded={isOpen}
               className={`w-full text-left flex items-center justify-between px-4 py-2 text-sm transition-colors ${
                 headerActive
-                  ? "bg-stone-100 text-stone-900 font-medium"
+                  ? "font-medium"
                   : isOpen
                     ? "text-stone-900 font-medium"
                     : "text-stone-700 hover:bg-stone-50"
               }`}
+              style={
+                headerActive
+                  ? {
+                      background: "var(--staff-accent-soft, #f5f5f4)",
+                      color: "var(--staff-active-text, #1c1917)",
+                    }
+                  : undefined
+              }
             >
               <span className="flex items-center gap-2">
                 <span>{section.title}</span>
@@ -209,8 +226,10 @@ export function StaffShell({
   );
 
   return (
-    <div className="min-h-dvh bg-stone-50">
-      <header className="bg-white border-b border-stone-200 sticky top-0 z-30">
+    <div className="min-h-dvh" style={{ background: "var(--staff-bg, #fafaf9)" }}>
+      {/* Themed accent rail — same color as the terminal lockscreen accent */}
+      <div className="h-[3px] w-full sticky top-0 z-40" style={{ background: "var(--staff-accent, transparent)" }} />
+      <header className="bg-white border-b border-stone-200 sticky top-[3px] z-30">
         <div className="max-w-7xl mx-auto px-3 md:px-5 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
             <button
@@ -242,7 +261,7 @@ export function StaffShell({
         <button
           type="button"
           aria-label="Close menu"
-          className="md:hidden fixed inset-0 top-[49px] z-30 bg-black/40"
+          className="md:hidden fixed inset-0 top-[52px] z-30 bg-black/40"
           onClick={() => setMobileNavOpen(false)}
         />
       )}
@@ -252,9 +271,9 @@ export function StaffShell({
           className={`
             bg-white py-4 overflow-y-auto
             md:w-56 md:flex-shrink-0 md:border-r md:border-stone-200
-            md:sticky md:top-[49px] md:h-[calc(100dvh-49px)]
+            md:sticky md:top-[52px] md:h-[calc(100dvh-52px)]
             md:translate-x-0 md:block
-            fixed top-[49px] left-0 z-40 w-64 max-w-[85vw] h-[calc(100dvh-49px)] border-r border-stone-200
+            fixed top-[52px] left-0 z-40 w-64 max-w-[85vw] h-[calc(100dvh-52px)] border-r border-stone-200
             transition-transform duration-200 ease-out
             ${mobileNavOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
           `}

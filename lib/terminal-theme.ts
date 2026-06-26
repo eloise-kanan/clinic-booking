@@ -21,6 +21,11 @@ export type TerminalTheme = {
   overlayBottom: string;
   // Hex of the small accent rail at the top.
   accent: string;
+  // Staff backend tints — used by StaffShell when this theme is active.
+  staffBg: string;        // overall page background (very subtle tint)
+  staffAccent: string;    // active nav border, top header rail
+  staffAccentSoft: string;// active nav background tint
+  staffActiveText: string;// active nav label color
 };
 
 export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
@@ -32,6 +37,10 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     overlayTop: "rgba(27,42,74,0.55)",
     overlayBottom: "rgba(27,42,74,0.80)",
     accent: "#C9A227",
+    staffBg: "#F4F1EA",
+    staffAccent: "#C9A227",
+    staffAccentSoft: "#FBF6E5",
+    staffActiveText: "#1B2A4A",
   },
   midnight: {
     name: "midnight",
@@ -41,6 +50,10 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     overlayTop: "rgba(15,23,42,0.55)",
     overlayBottom: "rgba(15,23,42,0.85)",
     accent: "#64748B",
+    staffBg: "#F1F5F9",
+    staffAccent: "#475569",
+    staffAccentSoft: "#E2E8F0",
+    staffActiveText: "#0F172A",
   },
   dawn: {
     name: "dawn",
@@ -50,6 +63,10 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     overlayTop: "rgba(40,20,15,0.50)",
     overlayBottom: "rgba(20,15,30,0.80)",
     accent: "#E08855",
+    staffBg: "#FFF7ED",
+    staffAccent: "#C2410C",
+    staffAccentSoft: "#FFEDD5",
+    staffActiveText: "#7C2D12",
   },
   sage: {
     name: "sage",
@@ -59,6 +76,10 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     overlayTop: "rgba(20,40,30,0.50)",
     overlayBottom: "rgba(20,30,45,0.80)",
     accent: "#7BA88A",
+    staffBg: "#F0FDF4",
+    staffAccent: "#15803D",
+    staffAccentSoft: "#DCFCE7",
+    staffActiveText: "#14532D",
   },
   mono: {
     name: "mono",
@@ -68,8 +89,25 @@ export const TERMINAL_THEMES: Record<TerminalThemeName, TerminalTheme> = {
     overlayTop: "rgba(0,0,0,0.50)",
     overlayBottom: "rgba(0,0,0,0.80)",
     accent: "#737373",
+    staffBg: "#F5F5F5",
+    staffAccent: "#404040",
+    staffAccentSoft: "#E5E5E5",
+    staffActiveText: "#171717",
   },
 };
+
+// CSS variables exposed to all staff UI screens. Loaded at <html> root by
+// app/layout.tsx so any component can use them (StaffShell, badges, etc.).
+export function themeToCss(theme: TerminalTheme): string {
+  return `
+    :root {
+      --staff-bg: ${theme.staffBg};
+      --staff-accent: ${theme.staffAccent};
+      --staff-accent-soft: ${theme.staffAccentSoft};
+      --staff-active-text: ${theme.staffActiveText};
+    }
+  `.trim();
+}
 
 export const DEFAULT_THEME: TerminalThemeName = "navy";
 
