@@ -14,10 +14,10 @@ function isSectioned(n: Nav): n is NavSection[] {
 }
 
 function isItemActive(item: NavItem, pathname: string): boolean {
-  if (item.href === pathname) return true;
-  // Treat a parent href as active when on a sub-path, but ignore the root "/"
-  // which would falsely match everything.
-  return item.href !== "/" && pathname.startsWith(item.href + "/");
+  // Exact match only — startsWith caused "/owner" (Overview) to read as
+  // active for every /owner/* sub-page, double-highlighting alongside the
+  // actual page's nav item.
+  return item.href === pathname;
 }
 
 function isSectionActive(section: NavSection, pathname: string): boolean {

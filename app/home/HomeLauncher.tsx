@@ -436,26 +436,25 @@ function CardItem({ card }: { card: Card }) {
   return (
     <Link
       href={card.href}
-      className={`group relative block p-5 rounded-xl border-2 hover:shadow-md hover:-translate-y-0.5 transition-all ${toneClass}`}
+      className={`group relative block px-3 py-2.5 rounded-lg border hover:shadow-sm hover:border-stone-300 transition-all ${toneClass}`}
     >
-      <div className="relative inline-block mb-3">
-        <div className="text-4xl leading-none">{card.icon}</div>
-        {hasBadge && (
-          <span
-            className={`absolute -top-1.5 -right-3 min-w-[22px] h-[22px] px-1.5 rounded-full text-[11px] font-bold flex items-center justify-center shadow-sm ring-2 ring-white ${dotClass}`}
-            aria-label={`${card.badge} ${card.badgeLabel || ""}`.trim()}
-          >
-            {badgeLabel}
-          </span>
-        )}
-      </div>
-      <div className="text-sm font-semibold text-stone-900 mb-1">{card.title}</div>
-      <div className="text-xs text-stone-600 leading-snug">{card.description}</div>
-      {hasBadge && card.badgeLabel && (
-        <div className="text-[11px] text-stone-500 mt-1.5">
-          {card.badge} {card.badgeLabel}
+      <div className="flex items-start gap-2.5">
+        <div className="relative shrink-0">
+          <div className="text-xl leading-none">{card.icon}</div>
+          {hasBadge && (
+            <span
+              className={`absolute -top-1 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full text-[9px] font-bold flex items-center justify-center shadow-sm ring-2 ring-white ${dotClass}`}
+              aria-label={`${card.badge} ${card.badgeLabel || ""}`.trim()}
+            >
+              {badgeLabel}
+            </span>
+          )}
         </div>
-      )}
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-semibold text-stone-900 leading-tight truncate">{card.title}</div>
+          <div className="text-[11px] text-stone-500 leading-snug mt-0.5 line-clamp-2">{card.description}</div>
+        </div>
+      </div>
     </Link>
   );
 }
@@ -491,27 +490,27 @@ export default function HomeLauncher({
   const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-medium tracking-tight text-stone-900">
+          <h1 className="text-lg font-medium tracking-tight text-stone-900">
             {greeting}, {firstName}
           </h1>
-          <p className="text-sm text-stone-500 mt-1">
-            Welcome to {clinicName}. Pick where to go below — or use the side menu for everything else.
+          <p className="text-xs text-stone-500 mt-0.5">
+            Welcome to {clinicName}.
           </p>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-50 text-brand-800 text-xs font-medium border border-brand-100">
-          🎯 {planLabel} plan
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-800 text-[11px] font-medium border border-brand-100">
+          {planLabel} plan
         </span>
       </div>
 
       {sections.map((section) => (
         <div key={section.title}>
-          <h2 className="text-[11px] uppercase tracking-wider font-semibold text-stone-500 mb-2">
+          <h2 className="text-[10px] uppercase tracking-wider font-semibold text-stone-500 mb-1.5">
             {section.title}
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
             {section.cards.map((card) => (
               <CardItem key={card.href} card={card} />
             ))}
