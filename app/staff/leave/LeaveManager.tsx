@@ -3,12 +3,15 @@
 import { useEffect, useState } from "react";
 import { localYmd as todayStr } from "@/lib/local-date";
 
+type LeaveType = "annual" | "mc" | "emergency";
+
 type LeaveRequest = {
   id: string;
   profile_id: string;
   start_date: string;
   end_date: string;
   reason: string | null;
+  leave_type?: LeaveType;
   status: "pending" | "approved" | "rejected";
   reviewed_at: string | null;
   reviewer_notes: string | null;
@@ -16,6 +19,8 @@ type LeaveRequest = {
   profile: { full_name: string; role: string } | { full_name: string; role: string }[] | null;
   reviewer: { full_name: string } | { full_name: string }[] | null;
 };
+
+type Balances = { annual: number; mc: number; emergency: number };
 
 function flat<T>(v: T | T[] | null | undefined): T | null {
   if (!v) return null;
@@ -34,13 +39,23 @@ export default function LeaveManager({
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [reason, setReason] = useState("");
+  const [leaveType, setLeaveType] = useState<LeaveType>("annual");
+  const [balances, setBalances] = useState<Balances | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>("");
+  const [autoNotice, setAutoNotice] = useState<string>("");
 
   async function load() {
-    const res = await fetch("/api/leave/requests");
-    const d = await res.json();
+    const [reqRes, balRes] = await Promise.all([
+      fetch("/api/leave/requests"),
+      fetch("/api/leave/balance"),
+    ]);
+    const d = await reqRes.json();
     setRequests(d.requests || []);
+    if (balRes.ok) {
+      const b = await balRes.json();
+      setBalances(b.balance);
+    }
   }
 
   useEffect(() => {
@@ -50,21 +65,46 @@ export default function LeaveManager({
     load();
   }, []);
 
+  // Predict whether the chosen start date will be auto-flagged emergency.
+  // Server-side rule is the source of truth, this is just a helper hint.
+  function workingDaysFromNow(start: string): number {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const s = new Date(start + "T00:00:00");
+    let n = 0;
+    for (const d = new Date(today); d < s; d.setDate(d.getDate() + 1)) {
+      const wd = d.getDay();
+      if (wd !== 0 && wd !== 6) n++;
+    }
+    return n;
+  }
+  const isShortNotice = startDate && workingDaysFromNow(startDate) < 3;
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setAutoNotice("");
     setBusy(true);
     try {
       const res = await fetch("/api/leave/requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ start_date: startDate, end_date: endDate, reason }),
+        body: JSON.stringify({
+          start_date: startDate,
+          end_date: endDate,
+          reason,
+          leave_type: leaveType,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || "Failed to submit");
       } else {
         setReason("");
+        if (data.auto_emergency) {
+          setAutoNotice(
+            "Submitted as Emergency leave — start date was within 3 working days. Owner will review."
+          );
+        }
         await load();
       }
     } finally {
@@ -108,8 +148,42 @@ export default function LeaveManager({
 
   return (
     <div className="space-y-5">
+      {/* Balance strip — three small stat tiles for the current year. */}
+      {balances && (
+        <div className="grid grid-cols-3 gap-2">
+          <BalanceTile label="Annual" value={balances.annual} tone="info" />
+          <BalanceTile label="Medical (MC)" value={balances.mc} tone="ok" />
+          <BalanceTile label="Emergency" value={balances.emergency} tone="warn" />
+        </div>
+      )}
+
       <form onSubmit={submit} className="bg-white rounded-xl border border-stone-200 p-4 space-y-3">
         <h3 className="text-sm font-medium">Submit a new request</h3>
+        {/* Leave-type selector */}
+        <div>
+          <label className="label">Leave type</label>
+          <div className="grid grid-cols-3 gap-2">
+            {(["annual", "mc", "emergency"] as LeaveType[]).map((lt) => (
+              <button
+                key={lt}
+                type="button"
+                onClick={() => setLeaveType(lt)}
+                className={`p-2.5 rounded-md border text-sm transition-colors ${
+                  leaveType === lt
+                    ? "border-stone-900 bg-stone-900 text-white"
+                    : "border-stone-200 bg-white hover:border-stone-400"
+                }`}
+              >
+                {lt === "annual" ? "Annual" : lt === "mc" ? "Medical (MC)" : "Emergency"}
+              </button>
+            ))}
+          </div>
+          {isShortNotice && leaveType === "annual" && (
+            <p className="text-[11px] text-amber-700 mt-1.5">
+              ⚠ Less than 3 working days&apos; notice — this will auto-submit as <strong>Emergency</strong> leave.
+            </p>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
             <label className="label">From</label>
@@ -143,6 +217,7 @@ export default function LeaveManager({
             />
           </div>
         </div>
+        {autoNotice && <p className="text-xs text-emerald-700">{autoNotice}</p>}
         {error && <p className="text-xs text-red-600">{error}</p>}
         <button type="submit" disabled={busy} className="btn-primary">
           {busy ? "Submitting…" : "Submit request"}
@@ -260,6 +335,32 @@ export default function LeaveManager({
           </ul>
         </div>
       )}
+    </div>
+  );
+}
+
+function BalanceTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: number;
+  tone: "info" | "ok" | "warn";
+}) {
+  const ringColor =
+    tone === "info"
+      ? "border-blue-200 bg-blue-50"
+      : tone === "ok"
+        ? "border-emerald-200 bg-emerald-50"
+        : "border-amber-200 bg-amber-50";
+  const labelColor =
+    tone === "info" ? "text-blue-700" : tone === "ok" ? "text-emerald-700" : "text-amber-700";
+  return (
+    <div className={`rounded-lg border ${ringColor} px-3 py-2`}>
+      <div className={`text-[10px] uppercase tracking-wider font-medium ${labelColor}`}>{label}</div>
+      <div className="text-xl font-medium tabular-nums leading-tight mt-0.5">{value}</div>
+      <div className="text-[10px] text-stone-500 leading-tight">days remaining</div>
     </div>
   );
 }

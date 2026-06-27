@@ -94,11 +94,13 @@ export default async function HomePage() {
 
     // Today's confirmed bookings — left panel on the lockscreen shows the
     // upcoming list with quick attendance buttons. Limit to 12 visible rows.
-    // Upcoming confirmed bookings — from now through the next 48 hours.
-    // Showing strictly "today only" left the panel empty on demo when
-    // bookings were scheduled for tomorrow + later. Imminent bookings
-    // (next 60 min) get visually elevated in the UI.
-    const horizonStart = new Date().toISOString();
+    // Upcoming confirmed bookings — start-of-today through 48 hours from now.
+    // Using "from now" was excluding morning-today bookings when the user
+    // checked the dashboard in the afternoon (Vercel runs UTC + clinic data
+    // is MYT, so the math was off). Show all of today + the next ~2 days.
+    const todayStartMs = new Date();
+    todayStartMs.setHours(0, 0, 0, 0);
+    const horizonStart = todayStartMs.toISOString();
     const horizonEnd = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
     const { data: todayList } = await admin
       .from("bookings")
