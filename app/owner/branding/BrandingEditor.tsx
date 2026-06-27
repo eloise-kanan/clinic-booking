@@ -14,6 +14,20 @@ type Branding = {
 
 // Mirrors lib/terminal-theme.ts — kept here for the live preview chip
 // without having to import server-only code into the editor.
+// Per-theme tints used by the staff backend preview — mirrors
+// lib/terminal-theme.ts's staffBg / staffAccentSoft / staffActiveText so
+// the mini preview really looks like the deployed UI.
+const STAFF_TINTS: Record<Branding["terminal_theme"], { bg: string; accentSoft: string; activeText: string }> = {
+  navy:     { bg: "#F4F1EA", accentSoft: "#FBF6E5", activeText: "#1B2A4A" },
+  midnight: { bg: "#F1F5F9", accentSoft: "#E2E8F0", activeText: "#0F172A" },
+  dawn:     { bg: "#FFF7ED", accentSoft: "#FFEDD5", activeText: "#7C2D12" },
+  sage:     { bg: "#F0FDF4", accentSoft: "#DCFCE7", activeText: "#14532D" },
+  mono:     { bg: "#F5F5F5", accentSoft: "#E5E5E5", activeText: "#171717" },
+};
+function getStaffBg(t: Branding["terminal_theme"]) { return STAFF_TINTS[t]?.bg || "#F4F1EA"; }
+function getStaffAccentSoft(t: Branding["terminal_theme"]) { return STAFF_TINTS[t]?.accentSoft || "#FBF6E5"; }
+function getStaffActiveText(t: Branding["terminal_theme"]) { return STAFF_TINTS[t]?.activeText || "#1B2A4A"; }
+
 const TERMINAL_THEME_OPTIONS: Array<{
   value: Branding["terminal_theme"];
   label: string;
@@ -148,8 +162,12 @@ export default function BrandingEditor({
     }
   }
 
+  // Look up the gradient string for the currently-selected terminal theme so
+  // the homepage preview matches what the staff backend will look like.
+  const activeTheme = TERMINAL_THEME_OPTIONS.find((o) => o.value === terminalTheme) || TERMINAL_THEME_OPTIONS[0];
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
       {/* Editor controls */}
       <div className="space-y-4">
         {/* Theme is the umbrella setting — drives lockscreen, staff backend,
@@ -302,12 +320,51 @@ export default function BrandingEditor({
         </div>
       </div>
 
-      {/* Live preview */}
-      <div className="space-y-3">
+      {/* Live preview — sticky on lg+ so it follows the editor scroll. */}
+      <div className="space-y-3 lg:sticky lg:top-[60px] self-start">
         <h3 className="text-sm font-medium text-stone-600 uppercase tracking-wider">Live preview</h3>
+
+        {/* Staff backend preview — drives by the chosen theme. Shows the
+            header band, accent rail, page tint, and an active-nav row so the
+            owner can see how /home + sidebar will look. */}
+        <div className="border border-stone-200 rounded-xl overflow-hidden shadow-sm">
+          <div className="px-3 py-2 border-b border-stone-100 flex items-center justify-between">
+            <span className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
+              Staff backend
+            </span>
+            <span className="text-[10px] text-stone-400">{activeTheme.label}</span>
+          </div>
+          {/* Themed accent rail */}
+          <div className="h-[3px]" style={{ background: activeTheme.accent }} />
+          {/* Header band */}
+          <div
+            className="px-3 py-2 text-white text-[11px] font-medium flex items-center justify-between"
+            style={{ background: activeTheme.gradient }}
+          >
+            <span>Clinic Console · {clinicName}</span>
+            <span className="text-white/70 text-[10px]">Sign out</span>
+          </div>
+          {/* Page area with two nav-row examples on a tinted background */}
+          <div className="p-3 space-y-1" style={{ background: getStaffBg(terminalTheme) }}>
+            <div
+              className="px-3 py-1.5 text-[11px] font-medium rounded flex items-center justify-between"
+              style={{
+                background: getStaffAccentSoft(terminalTheme),
+                color: getStaffActiveText(terminalTheme),
+                borderLeft: `2px solid ${activeTheme.accent}`,
+                paddingLeft: "10px",
+              }}
+            >
+              <span>Pending</span>
+              <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">3</span>
+            </div>
+            <div className="px-3 py-1.5 text-[11px] text-stone-600">All bookings</div>
+            <div className="px-3 py-1.5 text-[11px] text-stone-600">Patients</div>
+          </div>
+        </div>
+
         <p className="text-[11px] text-stone-500">
-          A miniature of how your booking page will look. The real page reflects these changes the
-          moment you save.
+          ↓ Patient-facing booking page below.
         </p>
 
         <div
@@ -317,6 +374,8 @@ export default function BrandingEditor({
             backgroundColor: "#fafaf7",
           }}
         >
+          {/* Accent rail at the top of the booking page (mirrors /book) */}
+          <div className="h-[3px]" style={{ background: activeTheme.accent }} />
           <div className="px-6 py-5 text-center">
             {logo ? (
               // eslint-disable-next-line @next/next/no-img-element
