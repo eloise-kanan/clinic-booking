@@ -489,6 +489,21 @@ export default function HomeLauncher({
   const firstName = userName.split(" ")[0] || userName;
   const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
 
+  // OWNER gets a curated summary view focused on what needs their attention
+  // (everything else is in the sidebar). Nurses + doctors still see the
+  // action-grid below since they navigate from here all day.
+  if (role === "owner") {
+    return (
+      <OwnerSummary
+        greeting={greeting}
+        firstName={firstName}
+        clinicName={clinicName}
+        planLabel={planLabel}
+        counts={counts}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Slim greeting bar */}
@@ -526,6 +541,188 @@ export default function HomeLauncher({
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+// Owner-only home view — task-oriented summary rather than a duplicate of
+// the sidebar. Each panel shows what needs attention + a direct CTA.
+function OwnerSummary({
+  greeting,
+  firstName,
+  clinicName,
+  planLabel,
+  counts,
+}: {
+  greeting: string;
+  firstName: string;
+  clinicName: string;
+  planLabel: string;
+  counts: Counts;
+}) {
+  const totalAttention =
+    counts.pending +
+    counts.pendingLeaves +
+    counts.pendingShifts +
+    counts.remindersPending +
+    counts.pastUnmarked;
+
+  return (
+    <div className="space-y-5">
+      {/* Greeting */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-medium tracking-tight text-stone-900">
+            {greeting}, {firstName}
+          </h1>
+          <p className="text-xs text-stone-500 mt-0.5">
+            {totalAttention === 0
+              ? `Nothing needs your attention at ${clinicName} right now.`
+              : `${totalAttention} ${totalAttention === 1 ? "thing" : "things"} need your attention at ${clinicName}.`}
+          </p>
+        </div>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-800 text-[11px] font-medium border border-brand-100">
+          {planLabel} plan
+        </span>
+      </div>
+
+      {/* Needs-decision panels — items where the owner is the actor */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <SummaryPanel
+          accent="amber"
+          eyebrow="Needs your decision"
+          title={`${counts.pendingLeaves + counts.pendingShifts} HR ${counts.pendingLeaves + counts.pendingShifts === 1 ? "request" : "requests"}`}
+          lines={[
+            counts.pendingLeaves > 0 ? `${counts.pendingLeaves} leave ${counts.pendingLeaves === 1 ? "request" : "requests"}` : null,
+            counts.pendingShifts > 0 ? `${counts.pendingShifts} shift-change ${counts.pendingShifts === 1 ? "request" : "requests"}` : null,
+            counts.pendingLeaves + counts.pendingShifts === 0 ? "Nothing pending." : null,
+          ].filter(Boolean) as string[]}
+          ctas={[
+            counts.pendingLeaves > 0
+              ? { label: "Review leave", href: "/staff/leave" }
+              : null,
+            counts.pendingShifts > 0
+              ? { label: "Review shifts", href: "/staff/duty" }
+              : null,
+          ].filter((c): c is { label: string; href: string } => c !== null)}
+        />
+
+        <SummaryPanel
+          accent="info"
+          eyebrow="Today's bookings"
+          title={`${counts.today} confirmed`}
+          lines={[
+            counts.pending > 0 ? `${counts.pending} still pending nurse approval` : null,
+            counts.pastUnmarked > 0 ? `${counts.pastUnmarked} past bookings not marked` : null,
+            counts.today === 0 && counts.pending === 0 ? "No appointments today." : null,
+          ].filter(Boolean) as string[]}
+          ctas={[
+            { label: "View calendar", href: "/owner/calendar" },
+            counts.pending > 0 ? { label: "Pending queue", href: "/nurse" } : null,
+          ].filter((c): c is { label: string; href: string } => c !== null)}
+        />
+
+        <SummaryPanel
+          accent={counts.remindersPending > 0 ? "warn" : "ok"}
+          eyebrow="Communications"
+          title={
+            counts.remindersPending > 0
+              ? `${counts.remindersPending} reminders to send`
+              : "All reminders sent ✓"
+          }
+          lines={[
+            counts.remindersPending > 0
+              ? "Tomorrow's confirmed appointments — patients are waiting."
+              : "Nothing to chase right now.",
+          ]}
+          ctas={
+            counts.remindersPending > 0
+              ? [{ label: "Send reminders", href: "/staff/reminders" }]
+              : []
+          }
+        />
+
+        <SummaryPanel
+          accent="neutral"
+          eyebrow="Quick access"
+          title="Common tasks"
+          lines={[]}
+          ctas={[
+            { label: "+ New booking", href: "/staff/new" },
+            { label: "Patients", href: "/owner/patients" },
+            { label: "Overview", href: "/owner" },
+          ]}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SummaryPanel({
+  accent,
+  eyebrow,
+  title,
+  lines,
+  ctas,
+}: {
+  accent: "amber" | "info" | "warn" | "ok" | "neutral";
+  eyebrow: string;
+  title: string;
+  lines: string[];
+  ctas: { label: string; href: string }[];
+}) {
+  const eyebrowColor =
+    accent === "amber"
+      ? "text-amber-700"
+      : accent === "warn"
+        ? "text-red-700"
+        : accent === "info"
+          ? "text-blue-700"
+          : accent === "ok"
+            ? "text-emerald-700"
+            : "text-stone-600";
+  const dotColor =
+    accent === "amber"
+      ? "bg-amber-500"
+      : accent === "warn"
+        ? "bg-red-500"
+        : accent === "info"
+          ? "bg-blue-500"
+          : accent === "ok"
+            ? "bg-emerald-500"
+            : "bg-stone-400";
+
+  return (
+    <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col gap-3">
+      <div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
+          <span className={`text-[10px] uppercase tracking-wider font-medium ${eyebrowColor}`}>
+            {eyebrow}
+          </span>
+        </div>
+        <div className="text-base font-semibold text-stone-900 leading-tight">{title}</div>
+      </div>
+      {lines.length > 0 && (
+        <ul className="text-xs text-stone-600 space-y-0.5 leading-snug">
+          {lines.map((l, i) => (
+            <li key={i}>{l}</li>
+          ))}
+        </ul>
+      )}
+      {ctas.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mt-auto pt-1">
+          {ctas.map((c) => (
+            <Link
+              key={c.href}
+              href={c.href}
+              className="text-xs px-2.5 py-1 rounded-md border border-stone-300 hover:border-stone-500 hover:bg-stone-50 text-stone-700 transition-colors"
+            >
+              {c.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
