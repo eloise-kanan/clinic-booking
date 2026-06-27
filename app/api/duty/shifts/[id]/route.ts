@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { applyPermanentToWorkingHours } from "@/lib/duty-shifts";
 
-// PATCH /api/duty/shifts/[id] — owner approves or rejects
+// PATCH /api/duty/shifts/[id] — owner approves or rejects. When approving
+// a permanent shift change for a doctor, immediately update working_hours
+// so the new schedule takes effect (one-off rows stay in duty_shifts; the
+// duty calendar excludes is_permanent rows).
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const {
@@ -21,22 +25,42 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const { id } = await params;
   const body = await req.json();
-  const { status, notes } = body;
+  const { status, notes, reviewer_notes } = body;
   if (!["approved", "rejected"].includes(status)) {
     return NextResponse.json({ error: "status must be 'approved' or 'rejected'" }, { status: 400 });
   }
 
   const admin = createAdminClient();
+
+  // Pull the row first so we know whether it's permanent + the schedule.
+  const { data: existing } = await admin
+    .from("duty_shifts")
+    .select("profile_id, shift_date, start_time, end_time, is_permanent, status")
+    .eq("id", id)
+    .single();
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
   const { error } = await admin
     .from("duty_shifts")
     .update({
       status,
       reviewed_at: new Date().toISOString(),
       reviewed_by: user.id,
-      reviewer_notes: notes || null,
+      reviewer_notes: reviewer_notes ?? notes ?? null,
     })
     .eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  if (status === "approved" && existing.is_permanent) {
+    await applyPermanentToWorkingHours(
+      admin,
+      existing.profile_id,
+      existing.shift_date,
+      existing.start_time,
+      existing.end_time
+    );
+  }
+
   return NextResponse.json({ ok: true });
 }
 

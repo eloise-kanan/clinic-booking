@@ -25,7 +25,7 @@ export default async function HrApprovalsPage() {
     admin
       .from("duty_shifts")
       .select(
-        "id, profile_id, shift_date, start_time, end_time, reason, status, created_at, profile:profiles!duty_shifts_profile_id_fkey(full_name, role)"
+        "id, profile_id, shift_date, start_time, end_time, notes, is_permanent, status, created_at, profile:profiles!duty_shifts_profile_id_fkey(full_name, role)"
       )
       .eq("status", "pending")
       .order("shift_date", { ascending: true }),
@@ -61,7 +61,8 @@ export default async function HrApprovalsPage() {
     shift_date: r.shift_date,
     start_time: r.start_time,
     end_time: r.end_time,
-    reason: r.reason,
+    reason: r.notes,
+    is_permanent: !!r.is_permanent,
     created_at: r.created_at,
   }));
 

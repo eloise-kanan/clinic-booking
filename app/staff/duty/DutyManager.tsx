@@ -39,6 +39,7 @@ export default function DutyManager({
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("21:00");
   const [notes, setNotes] = useState("");
+  const [isPermanent, setIsPermanent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>("");
 
@@ -69,7 +70,13 @@ export default function DutyManager({
       const res = await fetch("/api/duty/shifts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shift_date: shiftDate, start_time: startTime, end_time: endTime, notes }),
+        body: JSON.stringify({
+          shift_date: shiftDate,
+          start_time: startTime,
+          end_time: endTime,
+          notes,
+          is_permanent: isPermanent,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -173,9 +180,27 @@ export default function DutyManager({
             />
           </div>
         </div>
+        {/* Permanent toggle — when on, this becomes a recurring schedule
+            change. The picked date supplies the weekday; once approved it
+            replaces the staff member's default working hours and does NOT
+            show up on the duty calendar (no exception spam). */}
+        <label className="flex items-start gap-2.5 p-2.5 rounded-md border border-stone-200 bg-stone-50 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isPermanent}
+            onChange={(e) => setIsPermanent(e.target.checked)}
+            className="mt-0.5"
+          />
+          <div className="flex-1">
+            <div className="text-xs font-medium">Make this a permanent change</div>
+            <div className="text-[11px] text-stone-500 leading-snug mt-0.5">
+              Treat this as my new default for {fmtWeekdayName(shiftDate)}s going forward — owner approval will update my working hours, not the calendar.
+            </div>
+          </div>
+        </label>
         {error && <p className="text-xs text-red-600">{error}</p>}
         <button type="submit" disabled={busy} className="btn-primary">
-          {busy ? "Saving…" : role === "owner" ? "Add custom shift" : "Submit shift change"}
+          {busy ? "Saving…" : role === "owner" ? (isPermanent ? "Add permanent change" : "Add custom shift") : (isPermanent ? "Submit permanent change" : "Submit shift change")}
         </button>
       </form>
 
@@ -355,4 +380,10 @@ export default function DutyManager({
       </div>
     </div>
   );
+}
+
+function fmtWeekdayName(dateStr: string): string {
+  if (!dateStr) return "the chosen day";
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { weekday: "long" });
 }

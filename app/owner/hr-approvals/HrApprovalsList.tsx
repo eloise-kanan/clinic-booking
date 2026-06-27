@@ -24,6 +24,7 @@ type ShiftRow = {
   start_time: string;
   end_time: string;
   reason: string | null;
+  is_permanent: boolean;
   created_at: string;
 };
 
@@ -143,8 +144,13 @@ export default function HrApprovalsList({
                     {r.profile_name}
                     <span className="text-stone-500 ml-2 text-xs lowercase">({r.profile_role})</span>
                   </div>
-                  <div className="text-xs text-stone-600 mt-1">
+                  <div className="text-xs text-stone-600 mt-1 flex items-center gap-2 flex-wrap">
                     <strong>{fmtDate(r.shift_date)}</strong> · {r.start_time.slice(0, 5)}–{r.end_time.slice(0, 5)}
+                    {r.is_permanent && (
+                      <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 font-medium">
+                        Permanent · {weekdayName(r.shift_date)}s
+                      </span>
+                    )}
                   </div>
                   {r.reason && (
                     <div className="text-[11px] text-stone-500 mt-1">Reason: {r.reason}</div>
@@ -180,6 +186,9 @@ export default function HrApprovalsList({
   );
 }
 
+function weekdayName(d: string): string {
+  return new Date(d + "T00:00:00").toLocaleDateString("en-GB", { weekday: "long" });
+}
 function prettyLeaveType(t: "annual" | "mc" | "emergency"): string {
   if (t === "mc") return "Medical (MC)";
   if (t === "emergency") return "Emergency";
