@@ -108,6 +108,62 @@ export default async function HomePage() {
     );
   }
 
+  // Owner gets two extra summaries — today-on-the-floor + this-week pulse
+  let doctorsToday: Array<{ id: string; name: string; count: number }> = [];
+  let weekPulse: {
+    thisWeek: number;
+    lastWeek: number;
+    deltaPct: number | null;
+    newPatients: number;
+  } | null = null;
+  if (profile.role === "owner") {
+    const startOfThisWeek = new Date();
+    startOfThisWeek.setDate(startOfThisWeek.getDate() - 7);
+    const startOfLastWeek = new Date(startOfThisWeek);
+    startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+
+    const [todayBookingsRes, doctorsRes, weekRes, lastWeekRes, newPatientsRes] = await Promise.all([
+      admin
+        .from("bookings")
+        .select("doctor_id, attended_at, no_show")
+        .eq("status", "confirmed")
+        .gte("slot_start", todayStart)
+        .lte("slot_start", todayEnd),
+      admin.from("doctors").select("id, display_name").eq("active", true),
+      admin
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", startOfThisWeek.toISOString()),
+      admin
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", startOfLastWeek.toISOString())
+        .lt("created_at", startOfThisWeek.toISOString()),
+      admin
+        .from("patients")
+        .select("id", { count: "exact", head: true })
+        .gte("first_seen_at", startOfThisWeek.toISOString()),
+    ]);
+    const docName = new Map<string, string>();
+    (doctorsRes.data || []).forEach((d) => docName.set(d.id, d.display_name));
+    const docCount = new Map<string, number>();
+    (todayBookingsRes.data || []).forEach((b) => {
+      if (b.doctor_id) docCount.set(b.doctor_id, (docCount.get(b.doctor_id) || 0) + 1);
+    });
+    doctorsToday = Array.from(docCount.entries())
+      .map(([id, count]) => ({ id, name: docName.get(id) || "Doctor", count }))
+      .sort((a, b) => b.count - a.count);
+
+    const tw = weekRes.count || 0;
+    const lw = lastWeekRes.count || 0;
+    weekPulse = {
+      thisWeek: tw,
+      lastWeek: lw,
+      deltaPct: lw > 0 ? Math.round(((tw - lw) / lw) * 100) : null,
+      newPatients: newPatientsRes.count || 0,
+    };
+  }
+
   return (
     <StaffShell
       role={profile.role as "owner" | "nurse" | "doctor"}
@@ -127,6 +183,8 @@ export default async function HomePage() {
           pendingShifts: pendingShiftsCount || 0,
           pastUnmarked: pastUnmarkedCount || 0,
         }}
+        doctorsToday={doctorsToday}
+        weekPulse={weekPulse}
       />
     </StaffShell>
   );

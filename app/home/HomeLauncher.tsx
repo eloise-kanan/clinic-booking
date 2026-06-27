@@ -459,18 +459,30 @@ function CardItem({ card }: { card: Card }) {
   );
 }
 
+type DoctorToday = { id: string; name: string; count: number };
+type WeekPulse = {
+  thisWeek: number;
+  lastWeek: number;
+  deltaPct: number | null;
+  newPatients: number;
+};
+
 export default function HomeLauncher({
   role,
   userName,
   clinicName,
   plan,
   counts,
+  doctorsToday = [],
+  weekPulse = null,
 }: {
   role: Role;
   userName: string;
   clinicName: string;
   plan: Plan;
   counts: Counts;
+  doctorsToday?: DoctorToday[];
+  weekPulse?: WeekPulse | null;
 }) {
   // Filter cards by plan tier; drop sections that become empty after filtering.
   const sections = cardsForRole(role, counts)
@@ -500,6 +512,8 @@ export default function HomeLauncher({
         clinicName={clinicName}
         planLabel={planLabel}
         counts={counts}
+        doctorsToday={doctorsToday}
+        weekPulse={weekPulse}
       />
     );
   }
@@ -553,12 +567,16 @@ function OwnerSummary({
   clinicName,
   planLabel,
   counts,
+  doctorsToday,
+  weekPulse,
 }: {
   greeting: string;
   firstName: string;
   clinicName: string;
   planLabel: string;
   counts: Counts;
+  doctorsToday: DoctorToday[];
+  weekPulse: WeekPulse | null;
 }) {
   const totalAttention =
     counts.pending +
@@ -653,6 +671,110 @@ function OwnerSummary({
             { label: "Overview", href: "/owner" },
           ]}
         />
+      </div>
+
+      {/* Operational context — workload + week pulse */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <DoctorsTodayPanel doctorsToday={doctorsToday} />
+        <WeekPulsePanel pulse={weekPulse} />
+      </div>
+    </div>
+  );
+}
+
+function DoctorsTodayPanel({ doctorsToday }: { doctorsToday: DoctorToday[] }) {
+  const total = doctorsToday.reduce((sum, d) => sum + d.count, 0);
+  const max = Math.max(1, ...doctorsToday.map((d) => d.count));
+  return (
+    <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col gap-3">
+      <div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span className="text-[10px] uppercase tracking-wider font-medium text-blue-700">
+            Today on the floor
+          </span>
+        </div>
+        <div className="text-base font-semibold text-stone-900 leading-tight">
+          {total === 0 ? "No appointments today" : `${total} confirmed across ${doctorsToday.length} doctor${doctorsToday.length === 1 ? "" : "s"}`}
+        </div>
+      </div>
+      {doctorsToday.length === 0 ? (
+        <p className="text-xs text-stone-500">Nothing scheduled. Quiet day ahead.</p>
+      ) : (
+        <ul className="space-y-2">
+          {doctorsToday.slice(0, 5).map((d) => (
+            <li key={d.id}>
+              <div className="flex items-baseline justify-between gap-2 text-xs mb-0.5">
+                <span className="font-medium truncate">{d.name}</span>
+                <span className="tabular-nums text-stone-500">{d.count}</span>
+              </div>
+              <div className="flex h-1.5 rounded-full overflow-hidden bg-stone-100">
+                <div className="bg-blue-500" style={{ width: `${(d.count / max) * 100}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="mt-auto pt-1">
+        <Link
+          href="/owner/calendar"
+          className="text-xs px-2.5 py-1 rounded-md border border-stone-300 hover:border-stone-500 hover:bg-stone-50 text-stone-700 transition-colors inline-block"
+        >
+          View calendar
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function WeekPulsePanel({ pulse }: { pulse: WeekPulse | null }) {
+  if (!pulse) {
+    return (
+      <div className="bg-white border border-stone-200 rounded-xl p-4">
+        <p className="text-xs text-stone-500">Loading week pulse…</p>
+      </div>
+    );
+  }
+  const deltaText =
+    pulse.deltaPct == null
+      ? "no comparison"
+      : pulse.deltaPct >= 0
+        ? `+${pulse.deltaPct}% vs last week`
+        : `${pulse.deltaPct}% vs last week`;
+  const deltaTone =
+    pulse.deltaPct == null ? "neutral" : pulse.deltaPct >= 0 ? "ok" : "warn";
+  const deltaClass =
+    deltaTone === "ok"
+      ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+      : deltaTone === "warn"
+        ? "text-red-700 bg-red-50 border-red-200"
+        : "text-stone-600 bg-stone-50 border-stone-200";
+  return (
+    <div className="bg-white border border-stone-200 rounded-xl p-4 flex flex-col gap-3">
+      <div>
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-stone-500" />
+          <span className="text-[10px] uppercase tracking-wider font-medium text-stone-600">
+            This week
+          </span>
+        </div>
+        <div className="text-base font-semibold text-stone-900 leading-tight">
+          {pulse.thisWeek} bookings · {pulse.newPatients} new patient{pulse.newPatients === 1 ? "" : "s"}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 text-xs">
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md border font-medium ${deltaClass}`}>
+          {deltaText}
+        </span>
+        <span className="text-stone-500">vs {pulse.lastWeek} last week</span>
+      </div>
+      <div className="mt-auto pt-1">
+        <Link
+          href="/owner"
+          className="text-xs px-2.5 py-1 rounded-md border border-stone-300 hover:border-stone-500 hover:bg-stone-50 text-stone-700 transition-colors inline-block"
+        >
+          Full overview
+        </Link>
       </div>
     </div>
   );
