@@ -524,77 +524,19 @@ export default function FilterableBookingsTable({
                     <SentPills row={r} />
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-1.5">
-                      {readOnly && (
-                        <span className="text-[11px] text-stone-400 italic">View only</span>
-                      )}
-                      {!readOnly && r.status === "confirmed" && !isPast && !r.attended_at && !r.no_show && (
-                        <button
-                          type="button"
-                          onClick={() => sendReminder(r)}
-                          className={
-                            r.reminder_sent_at
-                              ? "px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
-                              : "btn-wa"
-                          }
-                          title={
-                            r.reminder_sent_at
-                              ? `Reminder sent ${new Date(r.reminder_sent_at).toLocaleString("en-MY")}`
-                              : "Open WhatsApp with the reminder template"
-                          }
-                        >
-                          {r.reminder_sent_at ? "✓ Reminded — resend" : "Send reminder"}
-                        </button>
-                      )}
-                      {!readOnly && (r.status === "pending" || r.status === "confirmed") && (
-                        <>
-                          <Link
-                            href={`/staff/new?reschedule=${r.id}`}
-                            className="px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
-                          >
-                            Reschedule
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => cancelBooking(r.id)}
-                            disabled={busy === r.id}
-                            className="btn-reject"
-                          >
-                            Cancel
-                          </button>
-                        </>
-                      )}
-                      {!readOnly && canMarkAttendance && !r.attended_at && !r.no_show && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => markAttendance(r.id, "attended")}
-                            disabled={busy === r.id}
-                            className="btn-approve"
-                          >
-                            ✓ Attended
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => markAttendance(r.id, "no_show")}
-                            disabled={busy === r.id}
-                            className="px-2 py-1 text-xs rounded-md border border-stone-300 bg-white hover:bg-stone-50"
-                          >
-                            No-show
-                          </button>
-                        </>
-                      )}
-                      {!readOnly && (r.attended_at || r.no_show) && (
-                        <button
-                          type="button"
-                          onClick={() => markAttendance(r.id, "clear")}
-                          disabled={busy === r.id}
-                          className="text-xs text-stone-500 hover:text-stone-800 hover:underline"
-                        >
-                          Undo
-                        </button>
-                      )}
-                    </div>
+                    {readOnly ? (
+                      <span className="text-[11px] text-stone-400 italic">View only</span>
+                    ) : (
+                      <ActionGroups
+                        row={r}
+                        isPast={isPast}
+                        canMarkAttendance={canMarkAttendance}
+                        busy={busy === r.id}
+                        onSendReminder={() => sendReminder(r)}
+                        onCancel={() => cancelBooking(r.id)}
+                        onMark={(m) => markAttendance(r.id, m)}
+                      />
+                    )}
                   </td>
                   {enableOverride && (
                     <td className="px-4 py-3">
@@ -680,5 +622,138 @@ function SortHeader({
         <span className="text-[9px] text-stone-400">{active ? (dir === "asc" ? "▲" : "▼") : "⇅"}</span>
       </button>
     </th>
+  );
+}
+
+// Group action buttons for the table row into three labeled clusters
+// (Comms / Status / Attendance) so they don't read as a wall of buttons.
+// Empty groups don't render. Group labels are tiny stone-400 uppercase.
+function ActionGroups({
+  row,
+  isPast,
+  canMarkAttendance,
+  busy,
+  onSendReminder,
+  onCancel,
+  onMark,
+}: {
+  row: BookingRow;
+  isPast: boolean;
+  canMarkAttendance: boolean;
+  busy: boolean;
+  onSendReminder: () => void;
+  onCancel: () => void;
+  onMark: (m: "attended" | "no_show" | "clear") => void;
+}) {
+  const canSendReminder = row.status === "confirmed" && !isPast && !row.attended_at && !row.no_show;
+  const canResched = row.status === "pending" || row.status === "confirmed";
+  const canAttend = canMarkAttendance && !row.attended_at && !row.no_show;
+  const canUndo = !!(row.attended_at || row.no_show);
+
+  const groups: { label: string; children: React.ReactNode }[] = [];
+
+  if (canSendReminder) {
+    groups.push({
+      label: "Comms",
+      children: (
+        <button
+          type="button"
+          onClick={onSendReminder}
+          className={
+            row.reminder_sent_at
+              ? "px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
+              : "btn-wa"
+          }
+          title={
+            row.reminder_sent_at
+              ? `Reminder sent ${new Date(row.reminder_sent_at).toLocaleString("en-MY")}`
+              : "Open WhatsApp with the reminder template"
+          }
+        >
+          {row.reminder_sent_at ? "Resend reminder" : "Send reminder"}
+        </button>
+      ),
+    });
+  }
+
+  if (canResched) {
+    groups.push({
+      label: "Status",
+      children: (
+        <>
+          <Link
+            href={`/staff/new?reschedule=${row.id}`}
+            className="px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
+          >
+            Reschedule
+          </Link>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="btn-reject"
+          >
+            Cancel
+          </button>
+        </>
+      ),
+    });
+  }
+
+  if (canAttend || canUndo) {
+    groups.push({
+      label: "Attendance",
+      children: (
+        <>
+          {canAttend && (
+            <>
+              <button
+                type="button"
+                onClick={() => onMark("attended")}
+                disabled={busy}
+                className="btn-approve"
+              >
+                ✓ Attended
+              </button>
+              <button
+                type="button"
+                onClick={() => onMark("no_show")}
+                disabled={busy}
+                className="px-2 py-1 text-xs rounded-md border border-stone-300 bg-white hover:bg-stone-50"
+              >
+                No-show
+              </button>
+            </>
+          )}
+          {canUndo && (
+            <button
+              type="button"
+              onClick={() => onMark("clear")}
+              disabled={busy}
+              className="text-xs text-stone-500 hover:text-stone-800 hover:underline"
+            >
+              Undo
+            </button>
+          )}
+        </>
+      ),
+    });
+  }
+
+  if (groups.length === 0) {
+    return <span className="text-[11px] text-stone-400 italic">No actions</span>;
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      {groups.map((g) => (
+        <div key={g.label}>
+          <div className="text-[9px] uppercase tracking-wider text-stone-400 mb-0.5">
+            {g.label}
+          </div>
+          <div className="flex flex-wrap gap-1">{g.children}</div>
+        </div>
+      ))}
+    </div>
   );
 }
