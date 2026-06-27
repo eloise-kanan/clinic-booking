@@ -76,8 +76,8 @@ export default async function HomePage() {
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "the clinic";
   const plan = await loadPlan();
 
-  // Terminal mode — lockscreen kiosk. Just counts; the lockscreen view
-  // bypasses StaffShell so the clock fills the full viewport.
+  // Terminal mode — lockscreen kiosk. Bypasses StaffShell so the clock
+  // fills the full viewport.
   if (profile.role === "terminal") {
     // Recalls due (computed in app code: months-since-visit >= recall_interval)
     const { data: recallRows } = await admin
@@ -92,6 +92,19 @@ export default async function HomePage() {
       return monthsSince >= (p.recall_interval_months || 6);
     }).length;
 
+    // Today's confirmed bookings — left panel on the lockscreen shows the
+    // upcoming list with quick attendance buttons. Limit to 12 visible rows.
+    const { data: todayList } = await admin
+      .from("bookings")
+      .select(
+        "id, slot_start, slot_end, service, attended_at, no_show, patient:patients(full_name), doctor:doctors(display_name)"
+      )
+      .eq("status", "confirmed")
+      .gte("slot_start", todayStart)
+      .lte("slot_start", todayEnd)
+      .order("slot_start")
+      .limit(12);
+
     const terminalCfg = await loadTerminalConfig();
     return (
       <ClinicConsole
@@ -104,6 +117,15 @@ export default async function HomePage() {
           today: todayCount || 0,
           reminders: remindersPendingCount || 0,
         }}
+        todayBookings={(todayList || []).map((b) => ({
+          id: b.id,
+          slot_start: b.slot_start,
+          service: b.service,
+          attended: !!b.attended_at,
+          no_show: !!b.no_show,
+          patient_name: (b.patient as { full_name?: string } | null)?.full_name || "—",
+          doctor_name: (b.doctor as { display_name?: string } | null)?.display_name || "—",
+        }))}
       />
     );
   }

@@ -27,6 +27,19 @@ export default async function BookPage() {
           <p className="text-sm text-stone-500 mt-1">Appointment booking</p>
         </header>
         <BookingForm />
+        <footer className="mt-10 text-center text-[11px] text-stone-500">
+          Powered by{" "}
+          <a
+            href="https://kanan.my"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium hover:underline underline-offset-2"
+            style={{ color: "#1B2A4A" }}
+          >
+            Kanan
+          </a>{" "}
+          · your trusted right hand
+        </footer>
       </div>
     </main>
   );

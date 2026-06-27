@@ -28,6 +28,16 @@ type Counts = {
   reminders: number;
 };
 
+type TodayBooking = {
+  id: string;
+  slot_start: string;
+  service: string;
+  attended: boolean;
+  no_show: boolean;
+  patient_name: string;
+  doctor_name: string;
+};
+
 // Role-specific category cards on the identified screen. Kept lightweight
 // (no DB lookups) — labels/links mirror the staff sidebar nav structure.
 // Context-specific noun for each count key so the sub-line on a category
@@ -112,11 +122,13 @@ export default function ClinicConsole({
   theme,
   backgroundUrl,
   counts,
+  todayBookings = [],
 }: {
   clinicName: string;
   theme: TerminalTheme;
   backgroundUrl?: string | null;
   counts: Counts;
+  todayBookings?: TodayBooking[];
 }) {
   const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
@@ -125,6 +137,11 @@ export default function ClinicConsole({
   // Where to navigate after a successful PIN verify, when the user opened
   // the modal from a specific count tile. Null = stay on /home.
   const [pendingNav, setPendingNav] = useState<string | null>(null);
+  // Pending attendance action — when user clicks Attended / No-show on a
+  // booking in the locked state, we open the PIN modal first.
+  const [pendingMark, setPendingMark] = useState<{ booking_id: string; mark: "attended" | "no_show" } | null>(null);
+  // Optimistic local state for booking marks (so UI updates without a refresh)
+  const [localMarks, setLocalMarks] = useState<Record<string, "attended" | "no_show" | "clear">>({});
   const [ownerOpen, setOwnerOpen] = useState(false);
 
   // Clock tick
@@ -297,6 +314,25 @@ export default function ClinicConsole({
     );
   }
 
+  // Fire the attendance API after PIN verify
+  async function markAttendance(booking_id: string, mark: "attended" | "no_show", profile_id: string, pin: string) {
+    setLocalMarks((m) => ({ ...m, [booking_id]: mark }));
+    try {
+      await fetch("/api/bookings/attendance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id, mark, pin_profile_id: profile_id, pin }),
+      });
+    } catch {
+      // Revert optimistic update on error
+      setLocalMarks((m) => {
+        const next = { ...m };
+        delete next[booking_id];
+        return next;
+      });
+    }
+  }
+
   // ── LOCKED LAYOUT ────────────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 flex flex-col text-white overflow-hidden" style={parentStyle}>
@@ -311,46 +347,57 @@ export default function ClinicConsole({
         End session
       </button>
 
-      {/* Clock */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 text-center min-h-0">
-        <div className="text-[11px] sm:text-xs uppercase tracking-[0.4em] text-white/60 mb-2">
-          Clinic console
-        </div>
-        <div className="text-xl sm:text-2xl md:text-3xl font-semibold mb-6 sm:mb-8 max-w-full truncate">
-          {clinicName}
-        </div>
+      {/* Two-column hero — patients on the left, clock + sign-in on right */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1fr] min-h-0 overflow-hidden">
+        {/* LEFT — upcoming patients today with quick attendance buttons */}
+        <UpcomingPatientsPanel
+          bookings={todayBookings}
+          localMarks={localMarks}
+          onMark={(booking_id, mark) => {
+            setPendingMark({ booking_id, mark });
+            setPinOpen(true);
+          }}
+        />
 
-        <div className="text-[20vw] sm:text-[18vw] md:text-[15vw] lg:text-[13vw] xl:text-[11vw] font-light tabular-nums leading-none tracking-tight">
-          {hh}<span className="opacity-75">:</span>{mm}
-        </div>
-        <div className="mt-4 text-sm sm:text-base md:text-lg text-white/75">
-          {weekday}
-          {weekday && dateLine && <span className="mx-2 text-white/40">·</span>}
-          {dateLine}
-        </div>
+        {/* RIGHT — clock + sign-in CTAs */}
+        <div className="flex flex-col items-center justify-center px-6 py-8 text-center min-h-0">
+          <div className="text-[11px] sm:text-xs uppercase tracking-[0.4em] text-white/60 mb-2">
+            Clinic console
+          </div>
+          <div className="text-lg sm:text-xl md:text-2xl font-semibold mb-6 sm:mb-8 max-w-full truncate">
+            {clinicName}
+          </div>
 
-        {/* Primary CTA — staff PIN sign-in */}
-        <div className="mt-8 flex flex-col items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => setPinOpen(true)}
-            className="bg-white text-stone-900 hover:bg-white/90 rounded-full px-8 py-3 text-sm font-medium shadow-xl"
-          >
-            Sign in (staff PIN)
-          </button>
-          <button
-            type="button"
-            onClick={() => setOwnerOpen(true)}
-            className="text-[12px] text-white/70 hover:text-white underline-offset-2 hover:underline"
-          >
-            Owner sign-in →
-          </button>
+          <div className="text-[14vw] sm:text-[12vw] md:text-[10vw] lg:text-[8vw] font-light tabular-nums leading-none tracking-tight">
+            {hh}<span className="opacity-75">:</span>{mm}
+          </div>
+          <div className="mt-3 text-xs sm:text-sm md:text-base text-white/75">
+            {weekday}
+            {weekday && dateLine && <span className="mx-2 text-white/40">·</span>}
+            {dateLine}
+          </div>
+
+          {/* Primary CTA — staff PIN sign-in */}
+          <div className="mt-6 flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPinOpen(true)}
+              className="bg-white text-stone-900 hover:bg-white/90 rounded-full px-7 py-2.5 text-sm font-medium shadow-xl"
+            >
+              Sign in (staff PIN)
+            </button>
+            <button
+              type="button"
+              onClick={() => setOwnerOpen(true)}
+              className="text-[12px] text-white/70 hover:text-white underline-offset-2 hover:underline"
+            >
+              Owner sign-in →
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Counts strip — each tile remembers its destination, so a tap +
-          PIN takes the user straight to that page without a second click
-          on the identified-state category card. */}
+      {/* Counts strip — bottom band, full width */}
       <div className="px-4 pb-4 sm:px-6 sm:pb-6">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl">
           <div className="grid grid-cols-4 divide-x divide-white/15">
@@ -377,30 +424,34 @@ export default function ClinicConsole({
           </div>
         </div>
         <p className="text-[10px] sm:text-[11px] text-white/55 text-center mt-3">
-          Tap any tile, enter your PIN, and you&apos;ll land on that page directly.
+          Powered by <a href="https://kanan.my" target="_blank" rel="noreferrer" className="font-medium hover:underline" style={{ color: "#C9A227" }}>Kanan</a> · your trusted right hand
         </p>
       </div>
 
-      {/* PIN modal — verifies + sets per-page lock-token cookie. If the
-          user tapped a count tile, navigate to that page directly so they
-          don't have to click a category card afterward. */}
+      {/* PIN modal — verifies + sets per-page lock-token cookie. Three
+          possible intents: navigate (pendingNav), mark attendance
+          (pendingMark), or just identify (no pending action). */}
       <PinChallenge
         open={pinOpen}
+        allowedRoles={pendingMark ? ["nurse", "doctor"] : undefined}
         onClose={() => {
           setPinOpen(false);
           setPendingNav(null);
+          setPendingMark(null);
         }}
         onVerified={async ({ profile_id, pin, full_name, role }) => {
-          // Cache locally for action-level PIN gates (90s grace).
           writePinSession({ profile_id, pin, full_name, role });
-          // And set the signed cookie for page-level gates (5 min sliding).
           await fetch("/api/pin/lock-token", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ profile_id, pin }),
           }).catch(() => {});
           setPinOpen(false);
-          if (pendingNav) {
+          if (pendingMark) {
+            const pm = pendingMark;
+            setPendingMark(null);
+            markAttendance(pm.booking_id, pm.mark, profile_id, pin);
+          } else if (pendingNav) {
             const dest = pendingNav;
             setPendingNav(null);
             router.push(dest);
@@ -479,6 +530,108 @@ function OwnerSignInModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Left-column panel on the lockscreen — today's confirmed bookings as a
+// scrollable list, each row showing time + patient + service + doctor + a
+// pair of quick action buttons (Attended / No-show) that trigger the PIN
+// modal. The list updates optimistically via localMarks.
+function UpcomingPatientsPanel({
+  bookings,
+  localMarks,
+  onMark,
+}: {
+  bookings: TodayBooking[];
+  localMarks: Record<string, "attended" | "no_show" | "clear">;
+  onMark: (booking_id: string, mark: "attended" | "no_show") => void;
+}) {
+  const now = Date.now();
+  return (
+    <div className="flex flex-col min-h-0 px-4 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4">
+      <div className="flex items-baseline justify-between mb-3">
+        <h3 className="text-[11px] sm:text-xs uppercase tracking-[0.3em] text-white/60 font-medium">
+          Today on the floor
+        </h3>
+        <span className="text-[10px] text-white/40 tabular-nums">{bookings.length}</span>
+      </div>
+      {bookings.length === 0 ? (
+        <p className="text-xs text-white/60 italic">Nothing scheduled for today.</p>
+      ) : (
+        <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-2">
+          {bookings.map((b) => {
+            const status =
+              localMarks[b.id] === "attended" || b.attended
+                ? "attended"
+                : localMarks[b.id] === "no_show" || b.no_show
+                  ? "no_show"
+                  : "pending";
+            const t = new Date(b.slot_start);
+            const hh = String(t.getHours()).padStart(2, "0");
+            const mm = String(t.getMinutes()).padStart(2, "0");
+            const isPast = t.getTime() < now;
+            return (
+              <div
+                key={b.id}
+                className={`rounded-xl px-3 py-2.5 border transition-colors ${
+                  status === "attended"
+                    ? "bg-emerald-400/15 border-emerald-300/30"
+                    : status === "no_show"
+                      ? "bg-red-400/15 border-red-300/30"
+                      : isPast
+                        ? "bg-amber-400/10 border-amber-300/25"
+                        : "bg-white/8 border-white/15"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div className="text-base font-light tabular-nums leading-none w-12 pt-0.5">
+                    {hh}<span className="opacity-60">:</span>{mm}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium leading-tight truncate">{b.patient_name}</div>
+                    <div className="text-[11px] text-white/70 truncate">
+                      {b.service || "—"} · {b.doctor_name}
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2">
+                  {status === "attended" && (
+                    <span className="text-[11px] text-emerald-200 font-medium">✓ Attended</span>
+                  )}
+                  {status === "no_show" && (
+                    <span className="text-[11px] text-red-200 font-medium">✕ No-show</span>
+                  )}
+                  {status === "pending" && (
+                    <span className="text-[10px] text-white/50">Awaiting check-in</span>
+                  )}
+                  {status === "pending" && (
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => onMark(b.id, "attended")}
+                        className="bg-emerald-500/80 hover:bg-emerald-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
+                      >
+                        Attended
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onMark(b.id, "no_show")}
+                        className="bg-white/15 hover:bg-white/25 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
+                      >
+                        No-show
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <p className="text-[10px] text-white/40 mt-3">
+        Tap a button — PIN required to mark attendance.
+      </p>
     </div>
   );
 }

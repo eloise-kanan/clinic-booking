@@ -51,6 +51,19 @@ export default async function LoginPage() {
         <Suspense fallback={<div className="bg-white text-stone-900 rounded-2xl shadow-2xl p-6">Loading…</div>}>
           <LoginForm />
         </Suspense>
+        <footer className="mt-8 text-center text-[11px] text-white/65">
+          Powered by{" "}
+          <a
+            href="https://kanan.my"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium hover:underline underline-offset-2"
+            style={{ color: "#C9A227" }}
+          >
+            Kanan
+          </a>{" "}
+          · your trusted right hand
+        </footer>
       </div>
     </main>
   );
