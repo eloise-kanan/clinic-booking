@@ -102,15 +102,16 @@ export default async function HomePage() {
     todayStartMs.setHours(0, 0, 0, 0);
     const horizonStart = todayStartMs.toISOString();
     const horizonEnd = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
-    const { data: todayList } = await admin
+    const { data: todayList, error: todayErr } = await admin
       .from("bookings")
       .select(
-        "id, slot_start, slot_end, service, attended_at, no_show, patient:patients(full_name), doctor:doctors(display_name)"
+        "id, slot_start, slot_end, visit_reason, attended_at, no_show, patient:patients(full_name), doctor:doctors(display_name)"
       )
       .eq("status", "confirmed")
       .gte("slot_start", horizonStart)
       .lte("slot_start", horizonEnd)
       .order("slot_start");
+    if (todayErr) console.error("upcoming bookings query failed:", todayErr.message);
 
     const terminalCfg = await loadTerminalConfig();
     return (
@@ -127,7 +128,7 @@ export default async function HomePage() {
         todayBookings={(todayList || []).map((b) => ({
           id: b.id,
           slot_start: b.slot_start,
-          service: b.service,
+          service: b.visit_reason || "—",
           attended: !!b.attended_at,
           no_show: !!b.no_show,
           patient_name: (b.patient as { full_name?: string } | null)?.full_name || "—",
