@@ -50,13 +50,10 @@ export default function LoginForm() {
           type="text"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
-          placeholder="terminal — or your login ID / email"
+          placeholder="Login ID or email"
           autoComplete="username"
           required
         />
-        <p className="text-[11px] text-stone-500 mt-1">
-          Most teams sign in here as <code className="bg-stone-100 px-1 rounded">terminal</code>, then identify themselves with a personal PIN on the console.
-        </p>
       </div>
       <div>
         <label className="label">Password</label>

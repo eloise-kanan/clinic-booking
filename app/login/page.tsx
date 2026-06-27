@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import LoginForm from "./LoginForm";
-import { PoweredByKanan } from "@/components/PoweredByKanan";
 import { loadTerminalConfig } from "@/lib/terminal-theme";
 
 export default async function LoginPage() {
@@ -52,7 +51,6 @@ export default async function LoginPage() {
         <Suspense fallback={<div className="bg-white text-stone-900 rounded-2xl shadow-2xl p-6">Loading…</div>}>
           <LoginForm />
         </Suspense>
-        <PoweredByKanan variant="light" />
       </div>
     </main>
   );

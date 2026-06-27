@@ -411,14 +411,46 @@ async function seedBookings(doctors, patients, ownerId, nurses) {
 
 async function seedAuditLog(ownerId, nurses) {
   const nurseIds = nurses.map((n) => n.profileId);
+  // Each entry includes before_data / after_data so the audit log UI has
+  // something to display when expanded — matches what the live endpoints
+  // store today (status transitions, attendance marks, etc.).
   const entries = [
-    { actor: nurseIds[1], action: "booking_attended",     entity: "booking", offset_min: 12 },
-    { actor: nurseIds[0], action: "approve_booking",       entity: "booking", offset_min: 45 },
-    { actor: nurseIds[1], action: "patient_recall_sent",  entity: "patient", offset_min: 90 },
-    { actor: ownerId,     action: "branding_update",      entity: "clinic_settings", offset_min: 130 },
-    { actor: nurseIds[2], action: "booking_no_show",      entity: "booking", offset_min: 240 },
-    { actor: nurseIds[0], action: "approve_reschedule",   entity: "booking", offset_min: 300 },
-    { actor: nurseIds[1], action: "send_reminder",        entity: "booking", offset_min: 360 },
+    {
+      actor: nurseIds[1], action: "booking_attended", entity: "booking", offset_min: 12,
+      after: { mark: "attended", via_terminal: true },
+    },
+    {
+      actor: nurseIds[0], action: "approve_booking", entity: "booking", offset_min: 45,
+      after: { status: "confirmed", via_terminal: false },
+    },
+    {
+      actor: nurseIds[1], action: "patient_recall_sent", entity: "patient", offset_min: 90,
+      after: { via_terminal: false },
+    },
+    {
+      actor: ownerId, action: "branding_update", entity: "clinic_settings", offset_min: 130,
+      after: { primary_color: "#0d9488", font_family: "Inter" },
+    },
+    {
+      actor: nurseIds[2], action: "booking_no_show", entity: "booking", offset_min: 240,
+      after: { mark: "no_show", via_terminal: false },
+    },
+    {
+      actor: nurseIds[0], action: "approve_reschedule", entity: "booking", offset_min: 300,
+      after: { status: "confirmed", via_terminal: false },
+    },
+    {
+      actor: nurseIds[1], action: "send_reminder", entity: "booking", offset_min: 360,
+      after: { via_terminal: false },
+    },
+    {
+      actor: ownerId, action: "owner_override", entity: "booking", offset_min: 500,
+      before: { status: "pending" }, after: { status: "confirmed", notes: "Owner approved by phone" },
+    },
+    {
+      actor: nurseIds[0], action: "staff_cancel", entity: "booking", offset_min: 720,
+      before: { status: "confirmed" }, after: { status: "cancelled", notes: "patient called", via_terminal: false },
+    },
   ];
   for (let i = 0; i < 20; i++) {
     const t = entries[i % entries.length];
@@ -426,10 +458,12 @@ async function seedAuditLog(ownerId, nurses) {
       actor_id: t.actor,
       action: t.action,
       entity_type: t.entity,
+      before_data: t.before || null,
+      after_data: t.after || null,
       created_at: new Date(Date.now() - t.offset_min * 60_000 - i * 1200_000).toISOString(),
     });
   }
-  console.log(`  ✓ seeded ~20 audit log entries`);
+  console.log(`  ✓ seeded ~20 audit log entries with before/after data`);
 }
 
 // ─── Main ────────────────────────────────────────────────────────────────
