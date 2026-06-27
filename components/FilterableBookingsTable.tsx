@@ -514,13 +514,18 @@ export default function FilterableBookingsTable({
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <WhatsAppActions
-                      booking={r}
-                      patient={r.patient}
-                      doctor={r.doctor}
-                      clinicName={clinicName}
-                      templates={templates}
-                    />
+                    {/* Hide the WhatsApp send buttons entirely in readOnly mode
+                        (used by doctor 'My bookings' view) — only show what's
+                        already been sent. */}
+                    {!readOnly && (
+                      <WhatsAppActions
+                        booking={r}
+                        patient={r.patient}
+                        doctor={r.doctor}
+                        clinicName={clinicName}
+                        templates={templates}
+                      />
+                    )}
                     <SentPills row={r} />
                   </td>
                   <td className="px-4 py-3">
