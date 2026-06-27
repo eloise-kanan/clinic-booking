@@ -14,6 +14,12 @@ export const metadata: Metadata = {
   },
 };
 
+// The layout reads branding + terminal theme from clinic_settings and injects
+// CSS variables via a <style> tag. Without force-dynamic, Next.js statically
+// generates the layout at build time, freezing the CSS vars — owners would
+// change a theme and not see it reflect until the next deploy.
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = {
   themeColor: "#0d9488",
 };

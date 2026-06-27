@@ -2,6 +2,10 @@ import { Suspense } from "react";
 import LoginForm from "./LoginForm";
 import { loadTerminalConfig } from "@/lib/terminal-theme";
 
+// /login renders the active terminal theme. Mark dynamic so theme changes
+// reflect immediately without a redeploy.
+export const dynamic = "force-dynamic";
+
 export default async function LoginPage() {
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Clinic";
   const { theme, backgroundUrl } = await loadTerminalConfig();

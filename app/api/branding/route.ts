@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
 
@@ -77,8 +78,13 @@ export async function PATCH(req: Request) {
     actor_id: user.id,
     action: "branding_update",
     entity_type: "clinic_settings",
-    after_data: { primary_color, font_family, button_radius, logo_url },
+    after_data: { primary_color, font_family, button_radius, logo_url, terminal_theme, terminal_background_url },
   });
+
+  // Branding + theme are injected via the root layout. Invalidating the
+  // layout cache forces every page (including /login, /book, /home) to pick
+  // up the new theme on next navigation — no redeploy needed.
+  revalidatePath("/", "layout");
 
   return NextResponse.json({ ok: true });
 }
