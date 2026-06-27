@@ -458,7 +458,7 @@ export default function ClinicConsole({
               value={counts.today}
               onClick={() => {
                 setPendingNav("/nurse/all?day=today");
-                setPendingAllowedRoles(undefined); // both — doctors view their own day
+                setPendingAllowedRoles(["nurse"]);
                 setPinOpen(true);
               }}
             />
