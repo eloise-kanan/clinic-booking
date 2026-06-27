@@ -363,19 +363,11 @@ export default function ClinicConsole({
         End session
       </button>
 
-      {/* Two-column hero — patients on the left, clock + sign-in on right */}
+      {/* Two-column hero — clock on the LEFT, upcoming patients on the RIGHT.
+          The patient list is busier visually; keeping it on the right means
+          the "rest area" (clock + sign-in CTAs) is what reads first. */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_1fr] min-h-0 overflow-hidden">
-        {/* LEFT — upcoming patients today with quick attendance buttons */}
-        <UpcomingPatientsPanel
-          bookings={todayBookings}
-          localMarks={localMarks}
-          onMark={(booking_id, mark) => {
-            setPendingMark({ booking_id, mark });
-            setPinOpen(true);
-          }}
-        />
-
-        {/* RIGHT — clock + sign-in CTAs */}
+        {/* LEFT — clock + sign-in CTAs */}
         <div className="flex flex-col items-center justify-center px-6 py-8 text-center min-h-0">
           <div className="text-[11px] sm:text-xs uppercase tracking-[0.4em] text-white/60 mb-2">
             Clinic console
@@ -411,6 +403,16 @@ export default function ClinicConsole({
             </button>
           </div>
         </div>
+
+        {/* RIGHT — upcoming patients with quick attendance buttons */}
+        <UpcomingPatientsPanel
+          bookings={todayBookings}
+          localMarks={localMarks}
+          onMark={(booking_id, mark) => {
+            setPendingMark({ booking_id, mark });
+            setPinOpen(true);
+          }}
+        />
       </div>
 
       {/* Counts strip — bottom band, full width */}
@@ -602,7 +604,7 @@ function UpcomingPatientsPanel({
       {bookings.length === 0 ? (
         <p className="text-xs text-white/60 italic">Nothing in the next 48 hours.</p>
       ) : (
-        <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-2">
+        <div className="flex-1 overflow-y-auto scrollbar-thin-dark -mx-2 px-2 space-y-2">
           {bookings.map((b) => {
             const status =
               localMarks[b.id] === "attended" || b.attended

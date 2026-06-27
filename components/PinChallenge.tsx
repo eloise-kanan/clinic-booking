@@ -38,20 +38,23 @@ export default function PinChallenge({
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Load staff list when opening
+  // Reset modal state when it opens. Important: depend on `open` only, NOT
+  // on allowedRoles — the parent passes a new array reference on every
+  // render (e.g. clock ticks every second on the lockscreen), which would
+  // otherwise reset selected→null mid-PIN-entry and bounce the user back
+  // to the staff picker. The fetch uses the LATEST allowedRoles via ref.
+  const allowedRolesKey = allowedRoles ? allowedRoles.join(",") : "";
   useEffect(() => {
     if (!open) return;
     setSelected(null);
     setPin("");
     setErr(null);
-    const q = allowedRoles && allowedRoles.length > 0
-      ? `?roles=${allowedRoles.join(",")}`
-      : "";
+    const q = allowedRolesKey ? `?roles=${allowedRolesKey}` : "";
     fetch(`/api/pin/staff-list${q}`)
       .then((r) => r.json())
       .then((d) => setStaff(d.staff || []))
       .catch(() => setStaff([]));
-  }, [open, allowedRoles]);
+  }, [open, allowedRolesKey]);
 
   // Auto-submit when 6 digits typed
   useEffect(() => {

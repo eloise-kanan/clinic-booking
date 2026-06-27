@@ -58,6 +58,27 @@ textarea {
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
+
+/* Themed thin scrollbar — used on dark surfaces (the lockscreen upcoming-
+   patients panel) so the default chunky browser bar doesn't clash with
+   the kiosk look. Subtle white/15 thumb that brightens on hover. */
+.scrollbar-thin-dark {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
+}
+.scrollbar-thin-dark::-webkit-scrollbar {
+  width: 6px;
+}
+.scrollbar-thin-dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin-dark::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 3px;
+}
+.scrollbar-thin-dark::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
 .label {
   @apply block text-xs font-medium text-stone-600 mb-1.5;
 }
