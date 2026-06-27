@@ -116,15 +116,16 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
           { href: "/staff/duty-calendar", label: "Duty calendar", feature: "calendar.duty" },
         ],
       },
-      // Expandable: Staff (managing doctors + nurses — accounts, hours, approvals)
+      // Expandable: Staff — owner does NOT submit leave or shift changes
+      // themselves (only nurses/doctors do). Owner reviews + approves both
+      // from a single HR approvals page.
       {
         title: "Staff",
         expandable: true,
         items: [
           { href: "/owner/staff", label: "Doctors & nurses", feature: "staff.management" },
           { href: "/owner/working-hours", label: "Working hours", feature: "staff.working_hours" },
-          { href: "/staff/duty", label: "Shift changes", feature: "staff.shift_changes" },
-          { href: "/staff/leave", label: "Leave", feature: "staff.leave" },
+          { href: "/owner/hr-approvals", label: "HR approvals", feature: "staff.leave" },
         ],
       },
       // Expandable: Settings (clinic-level configuration — non-staff).
