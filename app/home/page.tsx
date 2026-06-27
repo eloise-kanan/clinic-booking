@@ -94,6 +94,9 @@ export default async function HomePage() {
 
     // Today's confirmed bookings — left panel on the lockscreen shows the
     // upcoming list with quick attendance buttons. Limit to 12 visible rows.
+    // Today's confirmed bookings — show ALL upcoming (drop the cap), the
+    // panel scrolls. Imminent bookings (next 60 min) are visually elevated
+    // in the UI so they pop above the rest.
     const { data: todayList } = await admin
       .from("bookings")
       .select(
@@ -102,8 +105,7 @@ export default async function HomePage() {
       .eq("status", "confirmed")
       .gte("slot_start", todayStart)
       .lte("slot_start", todayEnd)
-      .order("slot_start")
-      .limit(12);
+      .order("slot_start");
 
     const terminalCfg = await loadTerminalConfig();
     return (

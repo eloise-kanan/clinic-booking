@@ -291,12 +291,28 @@ export default function ClinicConsole({
                 {cat.items.map((item) => {
                   const count = item.countKey ? counts[item.countKey] : null;
                   const semantic = item.countKey ? COUNT_SEMANTICS[item.countKey] : null;
+                  // Attention badge — red ! for pending bookings (urgent),
+                  // amber ! for reminders + recalls (notices), nothing for
+                  // informational counts (today's view).
+                  const isUrgent = item.countKey === "pending";
+                  const isNotice = item.countKey === "reminders" || item.countKey === "recalls";
+                  const showAlert = count != null && count > 0 && (isUrgent || isNotice);
                   return (
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="block bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 hover:border-white/30 rounded-xl px-3 py-3 transition-colors"
+                      className="relative block bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 hover:border-white/30 rounded-xl px-3 py-3 transition-colors"
                     >
+                      {showAlert && (
+                        <span
+                          aria-hidden
+                          className={`absolute top-1.5 right-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-bold text-white shadow ring-2 ring-black/10 animate-pulse ${
+                            isUrgent ? "bg-red-500" : "bg-amber-500"
+                          }`}
+                        >
+                          !
+                        </span>
+                      )}
                       <div className="text-sm font-medium leading-tight">{item.label}</div>
                       {count != null && count > 0 && (
                         <div className="mt-1 text-[11px] text-white/80 tabular-nums">
@@ -404,11 +420,13 @@ export default function ClinicConsole({
             <CountTile
               label="Pending"
               value={counts.pending}
+              attention="urgent"
               onClick={() => { setPendingNav("/nurse"); setPinOpen(true); }}
             />
             <CountTile
               label="Recalls due"
               value={counts.recalls}
+              attention="notice"
               onClick={() => { setPendingNav("/staff/recalls"); setPinOpen(true); }}
             />
             <CountTile
@@ -419,6 +437,7 @@ export default function ClinicConsole({
             <CountTile
               label="Reminders"
               value={counts.reminders}
+              attention="notice"
               onClick={() => { setPendingNav("/staff/reminders"); setPinOpen(true); }}
             />
           </div>
@@ -480,17 +499,30 @@ function CountTile({
   label,
   value,
   onClick,
+  attention,
 }: {
   label: string;
   value: number;
   onClick?: () => void;
+  attention?: "urgent" | "notice";
 }) {
+  const showAlert = attention && value > 0;
   return (
     <button
       type="button"
       onClick={onClick}
-      className="block w-full px-3 py-4 sm:py-5 text-center first:rounded-l-2xl last:rounded-r-2xl hover:bg-white/5 transition-colors"
+      className="block w-full relative px-3 py-4 sm:py-5 text-center first:rounded-l-2xl last:rounded-r-2xl hover:bg-white/5 transition-colors"
     >
+      {showAlert && (
+        <span
+          aria-hidden
+          className={`absolute top-2 right-2 inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold text-white shadow-md ring-2 ring-black/10 animate-pulse ${
+            attention === "urgent" ? "bg-red-500" : "bg-amber-500"
+          }`}
+        >
+          !
+        </span>
+      )}
       <div className="text-3xl sm:text-4xl font-light tabular-nums leading-none">{value}</div>
       <div className="mt-1 sm:mt-1.5 text-[10px] sm:text-[11px] uppercase tracking-wider text-white/70">
         {label}
@@ -548,6 +580,7 @@ function UpcomingPatientsPanel({
   onMark: (booking_id: string, mark: "attended" | "no_show") => void;
 }) {
   const now = Date.now();
+  const ONE_HOUR_MS = 60 * 60 * 1000;
   return (
     <div className="flex flex-col min-h-0 px-4 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4">
       <div className="flex items-baseline justify-between mb-3">
@@ -570,26 +603,44 @@ function UpcomingPatientsPanel({
             const t = new Date(b.slot_start);
             const hh = String(t.getHours()).padStart(2, "0");
             const mm = String(t.getMinutes()).padStart(2, "0");
-            const isPast = t.getTime() < now;
+            const slotMs = t.getTime();
+            const isPast = slotMs < now;
+            // Imminent = scheduled within the next 60 minutes (and still
+            // pending). Card is bigger + ringed + label says "Up next".
+            const isImminent =
+              status === "pending" && slotMs >= now && slotMs - now <= ONE_HOUR_MS;
             return (
               <div
                 key={b.id}
-                className={`rounded-xl px-3 py-2.5 border transition-colors ${
+                className={`rounded-xl border transition-all ${
                   status === "attended"
-                    ? "bg-emerald-400/15 border-emerald-300/30"
+                    ? "bg-emerald-400/15 border-emerald-300/30 px-3 py-2.5"
                     : status === "no_show"
-                      ? "bg-red-400/15 border-red-300/30"
-                      : isPast
-                        ? "bg-amber-400/10 border-amber-300/25"
-                        : "bg-white/8 border-white/15"
+                      ? "bg-red-400/15 border-red-300/30 px-3 py-2.5"
+                      : isImminent
+                        ? "bg-white/20 border-amber-300/60 ring-2 ring-amber-300/40 shadow-lg px-3.5 py-3"
+                        : isPast
+                          ? "bg-amber-400/10 border-amber-300/25 px-3 py-2.5"
+                          : "bg-white/8 border-white/15 px-3 py-2.5"
                 }`}
               >
+                {isImminent && (
+                  <div className="text-[9px] uppercase tracking-[0.25em] text-amber-200 font-semibold mb-1">
+                    ⚡ Up next
+                  </div>
+                )}
                 <div className="flex items-start gap-3">
-                  <div className="text-base font-light tabular-nums leading-none w-12 pt-0.5">
+                  <div
+                    className={`tabular-nums leading-none pt-0.5 ${
+                      isImminent ? "text-xl font-medium w-14" : "text-base font-light w-12"
+                    }`}
+                  >
                     {hh}<span className="opacity-60">:</span>{mm}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium leading-tight truncate">{b.patient_name}</div>
+                    <div className={`font-medium leading-tight truncate ${isImminent ? "text-base" : "text-sm"}`}>
+                      {b.patient_name}
+                    </div>
                     <div className="text-[11px] text-white/70 truncate">
                       {b.service || "—"} · {b.doctor_name}
                     </div>
@@ -603,7 +654,9 @@ function UpcomingPatientsPanel({
                     <span className="text-[11px] text-red-200 font-medium">✕ No-show</span>
                   )}
                   {status === "pending" && (
-                    <span className="text-[10px] text-white/50">Awaiting check-in</span>
+                    <span className="text-[10px] text-white/50">
+                      {isImminent ? "Awaiting check-in — soon" : isPast ? "Past — needs marking" : "Awaiting check-in"}
+                    </span>
                   )}
                   {status === "pending" && (
                     <div className="flex items-center gap-1.5">
