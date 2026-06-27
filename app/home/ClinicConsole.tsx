@@ -595,12 +595,12 @@ function UpcomingPatientsPanel({
   let lastDay = "";
   return (
     <div className="flex flex-col min-h-0 px-4 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4">
-      <div className="flex items-baseline justify-between mb-3">
-        <h3 className="text-[11px] sm:text-xs uppercase tracking-[0.3em] text-white/60 font-medium">
-          Upcoming patients
-        </h3>
-        <span className="text-[10px] text-white/40 tabular-nums">{bookings.length}</span>
-      </div>
+      <h3 className="text-[11px] sm:text-xs uppercase tracking-[0.3em] text-white/60 font-medium mb-3 flex items-baseline gap-2">
+        <span>Upcoming patients</span>
+        <span className="text-[10px] text-white/45 tabular-nums tracking-normal normal-case">
+          · {bookings.length} {bookings.length === 1 ? "person" : "people"}
+        </span>
+      </h3>
       {bookings.length === 0 ? (
         <p className="text-xs text-white/60 italic">Nothing in the next 48 hours.</p>
       ) : (
