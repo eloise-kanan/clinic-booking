@@ -202,7 +202,7 @@ export default async function OwnerHome() {
         />
       </div>
 
-      {/* 4-up cards: trend (spans 2 cols) + attendance + recall on top row */}
+      {/* Trend chart spans 2 cols, attendance + recall sit beside on xl */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 mb-2">
         <div className="xl:col-span-2">
           <Card title="Booking trend — 14 days">
@@ -223,7 +223,7 @@ export default async function OwnerHome() {
         </Card>
       </div>
 
-      {/* Performance leaderboards — 2-up */}
+      {/* Leaderboards — full-width 2-up with top 5 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         <Card
           title="Doctors — 30 d"
@@ -235,7 +235,6 @@ export default async function OwnerHome() {
         >
           <RankedBars rows={topDoctors.map((d) => ({ label: d.name, value: d.bookings, sub: `${d.attended} seen · ${d.noShow} no-show` }))} max={topDocMax} unit="bookings" />
         </Card>
-
         <Card
           title="Nurses — 30 d"
           footer={
@@ -395,10 +394,10 @@ function RankedBars({ rows, max, unit }: { rows: { label: string; value: number;
     return <p className="text-xs text-stone-500">No data yet.</p>;
   }
   return (
-    <ul className="space-y-2.5">
+    <ul className="space-y-2">
       {rows.map((r) => (
         <li key={r.label}>
-          <div className="flex items-baseline justify-between gap-2 text-xs mb-1">
+          <div className="flex items-baseline justify-between gap-2 text-xs mb-0.5">
             <span className="font-medium truncate">{r.label}</span>
             <span className="tabular-nums text-stone-500">{r.value} {unit}</span>
           </div>

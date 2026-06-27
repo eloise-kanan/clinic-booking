@@ -263,14 +263,15 @@ export default function ClinicConsole({
           </div>
         </div>
 
-        {/* Category cards */}
-        <div className="relative z-10 px-4 pb-6 sm:px-6 sm:pb-8 space-y-4">
+        {/* Category cards — slim, more columns so they spread across the
+            available width instead of stacking down the page. */}
+        <div className="relative z-10 px-4 pb-6 sm:px-6 sm:pb-8 space-y-2.5">
           {categories.map((cat) => (
             <section key={cat.title}>
-              <h3 className="text-[10px] sm:text-[11px] uppercase tracking-[0.3em] text-white/55 mb-2 px-1">
+              <h3 className="text-[9px] sm:text-[10px] uppercase tracking-[0.3em] text-white/55 mb-1.5 px-1">
                 {cat.title}
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-1.5">
                 {cat.items.map((item) => {
                   const count = item.countKey ? counts[item.countKey] : null;
                   const semantic = item.countKey ? COUNT_SEMANTICS[item.countKey] : null;
@@ -278,11 +279,11 @@ export default function ClinicConsole({
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="block bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 hover:border-white/30 rounded-xl px-3 py-3 transition-colors"
+                      className="block bg-white/10 hover:bg-white/15 backdrop-blur-md border border-white/15 hover:border-white/30 rounded-lg px-2.5 py-2 transition-colors"
                     >
-                      <div className="text-sm font-medium leading-tight">{item.label}</div>
+                      <div className="text-[13px] font-medium leading-tight">{item.label}</div>
                       {count != null && count > 0 && (
-                        <div className="mt-1 text-[11px] text-white/80 tabular-nums">
+                        <div className="mt-0.5 text-[10px] text-white/80 tabular-nums">
                           {count} {semantic}
                         </div>
                       )}

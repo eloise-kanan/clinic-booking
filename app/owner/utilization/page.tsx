@@ -49,6 +49,11 @@ export default async function UtilizationPage() {
   // Heatmap: weekday(0..6) x hour(9..21)
   const heat: Record<string, number> = {};
   let max = 0;
+  // Vercel runs in UTC — using .getHours() / .getDay() on a UTC ISO string
+  // bucketed Malaysian-clinic 9 AM bookings at hour 1 (UTC), leaving the
+  // heatmap empty for any clinic-hours slot. Convert to Asia/Kuala_Lumpur
+  // (UTC+8, no DST) by offsetting the ms then reading the UTC fields.
+  const MYT_OFFSET_MS = 8 * 60 * 60 * 1000;
   (rows || []).forEach((r) => {
     if (!r.doctor_id || !r.slot_start) return;
     const name = docName.get(r.doctor_id) || "Unknown";
@@ -56,8 +61,8 @@ export default async function UtilizationPage() {
     cur.count++;
     byDoctor.set(r.doctor_id, cur);
 
-    const d = new Date(r.slot_start);
-    const key = `${d.getDay()}-${d.getHours()}`;
+    const myt = new Date(new Date(r.slot_start).getTime() + MYT_OFFSET_MS);
+    const key = `${myt.getUTCDay()}-${myt.getUTCHours()}`;
     heat[key] = (heat[key] || 0) + 1;
     if (heat[key] > max) max = heat[key];
   });
