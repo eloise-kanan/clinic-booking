@@ -167,13 +167,13 @@ export default async function OwnerHome() {
 
   return (
     <StaffShell role="owner" userName={profile.full_name} nav={await staffNav(profile.role, pendingCount)}>
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <h2 className="text-base font-medium">Clinic overview</h2>
-        <span className="text-[11px] text-stone-500">This week + last 30 days</span>
-      </div>
+      <h2 className="text-base font-medium mb-1">Clinic overview</h2>
+      <p className="text-xs text-stone-500 mb-5">
+        Snapshot of how the clinic is performing this week + the last 30 days.
+      </p>
 
-      {/* KPI strip — slim 6-up row */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2 mb-3">
+      {/* KPI strip — 6 stats comfortably spaced */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
         <Stat
           label="This week"
           value={String(weekCount)}
@@ -181,35 +181,35 @@ export default async function OwnerHome() {
             weekDeltaPct == null
               ? "bookings"
               : weekDeltaPct >= 0
-                ? `+${weekDeltaPct}% vs last`
-                : `${weekDeltaPct}% vs last`
+                ? `+${weekDeltaPct}% vs last week`
+                : `${weekDeltaPct}% vs last week`
           }
           accent={weekDeltaPct != null ? (weekDeltaPct >= 0 ? "up" : "down") : undefined}
         />
-        <Stat label="Pending" value={String(pendingCount)} sub="awaiting" />
-        <Stat label="Patients" value={String(patientCount)} sub="total" />
-        <Stat label="Repeat" value={`${repeatRate}%`} sub="returning" />
+        <Stat label="Pending" value={String(pendingCount)} sub="awaiting nurse" />
+        <Stat label="Total patients" value={String(patientCount)} sub="" />
+        <Stat label="Repeat rate" value={`${repeatRate}%`} sub="returning patients" />
         <Stat
-          label="No-show"
+          label="No-show rate"
           value={`${noShowRate30}%`}
-          sub="30 d"
+          sub="last 30 days"
           accent={noShowRate30 >= 20 ? "down" : undefined}
         />
         <Stat
-          label="Recall"
+          label="Recall pickup"
           value={`${recallPickupRate}%`}
-          sub={`${recallPickedUp}/${recallSent}`}
+          sub={`${recallPickedUp} of ${recallSent} sent`}
         />
       </div>
 
-      {/* Trend chart spans 2 cols, attendance + recall sit beside on xl */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-2 mb-2">
-        <div className="xl:col-span-2">
-          <Card title="Booking trend — 14 days">
-            <BookingTrendChart data={trend} max={trendMax} />
-          </Card>
-        </div>
-        <Card title="Attendance — 30 d">
+      {/* Trend chart — full width, generous height */}
+      <Card title="Booking trend — last 14 days">
+        <BookingTrendChart data={trend} max={trendMax} />
+      </Card>
+
+      {/* Attendance + recall side-by-side */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <Card title="Attendance — last 30 days">
           <AttendanceBreakdown
             attended={attended30}
             noShow={noShow30}
@@ -218,28 +218,28 @@ export default async function OwnerHome() {
             cancelled={cancelled30}
           />
         </Card>
-        <Card title="Recall pickup — 60 d">
+        <Card title="Recall pickup — last 60 days">
           <RecallPickup sent={recallSent} pickedUp={recallPickedUp} rate={recallPickupRate} />
         </Card>
       </div>
 
-      {/* Leaderboards — full-width 2-up with top 5 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+      {/* Performance leaderboards — full-width 2-up with top 5 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <Card
-          title="Doctors — 30 d"
+          title="Doctor activity — last 30 days"
           footer={
-            <Link href="/owner/doctor-performance" className="text-[11px] text-blue-600 hover:underline">
-              Full report →
+            <Link href="/owner/doctor-performance" className="text-xs text-blue-600 hover:underline">
+              Full doctor report →
             </Link>
           }
         >
           <RankedBars rows={topDoctors.map((d) => ({ label: d.name, value: d.bookings, sub: `${d.attended} seen · ${d.noShow} no-show` }))} max={topDocMax} unit="bookings" />
         </Card>
         <Card
-          title="Nurses — 30 d"
+          title="Nurse approvals — last 30 days"
           footer={
-            <Link href="/owner/nurse-performance" className="text-[11px] text-blue-600 hover:underline">
-              Full report →
+            <Link href="/owner/nurse-performance" className="text-xs text-blue-600 hover:underline">
+              Full nurse report →
             </Link>
           }
         >
@@ -262,35 +262,34 @@ function Stat({
 }) {
   const accentColor = accent === "up" ? "text-emerald-600" : accent === "down" ? "text-red-600" : "text-stone-500";
   return (
-    <div className="bg-white border border-stone-200 rounded-lg px-2.5 py-2">
-      <div className="text-[10px] uppercase tracking-wider text-stone-500">{label}</div>
-      <div className="text-lg font-semibold mt-0.5 tabular-nums leading-tight">{value}</div>
-      {sub && <div className={`text-[10px] mt-0.5 leading-tight ${accentColor}`}>{sub}</div>}
+    <div className="bg-white border border-stone-200 rounded-lg p-3">
+      <div className="text-[11px] uppercase tracking-wider text-stone-500">{label}</div>
+      <div className="text-2xl font-medium mt-1 tabular-nums">{value}</div>
+      {sub && <div className={`text-[11px] mt-0.5 ${accentColor}`}>{sub}</div>}
     </div>
   );
 }
 
 function Card({ title, footer, children }: { title: string; footer?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-stone-200 rounded-lg">
-      <div className="px-3 pt-2.5 pb-1.5 flex items-baseline justify-between gap-2">
-        <h3 className="text-[11px] uppercase tracking-wider text-stone-500 font-medium">{title}</h3>
+    <div className="bg-white border border-stone-200 rounded-xl">
+      <div className="px-4 pt-3.5 pb-2 flex items-baseline justify-between">
+        <h3 className="text-sm font-medium">{title}</h3>
         {footer}
       </div>
-      <div className="px-3 pb-3">{children}</div>
+      <div className="px-4 pb-4">{children}</div>
     </div>
   );
 }
 
-// SVG vertical bar chart for the 14-day trend. Compact height to fit the
-// 4-up overview grid without dominating.
+// SVG vertical bar chart for the 14-day trend.
 function BookingTrendChart({ data, max }: { data: { day: string; label: string; bookings: number }[]; max: number }) {
-  const W = 720, H = 120, PAD = 6, BAR_GAP = 3;
+  const W = 720, H = 160, PAD = 8, BAR_GAP = 4;
   const n = data.length;
   const barW = (W - PAD * 2 - BAR_GAP * (n - 1)) / n;
   return (
     <div className="w-full overflow-x-auto">
-      <svg viewBox={`0 0 ${W} ${H + 24}`} className="w-full h-28">
+      <svg viewBox={`0 0 ${W} ${H + 28}`} className="w-full h-44">
         {/* Y axis grid (3 lines: 0, max/2, max) */}
         {[0, 0.5, 1].map((p, i) => {
           const y = PAD + (H - PAD * 2) * (1 - p);
