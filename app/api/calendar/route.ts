@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
+import { effectiveProfile } from "@/lib/pin";
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -11,10 +12,17 @@ export async function GET(req: Request) {
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("role, active")
+    .select("role, active, full_name")
     .eq("id", user.id)
     .single();
   if (!profile?.active) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+  // On the terminal kiosk, the "real" actor is whichever PIN holder unlocked
+  // the session. A doctor PINing in should still see only their own
+  // bookings — same scoping as a doctor on a personal device.
+  const eff = await effectiveProfile(user.id, profile.role, profile.full_name);
+  const effectiveRole = eff?.role || profile.role;
+  const effectiveProfileId = eff?.id || user.id;
 
   const url = new URL(req.url);
   const date = url.searchParams.get("date");
@@ -39,8 +47,8 @@ export async function GET(req: Request) {
     .order("slot_start");
 
   let scopedDoctorId: string | null = null;
-  if (profile.role === "doctor") {
-    const { data: doc } = await admin.from("doctors").select("id").eq("profile_id", user.id).single();
+  if (effectiveRole === "doctor") {
+    const { data: doc } = await admin.from("doctors").select("id").eq("profile_id", effectiveProfileId).single();
     if (doc) {
       scopedDoctorId = doc.id;
       query = query.eq("doctor_id", doc.id);
