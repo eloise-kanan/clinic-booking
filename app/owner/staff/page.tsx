@@ -14,30 +14,105 @@ export default async function StaffPage() {
   const plan = (await loadPlan()) as Plan;
   const caps = SEAT_CAPS[plan];
 
-  const { data: profiles } = await admin
-    .from("profiles")
-    .select("id, role, full_name, active, login_id, pin_hash")
-    .order("role");
+  const [profilesRes, doctorsRes, authUsersRes, hoursRes, recentLeavesRes, recentShiftsRes] = await Promise.all([
+    admin
+      .from("profiles")
+      .select("id, role, full_name, active, login_id, pin_hash, annual_leave_balance, mc_balance, emergency_balance")
+      .order("role"),
+    admin.from("doctors").select("id, profile_id, display_name, default_slot_minutes, active"),
+    admin.auth.admin.listUsers(),
+    admin.from("working_hours").select("doctor_id, weekday, start_time, end_time"),
+    admin
+      .from("leave_requests")
+      .select("id, profile_id, start_date, end_date, status, leave_type, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100),
+    admin
+      .from("duty_shifts")
+      .select("id, profile_id, shift_date, start_time, end_time, status, is_permanent, created_at")
+      .order("created_at", { ascending: false })
+      .limit(100),
+  ]);
 
-  // For each doctor profile, fetch their doctor row
-  const { data: doctors } = await admin
-    .from("doctors")
-    .select("id, profile_id, display_name, default_slot_minutes, active");
+  const profiles = profilesRes.data;
+  const doctors = doctorsRes.data;
+  const authUsers = authUsersRes.data;
 
-  // Auth user emails
-  const { data: authUsers } = await admin.auth.admin.listUsers();
   const emailById = new Map<string, string>();
   authUsers?.users?.forEach((u) => {
     if (u.id && u.email) emailById.set(u.id, u.email);
   });
 
-  const enriched = (profiles || []).map((p) => ({
-    ...p,
-    email: emailById.get(p.id) || "",
-    pin_set: !!p.pin_hash,
-    pin_hash: undefined, // Don't leak the hash to the client
-    doctor: doctors?.find((d) => d.profile_id === p.id) || null,
-  }));
+  // Index working hours by doctor_id → weekday list
+  const hoursByDoctor = new Map<string, { weekday: number; start_time: string; end_time: string }[]>();
+  (hoursRes.data || []).forEach((h) => {
+    if (!hoursByDoctor.has(h.doctor_id)) hoursByDoctor.set(h.doctor_id, []);
+    hoursByDoctor.get(h.doctor_id)!.push({
+      weekday: h.weekday,
+      start_time: h.start_time,
+      end_time: h.end_time,
+    });
+  });
+
+  // Mix leave + shift history per-profile, keep the 5 most recent each.
+  type HistoryItem = {
+    type: "leave" | "shift";
+    id: string;
+    status: string;
+    label: string;
+    sub: string;
+    created_at: string;
+  };
+  const historyByProfile = new Map<string, HistoryItem[]>();
+  (recentLeavesRes.data || []).forEach((r) => {
+    const arr = historyByProfile.get(r.profile_id) || [];
+    arr.push({
+      type: "leave",
+      id: r.id,
+      status: r.status,
+      label: `Leave — ${r.leave_type}`,
+      sub: r.start_date === r.end_date ? r.start_date : `${r.start_date} → ${r.end_date}`,
+      created_at: r.created_at,
+    });
+    historyByProfile.set(r.profile_id, arr);
+  });
+  (recentShiftsRes.data || []).forEach((r) => {
+    const arr = historyByProfile.get(r.profile_id) || [];
+    arr.push({
+      type: "shift",
+      id: r.id,
+      status: r.status,
+      label: r.is_permanent ? "Shift change (permanent)" : "Shift change",
+      sub: `${r.shift_date} · ${r.start_time.slice(0, 5)}–${r.end_time.slice(0, 5)}`,
+      created_at: r.created_at,
+    });
+    historyByProfile.set(r.profile_id, arr);
+  });
+  historyByProfile.forEach((arr, k) => {
+    arr.sort((a, b) => b.created_at.localeCompare(a.created_at));
+    historyByProfile.set(k, arr.slice(0, 5));
+  });
+
+  const enriched = (profiles || []).map((p) => {
+    const doc = doctors?.find((d) => d.profile_id === p.id) || null;
+    return {
+      id: p.id,
+      role: p.role,
+      full_name: p.full_name,
+      active: p.active,
+      login_id: p.login_id,
+      email: emailById.get(p.id) || "",
+      pin_set: !!p.pin_hash,
+      doctor: doc,
+      working_hours: doc?.id ? hoursByDoctor.get(doc.id) || [] : [],
+      balances: {
+        annual: p.annual_leave_balance ?? 14,
+        mc: p.mc_balance ?? 14,
+        emergency: p.emergency_balance ?? 5,
+      },
+      history: historyByProfile.get(p.id) || [],
+    };
+  });
 
   // Active seat usage for the meter strip
   const activeDoctors = enriched.filter((p) => p.role === "doctor" && p.active).length;
