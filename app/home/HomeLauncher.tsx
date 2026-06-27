@@ -489,34 +489,105 @@ export default function HomeLauncher({
   const firstName = userName.split(" ")[0] || userName;
   const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
 
+  // KPIs surface the live work-in-progress: stuff that actually wants the
+  // owner / nurse / doctor's attention right now. Tiles are tinted when
+  // there's a number > 0, neutral when it's clear.
+  const kpis: { label: string; value: number; tone: "warn" | "info" | "ok" | "neutral"; href?: string }[] =
+    role === "doctor"
+      ? [
+          { label: "Today", value: counts.today, tone: "info", href: "/doctor" },
+          { label: "Past unmarked", value: counts.pastUnmarked, tone: counts.pastUnmarked > 0 ? "warn" : "ok" },
+        ]
+      : [
+          { label: "Pending", value: counts.pending, tone: counts.pending > 0 ? "warn" : "ok", href: "/nurse" },
+          { label: "Today", value: counts.today, tone: "info" },
+          { label: "Reminders", value: counts.remindersPending, tone: counts.remindersPending > 0 ? "warn" : "ok", href: "/staff/reminders" },
+          { label: "Past unmarked", value: counts.pastUnmarked, tone: counts.pastUnmarked > 0 ? "warn" : "ok" },
+        ];
+
   return (
-    <div className="space-y-4">
-      <div className="flex items-start justify-between gap-3 flex-wrap">
-        <div>
-          <h1 className="text-lg font-medium tracking-tight text-stone-900">
-            {greeting}, {firstName}
-          </h1>
-          <p className="text-xs text-stone-500 mt-0.5">
-            Welcome to {clinicName}.
-          </p>
+    <div className="space-y-5">
+      {/* Header band */}
+      <div
+        className="rounded-2xl px-5 py-4 text-white shadow-sm"
+        style={{ background: "var(--staff-header-bg, #1B2A4A)" }}
+      >
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.3em] text-white/60 mb-1">
+              {clinicName}
+            </div>
+            <h1 className="text-xl font-medium tracking-tight">
+              {greeting}, {firstName}
+            </h1>
+          </div>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 text-white/90 text-[11px] font-medium border border-white/20">
+            {planLabel} plan
+          </span>
         </div>
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-brand-50 text-brand-800 text-[11px] font-medium border border-brand-100">
-          {planLabel} plan
-        </span>
+
+        {/* KPI strip — sits inside the header band so it reads as a single hero */}
+        <div className={`mt-4 grid gap-2 ${role === "doctor" ? "grid-cols-2 md:grid-cols-2" : "grid-cols-2 md:grid-cols-4"}`}>
+          {kpis.map((k) => (
+            <Kpi key={k.label} label={k.label} value={k.value} tone={k.tone} href={k.href} />
+          ))}
+        </div>
       </div>
 
+      {/* Action sections — each gets a section header with a small left
+          accent so the page breaks visually instead of reading as one long
+          sheet of identical cards. */}
       {sections.map((section) => (
-        <div key={section.title}>
-          <h2 className="text-[10px] uppercase tracking-wider font-semibold text-stone-500 mb-1.5">
-            {section.title}
-          </h2>
+        <section key={section.title}>
+          <div className="flex items-baseline gap-2 mb-2">
+            <span
+              className="w-1 h-4 rounded-full"
+              style={{ background: "var(--staff-accent, #1B2A4A)" }}
+            />
+            <h2 className="text-[11px] uppercase tracking-wider font-semibold text-stone-700">
+              {section.title}
+            </h2>
+            <span className="text-[10px] text-stone-400">·  {section.cards.length}</span>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
             {section.cards.map((card) => (
               <CardItem key={card.href} card={card} />
             ))}
           </div>
-        </div>
+        </section>
       ))}
     </div>
   );
+}
+
+function Kpi({
+  label,
+  value,
+  tone,
+  href,
+}: {
+  label: string;
+  value: number;
+  tone: "warn" | "info" | "ok" | "neutral";
+  href?: string;
+}) {
+  const colorClass =
+    value === 0
+      ? "bg-white/8 border-white/15 text-white/70"
+      : tone === "warn"
+        ? "bg-amber-400/20 border-amber-300/40 text-white"
+        : tone === "info"
+          ? "bg-white/15 border-white/25 text-white"
+          : tone === "ok"
+            ? "bg-emerald-400/15 border-emerald-300/30 text-white"
+            : "bg-white/10 border-white/20 text-white";
+
+  const content = (
+    <div className={`block rounded-lg px-3 py-2 border ${colorClass} transition-colors ${href ? "hover:bg-white/20 cursor-pointer" : ""}`}>
+      <div className="text-[10px] uppercase tracking-wider text-white/70">{label}</div>
+      <div className="text-2xl font-light tabular-nums leading-none mt-1">{value}</div>
+    </div>
+  );
+  if (!href) return content;
+  return <Link href={href}>{content}</Link>;
 }
