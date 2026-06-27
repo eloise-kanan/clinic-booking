@@ -378,6 +378,89 @@ export default function BackupActions({
           </li>
         </ul>
       </div>
+
+      {/* Demo data purge — destructive; for use between sales demos. */}
+      <DemoPurgePanel />
+    </div>
+  );
+}
+
+function DemoPurgePanel() {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [includeBookings, setIncludeBookings] = useState(false);
+  const [includeAudit, setIncludeAudit] = useState(false);
+
+  async function run() {
+    const summary = ["leave requests", "shift changes"];
+    if (includeBookings) summary.push("bookings");
+    if (includeAudit) summary.push("audit log");
+    if (!confirm(`Wipe ${summary.join(" + ")}? This cannot be undone. Use only between demos.`)) return;
+
+    setBusy(true);
+    setMsg(null);
+    try {
+      const include: string[] = [];
+      if (includeBookings) include.push("bookings");
+      if (includeAudit) include.push("audit_log");
+      const res = await fetch("/api/admin/demo-purge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ include }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setMsg(data.error || "Failed");
+        return;
+      }
+      const counts = Object.entries(data.wiped || {})
+        .map(([k, v]) => `${k}: ${v}`)
+        .join(", ");
+      setMsg(`Wiped — ${counts}`);
+      router.refresh();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+      <h3 className="text-sm font-semibold text-red-900 flex items-center gap-2">
+        🧹 Demo data purge
+      </h3>
+      <p className="text-xs text-red-800 mt-1">
+        Wipes HR submissions so the next demo starts clean. Always wipes
+        leave requests + shift changes; opt in to also clear bookings or the
+        audit log. <strong>Cannot be undone.</strong>
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-3">
+        <label className="flex items-center gap-1.5 text-xs text-red-900">
+          <input
+            type="checkbox"
+            checked={includeBookings}
+            onChange={(e) => setIncludeBookings(e.target.checked)}
+          />
+          Also wipe bookings
+        </label>
+        <label className="flex items-center gap-1.5 text-xs text-red-900">
+          <input
+            type="checkbox"
+            checked={includeAudit}
+            onChange={(e) => setIncludeAudit(e.target.checked)}
+          />
+          Also wipe audit log
+        </label>
+        <button
+          type="button"
+          onClick={run}
+          disabled={busy}
+          className="ml-auto text-xs px-3 py-1.5 rounded-md bg-red-600 hover:bg-red-700 text-white font-medium disabled:opacity-50"
+        >
+          {busy ? "Wiping…" : "Wipe now"}
+        </button>
+      </div>
+      {msg && <p className="text-[11px] text-red-900 mt-2">{msg}</p>}
     </div>
   );
 }

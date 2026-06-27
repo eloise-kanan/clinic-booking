@@ -45,6 +45,8 @@ const FEATURE_NAMES: Record<FeatureKey, string> = {
   "google_review_prompt": "Google review prompt (for 4★+ visits)",
   "payroll": "Payroll handoff (planned)",
   "commission": "Doctor commission tracking (planned)",
+  "rooms": "In-clinic check-in / check-out + room assignment",
+  "doctor_profiles": "Patient-facing doctor cards (expertise + rating)",
   "multi_branch": "Multi-branch (planned)",
 };
 
@@ -77,11 +79,14 @@ const FEATURE_CATEGORY: Record<FeatureKey, string> = {
   "review": "Admin & compliance",
   "payroll": "Admin & compliance",
   "commission": "Admin & compliance",
+  "rooms": "Patient flow",
+  "doctor_profiles": "Patient flow",
   "multi_branch": "Scale",
 };
 
 // Stable display order for the categories.
 const CATEGORY_ORDER: string[] = [
+  "Patient flow",
   "Bookings",
   "Patients",
   "Calendar",

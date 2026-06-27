@@ -85,6 +85,8 @@ export type FeatureKey =
   | "google_review_prompt"
   | "payroll"
   | "commission"
+  | "rooms"                  // in-clinic check-in / check-out + room assignment
+  | "doctor_profiles"        // patient-facing doctor cards (expertise + rating)
   // Franchise
   | "multi_branch";
 
@@ -119,6 +121,8 @@ export const FEATURE_REQUIRES: Record<FeatureKey, Plan> = {
   "google_review_prompt": "premium",
   "payroll": "premium",
   "commission": "premium",
+  "rooms": "premium",
+  "doctor_profiles": "premium",
 
   // Franchise
   "multi_branch": "franchise",
