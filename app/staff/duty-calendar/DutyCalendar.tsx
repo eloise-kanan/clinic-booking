@@ -31,15 +31,23 @@ function dateStr(d: Date) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-function renderStaffList(
+// New filtered renderer — only renders staff with EXCEPTIONS for the day
+// (an approved leave or a custom shift). Days with no exceptions render
+// as an empty cell (or "Default duty" hint) so the calendar reads as a
+// "what's different today" view instead of a wall of names.
+function renderExceptions(
   staff: StaffMember[],
   date: string,
   leaveByProfile: Map<string, Set<string>>,
   shiftByPersonDay: Map<string, Map<string, Shift>>,
   showRoleBadge: boolean
 ) {
-  return staff.map((s) => {
+  const out: React.ReactNode[] = [];
+  for (const s of staff) {
     const onLeave = leaveByProfile.get(s.id)?.has(date) ?? false;
+    const customShift = shiftByPersonDay.get(s.id)?.get(date);
+    if (!onLeave && !customShift) continue;  // skip default-duty staff
+
     const roleBadge = showRoleBadge ? (
       <span
         className={`text-[9px] uppercase tracking-wider px-1 rounded mr-1 ${
@@ -52,7 +60,7 @@ function renderStaffList(
       </span>
     ) : null;
     if (onLeave) {
-      return (
+      out.push(
         <div
           key={s.id}
           className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 truncate"
@@ -61,17 +69,17 @@ function renderStaffList(
           {roleBadge}🏖 {s.full_name}
         </div>
       );
+      continue;
     }
-    const override = shiftByPersonDay.get(s.id)?.get(date);
-    const start = override ? override.start_time.slice(0, 5) : DEFAULT_START;
-    const end = override ? override.end_time.slice(0, 5) : DEFAULT_END;
-    return (
+    // Custom shift only (default is skipped above)
+    const override = customShift!;
+    const start = override.start_time.slice(0, 5);
+    const end = override.end_time.slice(0, 5);
+    out.push(
       <div
         key={s.id}
-        className={`px-1.5 py-0.5 rounded truncate ${
-          override ? "bg-amber-50 text-amber-800" : "bg-brand-50 text-brand-800"
-        }`}
-        title={`${s.full_name} (${s.role}) ${start}–${end}${override ? " · custom" : ""}`}
+        className="px-1.5 py-0.5 rounded truncate bg-amber-50 text-amber-800"
+        title={`${s.full_name} (${s.role}) ${start}–${end} · custom shift`}
       >
         {roleBadge}
         <span className="truncate">{s.full_name}</span>{" "}
@@ -80,7 +88,8 @@ function renderStaffList(
         </span>
       </div>
     );
-  });
+  }
+  return out;
 }
 
 // Monday of the week containing d
@@ -271,8 +280,44 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
         </div>
       </div>
 
+      {/* Default-duty roster at the top — read once, then the calendar
+          shows only exceptions (custom shifts + approved leaves). */}
+      <div className="bg-white border border-stone-200 rounded-xl p-4 mb-4">
+        <div className="flex items-baseline justify-between mb-2 gap-3 flex-wrap">
+          <div>
+            <h3 className="text-sm font-medium">Default duty</h3>
+            <p className="text-[11px] text-stone-500">
+              Everyone below works <strong>{DEFAULT_START}–{DEFAULT_END}</strong> daily unless they have an approved shift change or leave.
+            </p>
+          </div>
+        </div>
+        {staff.length === 0 ? (
+          <p className="text-xs text-stone-500">No active staff.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {staff.map((s) => (
+              <span
+                key={s.id}
+                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-stone-50 border border-stone-200 text-xs"
+              >
+                <span
+                  className={`text-[9px] uppercase tracking-wider px-1 rounded ${
+                    s.role === "doctor"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-emerald-100 text-emerald-700"
+                  }`}
+                >
+                  {s.role === "doctor" ? "Dr" : "Nr"}
+                </span>
+                <span>{s.full_name}</span>
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
       <div className="text-[11px] text-stone-500 mb-2">
-        Default duty: {DEFAULT_START}–{DEFAULT_END} for everyone
+        Calendar below shows <strong>only exceptions</strong> — custom shift changes (amber) and approved leaves (red). Empty cells = everyone on default duty.
       </div>
 
       {view === "month" ? (
@@ -299,7 +344,7 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
                       <div className={`mb-1 font-medium ${isToday ? "text-brand-700" : "text-stone-600"}`}>
                         {parseInt(cell.date.slice(8), 10)}
                       </div>
-                      {cell.inMonth && renderStaffList(staff, cell.date, leaveByProfile, shiftByPersonDay, includeNurses)}
+                      {cell.inMonth && renderExceptions(staff, cell.date, leaveByProfile, shiftByPersonDay, includeNurses)}
                     </div>
                   );
                 })}
@@ -333,7 +378,7 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
-                  {renderStaffList(staff, cell.date, leaveByProfile, shiftByPersonDay, includeNurses)}
+                  {renderExceptions(staff, cell.date, leaveByProfile, shiftByPersonDay, includeNurses)}
                 </div>
               </div>
             );
@@ -343,10 +388,7 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
 
       <div className="mt-3 flex items-center gap-4 text-[11px] text-stone-500 flex-wrap">
         <div className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded bg-brand-50 border border-brand-200" /> Default duty (9–9)
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded bg-amber-50 border border-amber-200" /> Custom shift
+          <span className="inline-block w-3 h-3 rounded bg-amber-50 border border-amber-200" /> Custom shift change
         </div>
         <div className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded bg-red-50 border border-red-200" /> Approved leave
