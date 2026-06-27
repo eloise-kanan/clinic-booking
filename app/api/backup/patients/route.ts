@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { csvDocument, csvDateMy, csvDateOnlyMy } from "@/lib/csv";
+import { csvDocument, csvDateMy, csvDateOnlyMy, csvText } from "@/lib/csv";
 
 export async function GET() {
   const supabase = await createClient();
@@ -21,7 +21,7 @@ export async function GET() {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("patients")
-    .select("id, full_name, nationality, id_type, id_number, whatsapp_number, visit_count, created_at");
+    .select("id, full_name, nationality, id_type, id_number, whatsapp_number, visit_count, first_seen_at");
   if (error) return new Response(error.message, { status: 500 });
 
   const headers = [
@@ -32,17 +32,17 @@ export async function GET() {
     "id_number",
     "whatsapp_number",
     "visit_count",
-    "created_at",
+    "first_seen_at",
   ];
   const rows = (data || []).map((p) => [
     p.id,
     p.full_name,
     p.nationality,
     p.id_type,
-    p.id_number,
-    p.whatsapp_number,
+    csvText(p.id_number),       // Force Excel to treat IC/passport as text
+    csvText(p.whatsapp_number), // Same for phone — keeps the leading + or 0
     p.visit_count,
-    csvDateMy(p.created_at),
+    csvDateMy(p.first_seen_at),
   ]);
 
   // Audit log the export

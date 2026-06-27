@@ -35,8 +35,16 @@ export function csvDateOnlyMy(d: Date = new Date()): string {
   return fmt.format(d);
 }
 
+// Marker for a cell value that's already in valid CSV form and should be
+// emitted verbatim by csvCell (no further escaping). Used for the ="…"
+// Excel-text-coercion trick — csvCell would otherwise re-escape the quotes.
+class CsvRaw {
+  constructor(public value: string) {}
+}
+
 export function csvCell(value: unknown): string {
   if (value === null || value === undefined) return "";
+  if (value instanceof CsvRaw) return value.value;
   let s: string;
   if (value instanceof Date) {
     s = value.toISOString();
@@ -50,6 +58,17 @@ export function csvCell(value: unknown): string {
     return `"${s.replace(/"/g, '""')}"`;
   }
   return s;
+}
+
+// Force Excel to read a cell as text — useful for IC numbers, passport numbers,
+// phone numbers etc. that would otherwise be turned into scientific notation
+// (871015013005 → 8.71015E+11). Returns a CsvRaw whose serialised value is
+// "=""…""" — Excel honours that as a literal-text formula. Other CSV consumers
+// see ="…" as the raw cell (still readable).
+export function csvText(value: unknown): CsvRaw {
+  if (value === null || value === undefined || value === "") return new CsvRaw("");
+  const inner = String(value).replace(/"/g, '""');
+  return new CsvRaw(`"=""${inner}"""`);
 }
 
 export function csvRow(values: unknown[]): string {

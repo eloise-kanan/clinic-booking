@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import { createAdminClient } from "@/lib/supabase-admin";
-import { csvDocument, csvDateMy, csvDateOnlyMy } from "@/lib/csv";
+import { csvDocument, csvDateMy, csvDateOnlyMy, csvText } from "@/lib/csv";
 
 function flatName(v: unknown): string {
   if (!v) return "";
@@ -66,8 +66,8 @@ export async function GET() {
       csvDateMy(b.slot_end),
       b.visit_reason,
       patient?.full_name || "",
-      patient?.id_number || "",
-      patient?.whatsapp_number || "",
+      csvText(patient?.id_number),       // force-text so Excel keeps IC/passport as string
+      csvText(patient?.whatsapp_number),
       flatDisplay(b.doctor),
       csvDateMy(b.created_at),
       csvDateMy(b.reviewed_at),
