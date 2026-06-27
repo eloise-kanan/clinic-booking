@@ -7,7 +7,7 @@ const DEFAULT_END = "21:00";
 
 type ViewMode = "week" | "month";
 
-type StaffMember = { id: string; full_name: string; role: string };
+type StaffMember = { id: string; full_name: string; role: string; typical_hours?: string | null };
 
 type Shift = {
   id: string;
@@ -280,14 +280,15 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
         </div>
       </div>
 
-      {/* Default-duty roster at the top — read once, then the calendar
-          shows only exceptions (custom shifts + approved leaves). */}
+      {/* Default-duty roster at the top — each person shows their typical
+          shift hours (doctors use working_hours table summary; nurses show
+          the clinic default). Calendar below highlights only exceptions. */}
       <div className="bg-white border border-stone-200 rounded-xl p-4 mb-4">
         <div className="flex items-baseline justify-between mb-2 gap-3 flex-wrap">
           <div>
             <h3 className="text-sm font-medium">Default duty</h3>
             <p className="text-[11px] text-stone-500">
-              Everyone below works <strong>{DEFAULT_START}–{DEFAULT_END}</strong> daily unless they have an approved shift change or leave.
+              Typical shift per staff. Clinic default is <strong>{DEFAULT_START}–{DEFAULT_END}</strong>.
             </p>
           </div>
         </div>
@@ -295,23 +296,28 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
           <p className="text-xs text-stone-500">No active staff.</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
-            {staff.map((s) => (
-              <span
-                key={s.id}
-                className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-stone-50 border border-stone-200 text-xs"
-              >
+            {staff.map((s) => {
+              const hours =
+                s.typical_hours || `${DEFAULT_START}–${DEFAULT_END}`;
+              return (
                 <span
-                  className={`text-[9px] uppercase tracking-wider px-1 rounded ${
-                    s.role === "doctor"
-                      ? "bg-blue-100 text-blue-700"
-                      : "bg-emerald-100 text-emerald-700"
-                  }`}
+                  key={s.id}
+                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-stone-50 border border-stone-200 text-xs"
                 >
-                  {s.role === "doctor" ? "Dr" : "Nr"}
+                  <span
+                    className={`text-[9px] uppercase tracking-wider px-1 rounded ${
+                      s.role === "doctor"
+                        ? "bg-blue-100 text-blue-700"
+                        : "bg-emerald-100 text-emerald-700"
+                    }`}
+                  >
+                    {s.role === "doctor" ? "Dr" : "Nr"}
+                  </span>
+                  <span>{s.full_name}</span>
+                  <span className="text-[10px] text-stone-500 tabular-nums">{hours}</span>
                 </span>
-                <span>{s.full_name}</span>
-              </span>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
