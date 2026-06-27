@@ -331,7 +331,7 @@ export default function FilterableBookingsTable({
         "/api/bookings/attendance",
         { booking_id: id, mark },
         {
-          allowedRoles: ["nurse", "doctor"],
+          allowedRoles: ["nurse"],
           actionLabel:
             mark === "attended"
               ? "to mark this patient attended"

@@ -105,7 +105,7 @@ export default async function HomePage() {
     const { data: todayList, error: todayErr } = await admin
       .from("bookings")
       .select(
-        "id, slot_start, slot_end, visit_reason, attended_at, no_show, patient:patients(full_name), doctor:doctors(display_name)"
+        "id, slot_start, slot_end, visit_reason, attended_at, no_show, patient:patients(full_name, id_type, id_number), doctor:doctors(display_name)"
       )
       .eq("status", "confirmed")
       .gte("slot_start", horizonStart)
@@ -125,15 +125,21 @@ export default async function HomePage() {
           today: todayCount || 0,
           reminders: remindersPendingCount || 0,
         }}
-        todayBookings={(todayList || []).map((b) => ({
-          id: b.id,
-          slot_start: b.slot_start,
-          service: b.visit_reason || "—",
-          attended: !!b.attended_at,
-          no_show: !!b.no_show,
-          patient_name: (b.patient as { full_name?: string } | null)?.full_name || "—",
-          doctor_name: (b.doctor as { display_name?: string } | null)?.display_name || "—",
-        }))}
+        todayBookings={(todayList || []).map((b) => {
+          const pat = b.patient as { full_name?: string; id_type?: "ic" | "passport"; id_number?: string } | null;
+          return {
+            id: b.id,
+            slot_start: b.slot_start,
+            service: b.visit_reason || "—",
+            attended: !!b.attended_at,
+            no_show: !!b.no_show,
+            patient_name: pat?.full_name || "—",
+            patient_id_label: pat?.id_number
+              ? `${pat.id_type === "ic" ? "IC" : "Passport"} ${pat.id_number}`
+              : null,
+            doctor_name: (b.doctor as { display_name?: string } | null)?.display_name || "—",
+          };
+        })}
       />
     );
   }

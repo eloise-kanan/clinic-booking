@@ -30,9 +30,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "mark must be 'attended', 'no_show', or 'clear'" }, { status: 400 });
   }
 
-  // Attendance may be marked by either a nurse (front desk) or a doctor
-  // (after consultation).
-  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse", "doctor"] });
+  // Attendance is a nurse front-desk task. Doctors handle check-in/out
+  // separately (Premium feature).
+  const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse"] });
   if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
 
   const admin = createAdminClient();

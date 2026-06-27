@@ -35,6 +35,7 @@ type TodayBooking = {
   attended: boolean;
   no_show: boolean;
   patient_name: string;
+  patient_id_label?: string | null;
   doctor_name: string;
 };
 
@@ -137,6 +138,10 @@ export default function ClinicConsole({
   // Where to navigate after a successful PIN verify, when the user opened
   // the modal from a specific count tile. Null = stay on /home.
   const [pendingNav, setPendingNav] = useState<string | null>(null);
+  // When the PIN modal opens from an admin tile (booking confirmation,
+  // reminders, recalls), the picker should hide doctor cards — only nurses
+  // perform those tasks. Attendance + general sign-in stay open to both.
+  const [pendingAllowedRoles, setPendingAllowedRoles] = useState<("nurse" | "doctor")[] | undefined>(undefined);
   // Pending attendance action — when user clicks Attended / No-show on a
   // booking in the locked state, we open the PIN modal first.
   const [pendingMark, setPendingMark] = useState<{ booking_id: string; mark: "attended" | "no_show" } | null>(null);
@@ -432,24 +437,40 @@ export default function ClinicConsole({
               label="Pending"
               value={counts.pending}
               attention="urgent"
-              onClick={() => { setPendingNav("/nurse"); setPinOpen(true); }}
+              onClick={() => {
+                setPendingNav("/nurse");
+                setPendingAllowedRoles(["nurse"]);
+                setPinOpen(true);
+              }}
             />
             <CountTile
               label="Recalls due"
               value={counts.recalls}
               attention="notice"
-              onClick={() => { setPendingNav("/staff/recalls"); setPinOpen(true); }}
+              onClick={() => {
+                setPendingNav("/staff/recalls");
+                setPendingAllowedRoles(["nurse"]);
+                setPinOpen(true);
+              }}
             />
             <CountTile
               label="Today"
               value={counts.today}
-              onClick={() => { setPendingNav("/nurse/all?day=today"); setPinOpen(true); }}
+              onClick={() => {
+                setPendingNav("/nurse/all?day=today");
+                setPendingAllowedRoles(undefined); // both — doctors view their own day
+                setPinOpen(true);
+              }}
             />
             <CountTile
               label="Reminders"
               value={counts.reminders}
               attention="notice"
-              onClick={() => { setPendingNav("/staff/reminders"); setPinOpen(true); }}
+              onClick={() => {
+                setPendingNav("/staff/reminders");
+                setPendingAllowedRoles(["nurse"]);
+                setPinOpen(true);
+              }}
             />
           </div>
         </div>
@@ -459,14 +480,20 @@ export default function ClinicConsole({
       </div>
 
       {/* PIN modal — verifies + sets per-page lock-token cookie. Three
-          possible intents: navigate (pendingNav), mark attendance
-          (pendingMark), or just identify (no pending action). */}
+          possible intents: navigate (pendingNav, with per-tile allowedRoles),
+          mark attendance (pendingMark, nurse-only), or just identify (no
+          pending action — both nurse + doctor since doctors PIN-in for HR). */}
       <PinChallenge
         open={pinOpen}
-        allowedRoles={pendingMark ? ["nurse", "doctor"] : undefined}
+        allowedRoles={
+          pendingMark
+            ? ["nurse"]
+            : pendingAllowedRoles
+        }
         onClose={() => {
           setPinOpen(false);
           setPendingNav(null);
+          setPendingAllowedRoles(undefined);
           setPendingMark(null);
         }}
         onVerified={async ({ profile_id, pin, full_name, role }) => {
@@ -484,6 +511,7 @@ export default function ClinicConsole({
           } else if (pendingNav) {
             const dest = pendingNav;
             setPendingNav(null);
+            setPendingAllowedRoles(undefined);
             router.push(dest);
           } else {
             setSession(readPinSession());
@@ -678,6 +706,11 @@ function UpcomingPatientsPanel({
                     <div className={`font-medium leading-tight truncate ${isImminent ? "text-base" : "text-sm"}`}>
                       {b.patient_name}
                     </div>
+                    {b.patient_id_label && (
+                      <div className="text-[10px] text-white/55 font-mono tabular-nums truncate">
+                        {b.patient_id_label}
+                      </div>
+                    )}
                     <div className="text-[11px] text-white/70 truncate">
                       {b.service || "—"} · {b.doctor_name}
                     </div>
