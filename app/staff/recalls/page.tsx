@@ -72,6 +72,7 @@ export default async function RecallsPage() {
         role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
         userName={isTerminal ? "Clinic terminal" : profile.full_name}
         nav={await staffNav(isTerminal ? "terminal" : profile.role, pendingBookings || 0)}
+        isTerminal={isTerminal}
       >
         <p className="text-sm text-red-600">Error loading patients: {error.message}</p>
       </StaffShell>
@@ -80,9 +81,10 @@ export default async function RecallsPage() {
 
   return (
     <StaffShell
-      role={profile.role as "owner" | "nurse"}
-      userName={profile.full_name}
-      nav={await staffNav(profile.role, pendingBookings || 0)}
+      role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
+      userName={isTerminal ? "Clinic terminal" : profile.full_name}
+      nav={await staffNav(isTerminal ? "terminal" : profile.role, pendingBookings || 0)}
+      isTerminal={isTerminal}
     >
       <h2 className="text-base font-medium mb-1">Recalls due</h2>
       <p className="text-xs text-stone-500 mb-4">

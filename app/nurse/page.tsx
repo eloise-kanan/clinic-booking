@@ -35,6 +35,7 @@ export default async function NursePage() {
       role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
       userName={isTerminal ? "Clinic terminal" : profile.full_name}
       nav={await staffNav(isTerminal ? "terminal" : profile.role, pendingCount || 0)}
+      isTerminal={isTerminal}
     >
       <h2 className="text-base font-medium mb-4">Pending approvals</h2>
       {isTerminal && (

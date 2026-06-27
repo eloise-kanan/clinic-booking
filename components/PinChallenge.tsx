@@ -111,9 +111,9 @@ export default function PinChallenge({
           )}
         </div>
 
-        {/* Step 1: pick identity */}
+        {/* Step 1: pick identity — sectionised by role so it's faster to find */}
         {!selected && (
-          <div className="p-4">
+          <div className="p-4 space-y-3">
             {!staff ? (
               <p className="text-xs text-stone-500">Loading…</p>
             ) : staff.length === 0 ? (
@@ -121,23 +121,49 @@ export default function PinChallenge({
                 No staff with PINs set. The owner needs to set PINs at <code className="bg-stone-100 px-1 rounded">/owner/staff</code>.
               </p>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
-                {staff.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    disabled={s.locked}
-                    onClick={() => setSelected(s)}
-                    className="text-left p-3 rounded-lg border border-stone-200 hover:border-stone-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <div className="text-sm font-medium truncate">{s.full_name}</div>
-                    <div className="text-[10px] text-stone-500 uppercase tracking-wider mt-0.5">
-                      {s.role}
-                      {s.locked && <span className="ml-1 text-red-600">· locked</span>}
+              <>
+                {(["doctor", "nurse"] as const).map((roleGroup) => {
+                  const group = staff.filter((s) => s.role === roleGroup);
+                  if (group.length === 0) return null;
+                  return (
+                    <div key={roleGroup}>
+                      <div className="flex items-center gap-1.5 mb-1.5 px-0.5">
+                        <span
+                          className={`w-1.5 h-1.5 rounded-full ${
+                            roleGroup === "doctor" ? "bg-blue-500" : "bg-emerald-500"
+                          }`}
+                        />
+                        <span
+                          className={`text-[10px] uppercase tracking-wider font-medium ${
+                            roleGroup === "doctor" ? "text-blue-700" : "text-emerald-700"
+                          }`}
+                        >
+                          {roleGroup === "doctor" ? "Doctors" : "Nurses"}
+                        </span>
+                        <span className="text-[10px] text-stone-400 tabular-nums">
+                          ({group.length})
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        {group.map((s) => (
+                          <button
+                            key={s.id}
+                            type="button"
+                            disabled={s.locked}
+                            onClick={() => setSelected(s)}
+                            className="text-left p-3 rounded-lg border border-stone-200 hover:border-stone-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <div className="text-sm font-medium truncate">{s.full_name}</div>
+                            {s.locked && (
+                              <div className="text-[10px] text-red-600 mt-0.5">Locked</div>
+                            )}
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </button>
-                ))}
-              </div>
+                  );
+                })}
+              </>
             )}
           </div>
         )}
