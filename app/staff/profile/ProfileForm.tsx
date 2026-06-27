@@ -9,21 +9,28 @@ export default function ProfileForm({
   email,
   isOwner,
   hasPin,
+  terminalMode = false,
 }: {
   email: string;
   isOwner: boolean;
   hasPin: boolean;
+  terminalMode?: boolean;
 }) {
-  const [tab, setTab] = useState<Tab>("password");
+  // On the shared terminal, only the PIN tab is reachable — password +
+  // email changes need a personal-device session (auth user differs).
+  const [tab, setTab] = useState<Tab>(terminalMode ? "pin" : "password");
   const showPinTab = !isOwner;
-  const showEmailTab = isOwner;
+  const showEmailTab = isOwner && !terminalMode;
+  const showPasswordTab = !terminalMode;
 
   return (
     <div className="max-w-md">
       <div className="flex gap-1 mb-3 border-b border-stone-200">
-        <TabBtn active={tab === "password"} onClick={() => setTab("password")}>
-          Change password
-        </TabBtn>
+        {showPasswordTab && (
+          <TabBtn active={tab === "password"} onClick={() => setTab("password")}>
+            Change password
+          </TabBtn>
+        )}
         {showPinTab && (
           <TabBtn active={tab === "pin"} onClick={() => setTab("pin")}>
             {hasPin ? "Change PIN" : "Set PIN"}
@@ -35,7 +42,7 @@ export default function ProfileForm({
           </TabBtn>
         )}
       </div>
-      {tab === "password" && <PasswordSection />}
+      {tab === "password" && showPasswordTab && <PasswordSection />}
       {tab === "pin" && showPinTab && <PinSection hasPin={hasPin} />}
       {tab === "email" && showEmailTab && <EmailSection currentEmail={email} />}
     </div>

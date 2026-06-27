@@ -74,6 +74,7 @@ const NURSE_CATEGORIES: Category[] = [
     items: [
       { href: "/staff/leave", label: "Leave" },
       { href: "/staff/duty", label: "Shift changes" },
+      { href: "/staff/profile", label: "Change my PIN" },
     ],
   },
 ];
@@ -101,6 +102,7 @@ const DOCTOR_CATEGORIES: Category[] = [
     items: [
       { href: "/staff/leave", label: "Leave" },
       { href: "/staff/duty", label: "Shift changes" },
+      { href: "/staff/profile", label: "Change my PIN" },
     ],
   },
 ];
