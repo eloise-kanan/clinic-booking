@@ -38,7 +38,18 @@ export default function BookingForm() {
   }, [lang]);
   const t = (k: BookKey) => BOOK_T[lang][k];
 
-  const [reqType, setReqType] = useState<RequestType>("booking");
+  const [reqType, setReqType] = useState<RequestType | null>(null);
+  // Returning-patient detection — populated after the patient enters their
+  // IC/passport. Null = haven't looked up yet; {existing:false} = new
+  // patient; {existing:true, ...} = welcome-back with last-doctor hint.
+  type LookupResult =
+    | { existing: false }
+    | { existing: true; full_name: string; visit_count: number; last_visit_at: string | null; last_doctor: { id: string; display_name: string } | null };
+  const [lookup, setLookup] = useState<LookupResult | null>(null);
+  const [lookupLoading, setLookupLoading] = useState(false);
+  // When a returning patient wants to switch doctor — show the doctor list
+  // instead of locking to their last-visit doctor.
+  const [changeDoctor, setChangeDoctor] = useState(false);
 
   // Identity
   const [fullName, setFullName] = useState("");
@@ -49,6 +60,16 @@ export default function BookingForm() {
   // Type-specific
   const [isFirstTime, setIsFirstTime] = useState<boolean | null>(null);
   const [keepSameDoctor, setKeepSameDoctor] = useState<boolean | null>(null);
+
+  // Reset returning-patient detection when identity changes so we don't keep
+  // a stale welcome-back banner from a previous IC entry. Also reset when
+  // the request type flips off "booking".
+  useEffect(() => {
+    setLookup(null);
+    setChangeDoctor(false);
+    setIsFirstTime(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reqType, idNumber, nationality, fullName]);
 
   // Treatment + slot
   const [treatment, setTreatment] = useState<string>("");
@@ -213,7 +234,7 @@ export default function BookingForm() {
     }
   }
 
-  if (submitted) return <SubmittedView reqType={reqType} lang={lang} />;
+  if (submitted) return <SubmittedView reqType={reqType || "booking"} lang={lang} />;
 
   const showTreatment =
     (reqType === "booking" && isFirstTime !== null) ||
@@ -373,30 +394,85 @@ export default function BookingForm() {
         </div>
       )}
 
-      {/* Booking: first-time? */}
-      {reqType === "booking" && (
+      {/* Booking: auto-detect new vs returning patient from name + IC.
+          Fired by the "Continue" button below the identity fields. */}
+      {reqType === "booking" && !lookup && (
         <div className="border-t border-stone-200 pt-5">
-          <div className="label">{t("first_time")}</div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setIsFirstTime(true)}
-              className={`p-3 rounded-md border text-sm ${
-                isFirstTime === true ? "border-brand bg-brand text-white" : "border-stone-200"
-              }`}
-            >
-              {t("yes")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setIsFirstTime(false)}
-              className={`p-3 rounded-md border text-sm ${
-                isFirstTime === false ? "border-brand bg-brand text-white" : "border-stone-200"
-              }`}
-            >
-              {t("no")}
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={!fullName.trim() || !idNumber.trim() || lookupLoading}
+            onClick={async () => {
+              setLookupLoading(true);
+              try {
+                const res = await fetch("/api/patients/lookup-public", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ nationality, id_type: idType, id_number: idNumber }),
+                });
+                const data = await res.json();
+                if (data.existing) {
+                  setLookup({
+                    existing: true,
+                    full_name: data.full_name,
+                    visit_count: data.visit_count,
+                    last_visit_at: data.last_visit_at,
+                    last_doctor: data.last_doctor,
+                  });
+                  setIsFirstTime(false);
+                  // Auto-lock to last doctor (patient can change below).
+                  if (data.last_doctor?.id) setDoctorId(data.last_doctor.id);
+                } else {
+                  setLookup({ existing: false });
+                  setIsFirstTime(true);
+                }
+              } finally {
+                setLookupLoading(false);
+              }
+            }}
+            className="btn-primary w-full"
+          >
+            {lookupLoading ? "Checking…" : "Continue"}
+          </button>
+        </div>
+      )}
+
+      {/* Welcome-back / new-patient banner after lookup */}
+      {reqType === "booking" && lookup && (
+        <div className="border-t border-stone-200 pt-5">
+          {lookup.existing ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+              <div className="text-sm font-medium text-emerald-900">
+                Welcome back, {lookup.full_name}.
+              </div>
+              <p className="text-xs text-emerald-800 mt-1">
+                {lookup.last_doctor
+                  ? <>You last saw <strong>{lookup.last_doctor.display_name}</strong>{lookup.last_visit_at ? ` on ${new Date(lookup.last_visit_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}` : ""}. We&apos;ll book you with them again unless you&apos;d like a change.</>
+                  : <>You&apos;ve been here before — pick your doctor below.</>}
+              </p>
+              {lookup.last_doctor && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChangeDoctor((v) => !v);
+                    if (!changeDoctor) setDoctorId("");
+                    else if (lookup.last_doctor) setDoctorId(lookup.last_doctor.id);
+                  }}
+                  className="mt-2 text-xs text-emerald-800 underline-offset-2 hover:underline font-medium"
+                >
+                  {changeDoctor ? "← Keep same doctor" : "Change doctor →"}
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="text-sm font-medium text-blue-900">
+                Welcome, {fullName.split(" ")[0]} 👋
+              </div>
+              <p className="text-xs text-blue-800 mt-1">
+                First visit with us — pick a doctor below to see their next available slots.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -469,28 +545,37 @@ export default function BookingForm() {
         </div>
       )}
 
-      {/* Doctor + slot picker — only after treatment is set */}
+      {/* Doctor + slot picker — only after treatment is set. For returning
+          patients who DIDN'T tap "Change doctor", we skip the selector and
+          go straight to the calendar with their last doctor pre-selected. */}
       {treatmentReady && (
         <div className="border-t border-stone-200 pt-5 space-y-3">
-          <div>
-            <label className="label">{t("doctor")}</label>
-            <select
-              className="input"
-              value={doctorId}
-              onChange={(e) => {
-                setDoctorId(e.target.value);
-                setChosenSlot("");
-              }}
-              required
-            >
-              <option value="">{t("select_doctor")}</option>
-              {doctors.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.display_name}
-                </option>
-              ))}
-            </select>
-          </div>
+          {reqType === "booking" && lookup?.existing && lookup.last_doctor && !changeDoctor ? (
+            <div className="rounded-md border border-stone-200 bg-stone-50 px-3 py-2 text-sm">
+              <span className="text-stone-500 text-xs">{t("doctor")}: </span>
+              <span className="font-medium">{lookup.last_doctor.display_name}</span>
+            </div>
+          ) : (
+            <div>
+              <label className="label">{t("doctor")}</label>
+              <select
+                className="input"
+                value={doctorId}
+                onChange={(e) => {
+                  setDoctorId(e.target.value);
+                  setChosenSlot("");
+                }}
+                required
+              >
+                <option value="">{t("select_doctor")}</option>
+                {doctors.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.display_name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="label">{t("date")}</label>
             <Calendar
@@ -562,7 +647,7 @@ export default function BookingForm() {
 }
 
 function canSubmit(s: {
-  reqType: RequestType;
+  reqType: RequestType | null;
   isFirstTime: boolean | null;
   keepSameDoctor: boolean | null;
   activeBooking: ActiveBooking | null;
@@ -570,6 +655,7 @@ function canSubmit(s: {
   treatment: string;
   otherDetail: string;
 }) {
+  if (!s.reqType) return false;
   if (s.reqType === "cancellation") return !!s.activeBooking;
   const treatmentOk = !!s.treatment && (s.treatment !== "other" || s.otherDetail.trim().length > 0);
   if (s.reqType === "booking") return s.isFirstTime !== null && treatmentOk && !!s.chosenSlot;
