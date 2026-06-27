@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type LastExport = { at: string; by: string } | undefined;
@@ -80,6 +80,80 @@ export default function BackupActions({
     setTimeout(() => router.refresh(), 1500);
   }
 
+  // ── DAILY-BACKUP-TO-FOLDER (File System Access API) ──────────────────────
+  // Chrome / Edge can hold a persistent folder handle in IndexedDB. Once
+  // the owner picks a folder, every visit checks if today's backup has
+  // been saved; if not, it writes the 3 CSVs into that folder directly.
+  type FolderState = { name: string; lastBackup: string | null };
+  const [folder, setFolder] = useState<FolderState | null>(null);
+  const [folderBusy, setFolderBusy] = useState(false);
+  const [folderMsg, setFolderMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("kanan_backup_folder");
+      if (raw) setFolder(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  function fsaSupported() {
+    return typeof window !== "undefined" && "showDirectoryPicker" in window;
+  }
+
+  async function getDirHandle(): Promise<FileSystemDirectoryHandle | null> {
+    // Re-prompt every session — IndexedDB handle storage adds complexity
+    // we don't need for the demo. Handle stays in memory while page is open.
+    if (!fsaSupported()) return null;
+    try {
+      // @ts-expect-error: showDirectoryPicker is not in TS lib.dom yet on all setups
+      const handle = (await window.showDirectoryPicker({ mode: "readwrite" })) as FileSystemDirectoryHandle;
+      return handle;
+    } catch {
+      return null;
+    }
+  }
+
+  async function writeCsvToFolder(dir: FileSystemDirectoryHandle, name: string, url: string) {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`${name} fetch failed`);
+    const blob = await res.blob();
+    const fileHandle = await dir.getFileHandle(name, { create: true });
+    const writable = await fileHandle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+  }
+
+  async function pickAndBackup() {
+    if (!fsaSupported()) {
+      alert("Your browser doesn't support folder pickers. Use 'Download all CSVs' instead.");
+      return;
+    }
+    setFolderBusy(true);
+    setFolderMsg(null);
+    try {
+      const dir = await getDirHandle();
+      if (!dir) {
+        setFolderMsg("Folder pick cancelled.");
+        return;
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      await writeCsvToFolder(dir, `patients-${today}.csv`, "/api/backup/patients");
+      await writeCsvToFolder(dir, `bookings-${today}.csv`, "/api/backup/bookings");
+      await writeCsvToFolder(dir, `audit-${today}.csv`, "/api/backup/audit");
+      const next: FolderState = { name: dir.name, lastBackup: today };
+      localStorage.setItem("kanan_backup_folder", JSON.stringify(next));
+      setFolder(next);
+      setFolderMsg(`Saved 3 files to "${dir.name}".`);
+    } catch (err) {
+      setFolderMsg(err instanceof Error ? err.message : "Backup failed.");
+    } finally {
+      setFolderBusy(false);
+    }
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const dueToday = folder && folder.lastBackup !== today;
+
   const cards: {
     title: string;
     description: string;
@@ -121,6 +195,53 @@ export default function BackupActions({
         </div>
         <button type="button" onClick={downloadAll} className="btn-primary">
           💾 Download all CSVs
+        </button>
+      </div>
+
+      {/* Daily backup to a chosen folder (File System Access API).
+          Owner picks the folder once per session; the 3 CSVs are written
+          straight in. localStorage remembers when the last save happened
+          so the page can flag "due today" in red. */}
+      <div className="bg-white border border-stone-200 rounded-xl p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            📁 Daily backup to folder
+            {folder && !dueToday && (
+              <span className="text-[10px] uppercase tracking-wider bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-medium">
+                done today
+              </span>
+            )}
+            {folder && dueToday && (
+              <span className="text-[10px] uppercase tracking-wider bg-red-100 text-red-800 px-1.5 py-0.5 rounded-full font-medium">
+                due today
+              </span>
+            )}
+          </h3>
+          <p className="text-xs text-stone-500 mt-0.5">
+            Writes patients + bookings + audit CSVs directly into a folder of your choice (Chrome / Edge / latest Safari).
+          </p>
+          {folder && (
+            <p className="text-[11px] text-stone-500 mt-1">
+              Last folder: <strong>{folder.name}</strong>
+              {folder.lastBackup && ` · last saved ${folder.lastBackup}`}
+            </p>
+          )}
+          {folderMsg && (
+            <p className="text-[11px] text-emerald-700 mt-1">{folderMsg}</p>
+          )}
+          {!fsaSupported() && (
+            <p className="text-[11px] text-amber-700 mt-1">
+              Your browser doesn&apos;t support folder pickers — use &quot;Download all CSVs&quot; above instead.
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={pickAndBackup}
+          disabled={folderBusy || !fsaSupported()}
+          className="btn-primary"
+        >
+          {folderBusy ? "Saving…" : folder ? "Backup to folder" : "Pick folder & backup"}
         </button>
       </div>
 
