@@ -631,11 +631,13 @@ function UpcomingPatientsPanel({
             // pending). Card is bigger + ringed + label says "Up next".
             const isImminent =
               status === "pending" && slotMs >= now && slotMs - now <= ONE_HOUR_MS;
-            // Action buttons (Attended / No-show) only show for bookings
-            // within 30 minutes of now (either side). Anything further out
-            // is read-only — staff are checking who's coming, not marking.
+            // Action buttons (Attended / No-show) show for any past pending
+            // booking (clinic may have been busy and forgot to mark) AND
+            // for any upcoming booking within 30 min of now. Bookings more
+            // than 30 min in the FUTURE are read-only — staff are just
+            // glancing at who's coming later.
             const isActionable =
-              status === "pending" && Math.abs(slotMs - now) <= THIRTY_MIN_MS;
+              status === "pending" && (slotMs <= now || slotMs - now <= THIRTY_MIN_MS);
             const thisDay = dayLabel(b.slot_start);
             const showDayHeader = thisDay !== lastDay;
             if (showDayHeader) lastDay = thisDay;
