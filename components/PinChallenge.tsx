@@ -42,13 +42,18 @@ export default function PinChallenge({
   // on allowedRoles — the parent passes a new array reference on every
   // render (e.g. clock ticks every second on the lockscreen), which would
   // otherwise reset selected→null mid-PIN-entry and bounce the user back
-  // to the staff picker. The fetch uses the LATEST allowedRoles via ref.
+  // to the staff picker.
   const allowedRolesKey = allowedRoles ? allowedRoles.join(",") : "";
   useEffect(() => {
     if (!open) return;
     setSelected(null);
     setPin("");
     setErr(null);
+    // Clear stale staff list IMMEDIATELY so a previous open's data (e.g.
+    // doctors+nurses from a general 'Sign in') doesn't flash before the
+    // role-filtered fetch resolves. Was causing 'doctors then flip to
+    // nurses only' on the Reminders tile.
+    setStaff(null);
     const q = allowedRolesKey ? `?roles=${allowedRolesKey}` : "";
     fetch(`/api/pin/staff-list${q}`)
       .then((r) => r.json())
