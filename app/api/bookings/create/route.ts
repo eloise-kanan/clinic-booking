@@ -6,7 +6,6 @@ export async function POST(req: Request) {
   const body = await req.json();
   const {
     type,
-    full_name,
     nationality,
     id_type,
     id_number,
@@ -18,6 +17,9 @@ export async function POST(req: Request) {
     parent_booking_id,
     slot_minutes,
   } = body;
+  // Normalise name to ALL CAPS on the server — patient-facing form already
+  // uppercases, but defensive for any caller that bypasses the UI.
+  const full_name = typeof body.full_name === "string" ? body.full_name.trim().toUpperCase() : body.full_name;
 
   // Validate identity fields
   const validationError = validateBookingInput({

@@ -94,17 +94,20 @@ export default async function HomePage() {
 
     // Today's confirmed bookings — left panel on the lockscreen shows the
     // upcoming list with quick attendance buttons. Limit to 12 visible rows.
-    // Today's confirmed bookings — show ALL upcoming (drop the cap), the
-    // panel scrolls. Imminent bookings (next 60 min) are visually elevated
-    // in the UI so they pop above the rest.
+    // Upcoming confirmed bookings — from now through the next 48 hours.
+    // Showing strictly "today only" left the panel empty on demo when
+    // bookings were scheduled for tomorrow + later. Imminent bookings
+    // (next 60 min) get visually elevated in the UI.
+    const horizonStart = new Date().toISOString();
+    const horizonEnd = new Date(Date.now() + 48 * 3600 * 1000).toISOString();
     const { data: todayList } = await admin
       .from("bookings")
       .select(
         "id, slot_start, slot_end, service, attended_at, no_show, patient:patients(full_name), doctor:doctors(display_name)"
       )
       .eq("status", "confirmed")
-      .gte("slot_start", todayStart)
-      .lte("slot_start", todayEnd)
+      .gte("slot_start", horizonStart)
+      .lte("slot_start", horizonEnd)
       .order("slot_start");
 
     const terminalCfg = await loadTerminalConfig();

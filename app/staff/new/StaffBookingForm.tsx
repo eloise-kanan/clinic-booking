@@ -49,7 +49,7 @@ export default function StaffBookingForm({
   const initialNationality = prefill?.patient?.nationality || "Malaysia";
   const initialDial = dialCodeFor(initialNationality) || "+60";
 
-  const [fullName, setFullName] = useState(prefill?.patient?.full_name || "");
+  const [fullName, setFullName] = useState((prefill?.patient?.full_name || "").toUpperCase());
   const [nationality, setNationality] = useState(initialNationality);
   const [idNumber, setIdNumber] = useState(prefill?.patient?.id_number || "");
   const [phoneLocal, setPhoneLocal] = useState(
@@ -138,7 +138,7 @@ export default function StaffBookingForm({
         return;
       }
       const p = data.patient;
-      setFullName(p.full_name);
+      setFullName((p.full_name || "").toUpperCase());
       setNationality(p.nationality || "Malaysia");
       const newDial = dialCodeFor(p.nationality || "Malaysia") || "+60";
       setPhoneLocal(stripDial(p.whatsapp_number || "", newDial));
@@ -279,12 +279,13 @@ export default function StaffBookingForm({
         <div>
           <label className="label">Full name (as per IC/passport)</label>
           <input
-            className="input"
+            className="input uppercase"
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={(e) => setFullName(e.target.value.toUpperCase())}
             autoComplete="off"
             name="patient-name"
             required
+            placeholder="FULL NAME"
           />
         </div>
         <div>

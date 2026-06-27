@@ -254,12 +254,13 @@ export default function BookingForm() {
         <div>
           <label className="label">{t("full_name")}</label>
           <input
-            className="input"
+            className="input uppercase"
             value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
+            onChange={(e) => setFullName(e.target.value.toUpperCase())}
             autoComplete="off"
             name="patient-name"
             required
+            placeholder="FULL NAME"
           />
         </div>
 

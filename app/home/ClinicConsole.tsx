@@ -581,16 +581,26 @@ function UpcomingPatientsPanel({
 }) {
   const now = Date.now();
   const ONE_HOUR_MS = 60 * 60 * 1000;
+  // Group bookings by day for a clear "Today / Tomorrow / <date>" divider.
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const dayLabel = (iso: string) => {
+    const d = new Date(iso); d.setHours(0, 0, 0, 0);
+    const diff = Math.round((d.getTime() - today.getTime()) / (24 * 3600 * 1000));
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Tomorrow";
+    return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
+  };
+  let lastDay = "";
   return (
     <div className="flex flex-col min-h-0 px-4 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4">
       <div className="flex items-baseline justify-between mb-3">
         <h3 className="text-[11px] sm:text-xs uppercase tracking-[0.3em] text-white/60 font-medium">
-          Today on the floor
+          Upcoming patients
         </h3>
         <span className="text-[10px] text-white/40 tabular-nums">{bookings.length}</span>
       </div>
       {bookings.length === 0 ? (
-        <p className="text-xs text-white/60 italic">Nothing scheduled for today.</p>
+        <p className="text-xs text-white/60 italic">Nothing in the next 48 hours.</p>
       ) : (
         <div className="flex-1 overflow-y-auto -mx-2 px-2 space-y-2">
           {bookings.map((b) => {
@@ -609,9 +619,17 @@ function UpcomingPatientsPanel({
             // pending). Card is bigger + ringed + label says "Up next".
             const isImminent =
               status === "pending" && slotMs >= now && slotMs - now <= ONE_HOUR_MS;
+            const thisDay = dayLabel(b.slot_start);
+            const showDayHeader = thisDay !== lastDay;
+            if (showDayHeader) lastDay = thisDay;
             return (
+              <div key={b.id}>
+              {showDayHeader && (
+                <div className="text-[10px] uppercase tracking-[0.25em] text-white/45 font-medium mt-3 first:mt-0 mb-1.5">
+                  {thisDay}
+                </div>
+              )}
               <div
-                key={b.id}
                 className={`rounded-xl border transition-all ${
                   status === "attended"
                     ? "bg-emerald-400/15 border-emerald-300/30 px-3 py-2.5"
@@ -677,6 +695,7 @@ function UpcomingPatientsPanel({
                     </div>
                   )}
                 </div>
+              </div>
               </div>
             );
           })}

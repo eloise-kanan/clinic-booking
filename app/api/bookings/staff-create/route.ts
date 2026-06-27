@@ -26,7 +26,6 @@ export async function POST(req: Request) {
   const actor = await resolveActor(user.id, body, { allowedPinRoles: ["nurse"] });
   if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
   const {
-    full_name,
     nationality,
     id_type,
     id_number,
@@ -38,6 +37,9 @@ export async function POST(req: Request) {
     parent_booking_id,
     slot_minutes,
   } = body;
+  // Normalise name to ALL CAPS on the server too — defensive against any
+  // caller that bypasses the client's uppercase enforcement.
+  const full_name = typeof body.full_name === "string" ? body.full_name.trim().toUpperCase() : body.full_name;
 
   const validationError = validateBookingInput({
     full_name,
