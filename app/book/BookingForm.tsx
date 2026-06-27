@@ -9,7 +9,16 @@ import Calendar from "@/components/Calendar";
 import { BOOK_T, LANGS, TREATMENT_LABELS, MONTHS_T, DOW_T, type Lang, type BookKey } from "@/lib/i18n-book";
 
 type RequestType = "booking" | "reschedule" | "cancellation";
-type Doctor = { id: string; display_name: string };
+type Doctor = {
+  id: string;
+  display_name: string;
+  // Premium-only fields. The /api/doctors endpoint will return them as null
+  // when the clinic is on Standard so we don't even render the card UI.
+  expertise?: string | null;
+  bio?: string | null;
+  rating_average?: number | null;
+  rating_count?: number | null;
+};
 type Slot = { slot_start: string; slot_end: string };
 type ActiveBooking = {
   id: string;
@@ -26,7 +35,13 @@ const REQUEST_TYPE_KEYS: { value: RequestType; labelKey: BookKey; descKey: BookK
   { value: "cancellation", labelKey: "type_cancellation", descKey: "type_cancellation_desc" },
 ];
 
-export default function BookingForm() {
+export default function BookingForm({
+  doctorProfilesEnabled = false,
+}: {
+  // Premium: render doctor cards with expertise + rating instead of the
+  // plain <select>. Standard tier ignores this and gets the dropdown.
+  doctorProfilesEnabled?: boolean;
+}) {
   // Language toggle — defaults to English, persists across visits.
   const [lang, setLang] = useState<Lang>("en");
   useEffect(() => {
@@ -558,22 +573,60 @@ export default function BookingForm() {
           ) : (
             <div>
               <label className="label">{t("doctor")}</label>
-              <select
-                className="input"
-                value={doctorId}
-                onChange={(e) => {
-                  setDoctorId(e.target.value);
-                  setChosenSlot("");
-                }}
-                required
-              >
-                <option value="">{t("select_doctor")}</option>
-                {doctors.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.display_name}
-                  </option>
-                ))}
-              </select>
+              {doctorProfilesEnabled ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {doctors.map((d) => {
+                    const selected = doctorId === d.id;
+                    const rating = d.rating_average ?? 0;
+                    const ratingCount = d.rating_count ?? 0;
+                    return (
+                      <button
+                        key={d.id}
+                        type="button"
+                        onClick={() => {
+                          setDoctorId(d.id);
+                          setChosenSlot("");
+                        }}
+                        className={`text-left p-3 rounded-xl border-2 transition-all ${
+                          selected
+                            ? "border-blue-500 bg-blue-50 shadow-sm"
+                            : "border-stone-200 bg-white hover:border-blue-300"
+                        }`}
+                      >
+                        <div className="flex items-baseline justify-between gap-2 mb-0.5">
+                          <span className="text-sm font-semibold truncate">{d.display_name}</span>
+                          {ratingCount > 0 && (
+                            <span className="text-[11px] text-amber-700 font-medium shrink-0 tabular-nums">
+                              ★ {rating.toFixed(1)}
+                              <span className="text-stone-500 font-normal"> · {ratingCount}</span>
+                            </span>
+                          )}
+                        </div>
+                        {d.expertise && (
+                          <p className="text-[11px] text-stone-600 leading-snug">{d.expertise}</p>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <select
+                  className="input"
+                  value={doctorId}
+                  onChange={(e) => {
+                    setDoctorId(e.target.value);
+                    setChosenSlot("");
+                  }}
+                  required
+                >
+                  <option value="">{t("select_doctor")}</option>
+                  {doctors.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.display_name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
           <div>

@@ -37,6 +37,11 @@ type TodayBooking = {
   patient_name: string;
   patient_id_label?: string | null;
   doctor_name: string;
+  // Premium room-flow fields — null when feature is off or step not taken yet.
+  room?: string | null;
+  checked_in_at?: string | null;
+  checked_out_at?: string | null;
+  treatment_done?: string | null;
 };
 
 // Role-specific category cards on the identified screen. Kept lightweight
@@ -124,12 +129,21 @@ export default function ClinicConsole({
   backgroundUrl,
   counts,
   todayBookings = [],
+  roomsEnabled = false,
+  rooms = [],
+  treatmentOptions = [],
 }: {
   clinicName: string;
   theme: TerminalTheme;
   backgroundUrl?: string | null;
   counts: Counts;
   todayBookings?: TodayBooking[];
+  // Premium room flow — when roomsEnabled, the upcoming-patients panel shows
+  // Check-in (nurse) + Check-out (doctor, with treatment picker) instead of
+  // the basic Attended / No-show shortcut.
+  roomsEnabled?: boolean;
+  rooms?: string[];
+  treatmentOptions?: string[];
 }) {
   const router = useRouter();
   const [now, setNow] = useState<Date | null>(null);
@@ -145,8 +159,21 @@ export default function ClinicConsole({
   // Pending attendance action — when user clicks Attended / No-show on a
   // booking in the locked state, we open the PIN modal first.
   const [pendingMark, setPendingMark] = useState<{ booking_id: string; mark: "attended" | "no_show" } | null>(null);
+  // Premium room flow — once nurse picks a room we open the PIN modal
+  // (nurse-only); on verify we hit /api/bookings/check-in.
+  const [pendingCheckIn, setPendingCheckIn] = useState<{ booking_id: string; room: string } | null>(null);
+  // Premium check-out — doctor picks treatment_done, PIN modal (doctor-only),
+  // then /api/bookings/check-out.
+  const [pendingCheckOut, setPendingCheckOut] = useState<{ booking_id: string; treatment_done: string } | null>(null);
+  // Open the room picker for a given booking before the PIN flow.
+  const [roomPickerFor, setRoomPickerFor] = useState<TodayBooking | null>(null);
+  // Open the treatment picker for a given booking before the PIN flow.
+  const [treatmentPickerFor, setTreatmentPickerFor] = useState<TodayBooking | null>(null);
   // Optimistic local state for booking marks (so UI updates without a refresh)
   const [localMarks, setLocalMarks] = useState<Record<string, "attended" | "no_show" | "clear">>({});
+  // Optimistic room + treatment locals for the Premium flow.
+  const [localRooms, setLocalRooms] = useState<Record<string, string>>({});
+  const [localTreatments, setLocalTreatments] = useState<Record<string, string>>({});
   const [ownerOpen, setOwnerOpen] = useState(false);
 
   // Clock tick
@@ -335,10 +362,14 @@ export default function ClinicConsole({
     );
   }
 
-  // Fire the attendance API after PIN verify. Attendance marking is a
-  // one-shot action — the staff member shouldn't get "signed in" to the
-  // terminal backend afterwards. Clear the PIN session + cookie when done
-  // so the lockscreen stays in LOCKED state.
+  // Shared post-action cleanup — drop PIN session so the lockscreen reverts
+  // to LOCKED, otherwise the 5s polling tick flips into the identified view.
+  function clearAfterOneShot() {
+    clearPinSession();
+    fetch("/api/pin/lock-token", { method: "DELETE" }).catch(() => {});
+    setSession(null);
+  }
+
   async function markAttendance(booking_id: string, mark: "attended" | "no_show", profile_id: string, pin: string) {
     setLocalMarks((m) => ({ ...m, [booking_id]: mark }));
     try {
@@ -354,12 +385,46 @@ export default function ClinicConsole({
         return next;
       });
     } finally {
-      // Drop the PIN session so the lockscreen reverts to locked. Otherwise
-      // the 5-second polling tick reads sessionStorage and flips the UI
-      // into the identified-state "backend" view.
-      clearPinSession();
-      fetch("/api/pin/lock-token", { method: "DELETE" }).catch(() => {});
-      setSession(null);
+      clearAfterOneShot();
+    }
+  }
+
+  async function checkInBooking(booking_id: string, room: string, profile_id: string, pin: string) {
+    setLocalRooms((r) => ({ ...r, [booking_id]: room }));
+    try {
+      await fetch("/api/bookings/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id, room, pin_profile_id: profile_id, pin }),
+      });
+    } catch {
+      setLocalRooms((r) => {
+        const next = { ...r };
+        delete next[booking_id];
+        return next;
+      });
+    } finally {
+      clearAfterOneShot();
+    }
+  }
+
+  async function checkOutBooking(booking_id: string, treatment_done: string, profile_id: string, pin: string) {
+    setLocalTreatments((t) => ({ ...t, [booking_id]: treatment_done }));
+    setLocalMarks((m) => ({ ...m, [booking_id]: "attended" }));
+    try {
+      await fetch("/api/bookings/check-out", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id, treatment_done, pin_profile_id: profile_id, pin }),
+      });
+    } catch {
+      setLocalTreatments((t) => {
+        const next = { ...t };
+        delete next[booking_id];
+        return next;
+      });
+    } finally {
+      clearAfterOneShot();
     }
   }
 
@@ -422,10 +487,15 @@ export default function ClinicConsole({
         <UpcomingPatientsPanel
           bookings={todayBookings}
           localMarks={localMarks}
+          localRooms={localRooms}
+          localTreatments={localTreatments}
           onMark={(booking_id, mark) => {
             setPendingMark({ booking_id, mark });
             setPinOpen(true);
           }}
+          roomsEnabled={roomsEnabled}
+          onCheckInRequest={(b) => setRoomPickerFor(b)}
+          onCheckOutRequest={(b) => setTreatmentPickerFor(b)}
         />
       </div>
 
@@ -486,15 +556,19 @@ export default function ClinicConsole({
       <PinChallenge
         open={pinOpen}
         allowedRoles={
-          pendingMark
+          pendingMark || pendingCheckIn
             ? ["nurse"]
-            : pendingAllowedRoles
+            : pendingCheckOut
+              ? ["doctor"]
+              : pendingAllowedRoles
         }
         onClose={() => {
           setPinOpen(false);
           setPendingNav(null);
           setPendingAllowedRoles(undefined);
           setPendingMark(null);
+          setPendingCheckIn(null);
+          setPendingCheckOut(null);
         }}
         onVerified={async ({ profile_id, pin, full_name, role }) => {
           writePinSession({ profile_id, pin, full_name, role });
@@ -508,6 +582,14 @@ export default function ClinicConsole({
             const pm = pendingMark;
             setPendingMark(null);
             markAttendance(pm.booking_id, pm.mark, profile_id, pin);
+          } else if (pendingCheckIn) {
+            const pc = pendingCheckIn;
+            setPendingCheckIn(null);
+            checkInBooking(pc.booking_id, pc.room, profile_id, pin);
+          } else if (pendingCheckOut) {
+            const pc = pendingCheckOut;
+            setPendingCheckOut(null);
+            checkOutBooking(pc.booking_id, pc.treatment_done, profile_id, pin);
           } else if (pendingNav) {
             const dest = pendingNav;
             setPendingNav(null);
@@ -517,6 +599,31 @@ export default function ClinicConsole({
             setSession(readPinSession());
           }
         }}
+      />
+
+      {/* Premium room-flow modals — open BEFORE the PIN modal so the staff
+          member picks the room / treatment first, then PINs in. */}
+      <RoomPickerModal
+        booking={roomPickerFor}
+        rooms={rooms}
+        onPick={(room) => {
+          if (!roomPickerFor) return;
+          setPendingCheckIn({ booking_id: roomPickerFor.id, room });
+          setRoomPickerFor(null);
+          setPinOpen(true);
+        }}
+        onClose={() => setRoomPickerFor(null)}
+      />
+      <TreatmentPickerModal
+        booking={treatmentPickerFor}
+        options={treatmentOptions}
+        onPick={(treatment_done) => {
+          if (!treatmentPickerFor) return;
+          setPendingCheckOut({ booking_id: treatmentPickerFor.id, treatment_done });
+          setTreatmentPickerFor(null);
+          setPinOpen(true);
+        }}
+        onClose={() => setTreatmentPickerFor(null)}
       />
 
       {/* Owner sign-in — leaves terminal, sends to /login */}
@@ -612,11 +719,21 @@ function OwnerSignInModal({
 function UpcomingPatientsPanel({
   bookings,
   localMarks,
+  localRooms,
+  localTreatments,
   onMark,
+  roomsEnabled,
+  onCheckInRequest,
+  onCheckOutRequest,
 }: {
   bookings: TodayBooking[];
   localMarks: Record<string, "attended" | "no_show" | "clear">;
+  localRooms: Record<string, string>;
+  localTreatments: Record<string, string>;
   onMark: (booking_id: string, mark: "attended" | "no_show") => void;
+  roomsEnabled: boolean;
+  onCheckInRequest: (b: TodayBooking) => void;
+  onCheckOutRequest: (b: TodayBooking) => void;
 }) {
   const now = Date.now();
   const ONE_HOUR_MS = 60 * 60 * 1000;
@@ -716,39 +833,59 @@ function UpcomingPatientsPanel({
                     </div>
                   </div>
                 </div>
-                <div className="mt-2 flex items-center justify-between gap-2">
-                  {status === "attended" && (
-                    <span className="text-[11px] text-emerald-200 font-medium">✓ Attended</span>
-                  )}
-                  {status === "no_show" && (
-                    <span className="text-[11px] text-red-200 font-medium">✕ No-show</span>
-                  )}
-                  {status === "pending" && (
-                    <span className="text-[10px] text-white/50">
-                      {isActionable
-                        ? (isPast ? "Past — needs marking" : "Awaiting check-in")
-                        : isPast
-                          ? "Past — needs marking"
-                          : "Scheduled"}
-                    </span>
-                  )}
-                  {isActionable && (
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => onMark(b.id, "attended")}
-                        className="bg-emerald-500/80 hover:bg-emerald-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
-                      >
-                        Attended
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onMark(b.id, "no_show")}
-                        className="bg-white/15 hover:bg-white/25 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
-                      >
-                        No-show
-                      </button>
-                    </div>
+                <div className="mt-2 flex items-center justify-between gap-2 flex-wrap">
+                  {/* Premium room flow — replaces Attended button with
+                      Check-in → Room badge → Check-out. No-show keeps the
+                      same fast path (Premium clinics still need to clear
+                      pending no-shows from the dashboard). */}
+                  {roomsEnabled ? (
+                    <PremiumActionRow
+                      booking={b}
+                      status={status}
+                      isActionable={isActionable}
+                      isPast={isPast}
+                      currentRoom={localRooms[b.id] ?? b.room ?? null}
+                      currentTreatment={localTreatments[b.id] ?? b.treatment_done ?? null}
+                      onCheckIn={() => onCheckInRequest(b)}
+                      onCheckOut={() => onCheckOutRequest(b)}
+                      onNoShow={() => onMark(b.id, "no_show")}
+                    />
+                  ) : (
+                    <>
+                      {status === "attended" && (
+                        <span className="text-[11px] text-emerald-200 font-medium">✓ Attended</span>
+                      )}
+                      {status === "no_show" && (
+                        <span className="text-[11px] text-red-200 font-medium">✕ No-show</span>
+                      )}
+                      {status === "pending" && (
+                        <span className="text-[10px] text-white/50">
+                          {isActionable
+                            ? (isPast ? "Past — needs marking" : "Awaiting check-in")
+                            : isPast
+                              ? "Past — needs marking"
+                              : "Scheduled"}
+                        </span>
+                      )}
+                      {isActionable && (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => onMark(b.id, "attended")}
+                            className="bg-emerald-500/80 hover:bg-emerald-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
+                          >
+                            Attended
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onMark(b.id, "no_show")}
+                            className="bg-white/15 hover:bg-white/25 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
+                          >
+                            No-show
+                          </button>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -758,8 +895,218 @@ function UpcomingPatientsPanel({
         </div>
       )}
       <p className="text-[10px] text-white/40 mt-3">
-        Tap a button — PIN required to mark attendance.
+        {roomsEnabled
+          ? "Nurse PIN to check in · doctor PIN to check out."
+          : "Tap a button — PIN required to mark attendance."}
       </p>
+    </div>
+  );
+}
+
+// Premium action row — replaces Attended button with a 3-stage flow:
+//   1. PENDING (not in a room): "Check in" button + "No-show" button
+//   2. IN ROOM: badge showing "Room X · Checked in HH:MM" + "Check out" button
+//   3. DONE: "✓ Done · {treatment}" line.
+// Past pending bookings still get No-show in case the clinic forgot.
+function PremiumActionRow({
+  booking,
+  status,
+  isActionable,
+  isPast,
+  currentRoom,
+  currentTreatment,
+  onCheckIn,
+  onCheckOut,
+  onNoShow,
+}: {
+  booking: TodayBooking;
+  status: "attended" | "no_show" | "pending";
+  isActionable: boolean;
+  isPast: boolean;
+  currentRoom: string | null;
+  currentTreatment: string | null;
+  onCheckIn: () => void;
+  onCheckOut: () => void;
+  onNoShow: () => void;
+}) {
+  if (status === "no_show") {
+    return <span className="text-[11px] text-red-200 font-medium">✕ No-show</span>;
+  }
+  // checked out → done line wins over generic "Attended"
+  if (currentTreatment || (status === "attended" && booking.checked_out_at)) {
+    return (
+      <span className="text-[11px] text-emerald-200 font-medium truncate">
+        ✓ Done{currentTreatment ? ` · ${currentTreatment}` : ""}
+      </span>
+    );
+  }
+  // checked in but not yet checked out → room badge + Check out
+  if (currentRoom) {
+    return (
+      <div className="flex items-center justify-between gap-2 w-full flex-wrap">
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/30 border border-blue-300/40 text-blue-100 text-[11px] font-medium">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-200 animate-pulse" />
+          In {currentRoom}
+        </span>
+        <button
+          type="button"
+          onClick={onCheckOut}
+          className="bg-emerald-500/80 hover:bg-emerald-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
+        >
+          Check out
+        </button>
+      </div>
+    );
+  }
+  // attended (legacy / pre-Premium row but no room set) → keep the simple chip
+  if (status === "attended") {
+    return <span className="text-[11px] text-emerald-200 font-medium">✓ Attended</span>;
+  }
+  // pending — show check-in CTA when actionable
+  return (
+    <>
+      <span className="text-[10px] text-white/50">
+        {isActionable
+          ? (isPast ? "Past — needs marking" : "Awaiting check-in")
+          : isPast
+            ? "Past — needs marking"
+            : "Scheduled"}
+      </span>
+      {isActionable && (
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onCheckIn}
+            className="bg-blue-500/80 hover:bg-blue-500 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
+          >
+            Check in
+          </button>
+          <button
+            type="button"
+            onClick={onNoShow}
+            className="bg-white/15 hover:bg-white/25 text-white text-[11px] font-medium px-2.5 py-1 rounded-md"
+          >
+            No-show
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+function RoomPickerModal({
+  booking,
+  rooms,
+  onPick,
+  onClose,
+}: {
+  booking: TodayBooking | null;
+  rooms: string[];
+  onPick: (room: string) => void;
+  onClose: () => void;
+}) {
+  if (!booking) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white text-stone-900 rounded-2xl shadow-2xl w-full max-w-md p-5">
+        <h3 className="text-base font-semibold mb-1">Assign a room</h3>
+        <p className="text-xs text-stone-500 mb-4">
+          <strong>{booking.patient_name}</strong> · {booking.service} · {booking.doctor_name}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {rooms.map((r) => (
+            <button
+              key={r}
+              type="button"
+              onClick={() => onPick(r)}
+              className="px-3 py-3 rounded-lg border border-stone-200 hover:border-blue-400 hover:bg-blue-50 text-sm font-medium text-left transition-colors"
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={onClose}
+          className="mt-4 text-xs text-stone-500 hover:text-stone-700"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function TreatmentPickerModal({
+  booking,
+  options,
+  onPick,
+  onClose,
+}: {
+  booking: TodayBooking | null;
+  options: string[];
+  onPick: (treatment: string) => void;
+  onClose: () => void;
+}) {
+  const [custom, setCustom] = useState("");
+  if (!booking) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div className="bg-white text-stone-900 rounded-2xl shadow-2xl w-full max-w-md p-5">
+        <h3 className="text-base font-semibold mb-1">What was done?</h3>
+        <p className="text-xs text-stone-500 mb-4">
+          <strong>{booking.patient_name}</strong> · {booking.doctor_name}
+          {booking.room && <span> · {booking.room}</span>}
+        </p>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {options.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => onPick(t)}
+              className="px-3 py-2.5 rounded-lg border border-stone-200 hover:border-emerald-400 hover:bg-emerald-50 text-sm text-left transition-colors"
+            >
+              {t}
+            </button>
+          ))}
+        </div>
+        <div className="border-t border-stone-100 pt-3">
+          <label className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
+            Or describe it
+          </label>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              className="input flex-1 text-sm"
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              placeholder="e.g. composite filling on #16"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && custom.trim()) onPick(custom.trim());
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => custom.trim() && onPick(custom.trim())}
+              disabled={!custom.trim()}
+              className="btn-primary text-xs disabled:opacity-40"
+            >
+              Save
+            </button>
+          </div>
+        </div>
+        <button onClick={onClose} className="mt-4 text-xs text-stone-500 hover:text-stone-700">
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

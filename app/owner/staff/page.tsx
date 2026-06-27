@@ -3,8 +3,9 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
 import { loadPlan } from "@/lib/branding-server";
-import { SEAT_CAPS, PLAN_LABELS, type Plan } from "@/lib/plan";
+import { SEAT_CAPS, PLAN_LABELS, type Plan, hasFeature } from "@/lib/plan";
 import StaffManager from "./StaffManager";
+import RoomsListEditor from "./RoomsListEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function StaffPage() {
       .from("profiles")
       .select("id, role, full_name, active, login_id, pin_hash, annual_leave_balance, mc_balance, emergency_balance")
       .order("role"),
-    admin.from("doctors").select("id, profile_id, display_name, default_slot_minutes, active"),
+    admin.from("doctors").select("id, profile_id, display_name, default_slot_minutes, active, expertise, bio, rating_average, rating_count"),
     admin.auth.admin.listUsers(),
     admin.from("working_hours").select("doctor_id, weekday, start_time, end_time"),
     admin
@@ -140,9 +141,23 @@ export default async function StaffPage() {
         whole tier? Ping us on WhatsApp and we&apos;ll top up your account.
       </p>
 
-      <StaffManager initial={enriched} />
+      {/* Premium — rooms editor + doctor profiles. The doctor profile editor
+          is inline on each EmployeeCard; the rooms list lives in its own
+          panel since it's clinic-wide, not per-staff. */}
+      {hasFeature(plan, "rooms") && <RoomsListEditor initial={await loadRoomsList(admin)} />}
+
+      <StaffManager initial={enriched} doctorProfilesEnabled={hasFeature(plan, "doctor_profiles")} />
     </StaffShell>
   );
+}
+
+async function loadRoomsList(admin: ReturnType<typeof createAdminClient>): Promise<string[]> {
+  const { data } = await admin
+    .from("clinic_settings")
+    .select("rooms_list")
+    .eq("id", true)
+    .maybeSingle();
+  return (data?.rooms_list as string[]) || ["Room 1", "Room 2", "Room 3"];
 }
 
 function SeatMeter({ label, used, cap }: { label: string; used: number; cap: number }) {

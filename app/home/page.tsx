@@ -105,7 +105,7 @@ export default async function HomePage() {
     const { data: todayList, error: todayErr } = await admin
       .from("bookings")
       .select(
-        "id, slot_start, slot_end, visit_reason, attended_at, no_show, patient:patients(full_name, id_type, id_number), doctor:doctors(display_name)"
+        "id, slot_start, slot_end, visit_reason, attended_at, no_show, room, checked_in_at, checked_out_at, treatment_done, patient:patients(full_name, id_type, id_number), doctor:doctors(display_name)"
       )
       .eq("status", "confirmed")
       .gte("slot_start", horizonStart)
@@ -114,6 +114,10 @@ export default async function HomePage() {
     if (todayErr) console.error("upcoming bookings query failed:", todayErr.message);
 
     const terminalCfg = await loadTerminalConfig();
+    const { loadPremiumConfig } = await import("@/lib/premium-config");
+    const { hasFeature } = await import("@/lib/plan");
+    const premiumCfg = await loadPremiumConfig();
+    const roomsEnabled = hasFeature(plan, "rooms");
     return (
       <ClinicConsole
         clinicName={clinicName}
@@ -138,8 +142,15 @@ export default async function HomePage() {
               ? `${pat.id_type === "ic" ? "IC" : "Passport"} ${pat.id_number}`
               : null,
             doctor_name: (b.doctor as { display_name?: string } | null)?.display_name || "—",
+            room: b.room || null,
+            checked_in_at: b.checked_in_at || null,
+            checked_out_at: b.checked_out_at || null,
+            treatment_done: b.treatment_done || null,
           };
         })}
+        roomsEnabled={roomsEnabled}
+        rooms={premiumCfg.rooms}
+        treatmentOptions={premiumCfg.treatmentOptions}
       />
     );
   }

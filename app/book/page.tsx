@@ -1,6 +1,7 @@
 import BookingForm from "./BookingForm";
-import { loadBranding } from "@/lib/branding-server";
+import { loadBranding, loadPlan } from "@/lib/branding-server";
 import { loadTerminalConfig } from "@/lib/terminal-theme";
+import { hasFeature, type Plan } from "@/lib/plan";
 
 export const dynamic = "force-dynamic";
 
@@ -8,6 +9,8 @@ export default async function BookPage() {
   const clinicName = process.env.NEXT_PUBLIC_CLINIC_NAME || "Our Clinic";
   const branding = await loadBranding();
   const { theme } = await loadTerminalConfig();
+  const plan = (await loadPlan()) as Plan;
+  const doctorProfilesEnabled = hasFeature(plan, "doctor_profiles");
   return (
     <main className="relative min-h-dvh" style={{ background: theme.staffBg }}>
       {/* Themed accent rail — same color as the staff backend + lockscreen,
@@ -26,7 +29,7 @@ export default async function BookPage() {
           <h1 className="text-2xl font-medium tracking-tight">{clinicName}</h1>
           <p className="text-sm text-stone-500 mt-1">Appointment booking</p>
         </header>
-        <BookingForm />
+        <BookingForm doctorProfilesEnabled={doctorProfilesEnabled} />
         <footer className="mt-10 text-center text-[11px] text-stone-500">
           Powered by{" "}
           <a

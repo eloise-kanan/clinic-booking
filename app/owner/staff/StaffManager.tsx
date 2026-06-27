@@ -21,7 +21,16 @@ type Member = {
   email: string;             // owner's real email; synthetic @kanan-clinic.local for staff (never shown)
   login_id: string | null;   // null for owner; e.g. "tan_ming" for staff; "terminal" for the shared console
   pin_set: boolean;          // true if staff has a PIN configured
-  doctor: { id: string; display_name: string; default_slot_minutes: number; active: boolean } | null;
+  doctor: {
+    id: string;
+    display_name: string;
+    default_slot_minutes: number;
+    active: boolean;
+    expertise?: string | null;
+    bio?: string | null;
+    rating_average?: number | null;
+    rating_count?: number | null;
+  } | null;
   working_hours?: { weekday: number; start_time: string; end_time: string }[];
   balances?: { annual: number; mc: number; emergency: number };
   history?: HistoryItem[];
@@ -29,7 +38,13 @@ type Member = {
 
 const WEEKDAY_LABEL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-export default function StaffManager({ initial }: { initial: Member[] }) {
+export default function StaffManager({
+  initial,
+  doctorProfilesEnabled = false,
+}: {
+  initial: Member[];
+  doctorProfilesEnabled?: boolean;
+}) {
   const router = useRouter();
   const [show, setShow] = useState(false);
   const [role, setRole] = useState<"nurse" | "doctor">("nurse");
@@ -245,6 +260,7 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
             <EmployeeCard
               key={m.id}
               member={m}
+              doctorProfilesEnabled={doctorProfilesEnabled}
               onSetPin={() => setPin(m)}
               onClearPin={() => clearPin(m)}
               onResetPassword={() => resetPassword(m)}
@@ -258,12 +274,14 @@ export default function StaffManager({ initial }: { initial: Member[] }) {
 
 function EmployeeCard({
   member,
+  doctorProfilesEnabled,
   onSetPin,
   onClearPin,
   onResetPassword,
   onToggleActive,
 }: {
   member: Member;
+  doctorProfilesEnabled: boolean;
   onSetPin: () => void;
   onClearPin: () => void;
   onResetPassword: () => void;
@@ -383,6 +401,11 @@ function EmployeeCard({
           </div>
         )}
 
+        {/* Premium — doctor profile (expertise + bio for patient cards on /book). */}
+        {member.role === "doctor" && doctorProfilesEnabled && member.doctor && (
+          <DoctorProfileEditor doctor={member.doctor} />
+        )}
+
         {/* Leave balances — inline editor */}
         <div>
           <div className="flex items-baseline justify-between mb-1">
@@ -486,5 +509,93 @@ function BalanceField({ label, value, onChange }: { label: string; value: number
         className="input mt-0.5 text-sm tabular-nums"
       />
     </label>
+  );
+}
+
+// Premium-only — surfaced on doctor employee cards. Editing expertise + bio
+// powers the patient-facing doctor cards on /book. Rating is read-only here
+// (set by the review flow when patients leave feedback).
+function DoctorProfileEditor({
+  doctor,
+}: {
+  doctor: {
+    id: string;
+    expertise?: string | null;
+    bio?: string | null;
+    rating_average?: number | null;
+    rating_count?: number | null;
+  };
+}) {
+  const router = useRouter();
+  const [expertise, setExpertise] = useState(doctor.expertise || "");
+  const [bio, setBio] = useState(doctor.bio || "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const dirty = expertise !== (doctor.expertise || "") || bio !== (doctor.bio || "");
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch(`/api/doctors/${doctor.id}/profile`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expertise, bio }),
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        setMsg(d.error || "Failed");
+        return;
+      }
+      setMsg("Saved.");
+      router.refresh();
+    } finally {
+      setBusy(false);
+      setTimeout(() => setMsg(null), 2000);
+    }
+  }
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1">
+        <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium flex items-center gap-1.5">
+          Doctor profile
+          <span className="text-[9px] bg-purple-100 text-purple-800 px-1 py-0.5 rounded-full font-medium">
+            Premium
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          {(doctor.rating_count ?? 0) > 0 && (
+            <span className="text-[10px] text-amber-700 font-medium tabular-nums">
+              ★ {(doctor.rating_average ?? 0).toFixed(1)}
+              <span className="text-stone-500 font-normal"> · {doctor.rating_count}</span>
+            </span>
+          )}
+          {msg && <span className="text-[10px] text-emerald-700">{msg}</span>}
+        </div>
+      </div>
+      <input
+        className="input text-sm mb-1.5"
+        placeholder="Expertise — e.g. Implants, Root canal, Orthodontics"
+        value={expertise}
+        onChange={(e) => setExpertise(e.target.value)}
+      />
+      <textarea
+        className="input text-sm"
+        rows={2}
+        placeholder="Short bio (optional)"
+        value={bio}
+        onChange={(e) => setBio(e.target.value)}
+      />
+      {dirty && (
+        <button
+          onClick={save}
+          disabled={busy}
+          className="mt-1.5 text-[11px] text-blue-700 font-medium hover:underline"
+        >
+          {busy ? "Saving…" : "Save profile"}
+        </button>
+      )}
+    </div>
   );
 }
