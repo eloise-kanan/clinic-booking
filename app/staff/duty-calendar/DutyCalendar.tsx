@@ -336,7 +336,7 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
                   return (
                     <div
                       key={i}
-                      className={`min-h-[110px] border-r border-b border-stone-100 last:border-r-0 p-1.5 text-[11px] ${
+                      className={`min-h-[60px] border-r border-b border-stone-100 last:border-r-0 px-1.5 py-1 text-[11px] ${
                         cell.inMonth ? "bg-white" : "bg-stone-50 text-stone-400"
                       } ${isToday ? "ring-2 ring-brand-500 ring-inset" : ""}`}
                     >
@@ -362,22 +362,25 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
               day: "numeric",
               month: "short",
             });
+            const exc = renderExceptions(staff, cell.date, leaveByProfile, shiftByPersonDay, includeNurses);
             return (
               <div
                 key={cell.date}
-                className={`p-3 ${isToday ? "bg-brand-50/50" : "bg-white"}`}
+                className={`px-3 py-1.5 flex items-start gap-3 ${isToday ? "bg-brand-50/50" : "bg-white"}`}
               >
-                <div className="flex items-baseline justify-between mb-2">
-                  <div className={`text-sm ${isToday ? "text-brand-800 font-medium" : "text-stone-700"}`}>
-                    <span className="font-medium">{dayName}</span>
-                    <span className="text-stone-500 ml-2">{dateLabel}</span>
-                    {isToday && (
-                      <span className="ml-2 text-[10px] uppercase tracking-wide text-brand-700">today</span>
-                    )}
-                  </div>
+                <div className={`text-xs shrink-0 w-24 pt-0.5 ${isToday ? "text-brand-800 font-medium" : "text-stone-700"}`}>
+                  <span className="font-medium">{dayName}</span>
+                  <span className="text-stone-500 ml-1.5">{dateLabel}</span>
+                  {isToday && (
+                    <span className="ml-1.5 text-[9px] uppercase tracking-wide text-brand-700">now</span>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-xs">
-                  {renderExceptions(staff, cell.date, leaveByProfile, shiftByPersonDay, includeNurses)}
+                <div className="flex-1 min-w-0">
+                  {exc.length === 0 ? (
+                    <span className="text-[11px] text-stone-400 italic">Default duty</span>
+                  ) : (
+                    <div className="flex flex-wrap gap-1 text-xs">{exc}</div>
+                  )}
                 </div>
               </div>
             );
