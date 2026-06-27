@@ -33,6 +33,7 @@ export default async function StaffNewBookingPage({
       role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
       userName={isTerminal ? "Clinic terminal" : profile.full_name}
       nav={await staffNav(isTerminal ? "terminal" : profile.role, pendingCount || 0)}
+      isTerminal={isTerminal}
     >
       <h2 className="text-base font-medium mb-1">
         {prefill ? "Reschedule on behalf of patient" : "New booking on behalf of patient"}

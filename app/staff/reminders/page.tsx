@@ -50,6 +50,7 @@ export default async function RemindersPage() {
       role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
       userName={isTerminal ? "Clinic terminal" : profile.full_name}
       nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
+      isTerminal={isTerminal}
     >
       <h2 className="text-base font-medium mb-1">Send reminders</h2>
       <p className="text-xs text-stone-500 mb-4">
