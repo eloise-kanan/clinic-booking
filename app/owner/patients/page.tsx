@@ -2,6 +2,7 @@ import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
+import PatientsTable, { type PatientRow } from "@/components/PatientsTable";
 
 export const dynamic = "force-dynamic";
 
@@ -77,37 +78,8 @@ export default async function OwnerPatientsPage() {
         </div>
       </div>
 
-      <h3 className="text-sm font-medium mb-3">All patients</h3>
-      <div className="bg-white border border-stone-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs text-stone-500 border-b border-stone-200">
-              <th className="px-4 py-2.5 font-medium">Name</th>
-              <th className="px-4 py-2.5 font-medium">Nationality</th>
-              <th className="px-4 py-2.5 font-medium">ID</th>
-              <th className="px-4 py-2.5 font-medium">WhatsApp</th>
-              <th className="px-4 py-2.5 font-medium text-right">Visits</th>
-              <th className="px-4 py-2.5 font-medium">First seen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {(patients || []).map((p) => (
-              <tr key={p.id} className="border-b border-stone-100 last:border-b-0">
-                <td className="px-4 py-3 font-medium">{p.full_name}</td>
-                <td className="px-4 py-3 text-xs">{p.nationality}</td>
-                <td className="px-4 py-3 text-xs">
-                  {p.id_type === "ic" ? "IC" : "Passport"} {p.id_number}
-                </td>
-                <td className="px-4 py-3 text-xs">{p.whatsapp_number}</td>
-                <td className="px-4 py-3 text-right text-xs">{p.visit_count}</td>
-                <td className="px-4 py-3 text-xs text-stone-500">
-                  {new Date(p.first_seen_at).toLocaleDateString("en-MY")}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <h3 className="text-sm font-medium mb-2">All patients</h3>
+      <PatientsTable rows={(patients as PatientRow[]) || []} initialSort="visit_count" />
     </StaffShell>
   );
 }
