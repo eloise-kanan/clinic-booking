@@ -280,47 +280,40 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
         </div>
       </div>
 
-      {/* Default-duty roster at the top — each person shows their typical
-          shift hours (doctors use working_hours table summary; nurses show
-          the clinic default). Calendar below highlights only exceptions. */}
-      <div className="bg-white border border-stone-200 rounded-xl p-4 mb-4">
-        <div className="flex items-baseline justify-between mb-2 gap-3 flex-wrap">
-          <div>
-            <h3 className="text-sm font-medium">Default duty</h3>
-            <p className="text-[11px] text-stone-500">
-              Typical shift per staff. Clinic default is <strong>{DEFAULT_START}–{DEFAULT_END}</strong>.
-            </p>
+      {/* Default-duty roster — sectionised by role, each staff in a small
+          card with name on top + typical-hours under it. Doctors show their
+          working_hours summary; nurses fall back to the clinic default. */}
+      {(() => {
+        const doctors = staff.filter((s) => s.role === "doctor");
+        const nurses = staff.filter((s) => s.role === "nurse");
+        return (
+          <div className="bg-white border border-stone-200 rounded-xl p-4 mb-4">
+            <div className="flex items-baseline justify-between gap-3 flex-wrap mb-3">
+              <div>
+                <h3 className="text-sm font-medium">Default duty</h3>
+                <p className="text-[11px] text-stone-500">
+                  Typical shift per staff. Calendar below shows only exceptions.
+                </p>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider text-stone-400">
+                Clinic default {DEFAULT_START}–{DEFAULT_END}
+              </span>
+            </div>
+            {staff.length === 0 ? (
+              <p className="text-xs text-stone-500">No active staff.</p>
+            ) : (
+              <div className="space-y-3">
+                {doctors.length > 0 && (
+                  <RosterSection role="doctor" people={doctors} />
+                )}
+                {nurses.length > 0 && (
+                  <RosterSection role="nurse" people={nurses} />
+                )}
+              </div>
+            )}
           </div>
-        </div>
-        {staff.length === 0 ? (
-          <p className="text-xs text-stone-500">No active staff.</p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {staff.map((s) => {
-              const hours =
-                s.typical_hours || `${DEFAULT_START}–${DEFAULT_END}`;
-              return (
-                <span
-                  key={s.id}
-                  className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-stone-50 border border-stone-200 text-xs"
-                >
-                  <span
-                    className={`text-[9px] uppercase tracking-wider px-1 rounded ${
-                      s.role === "doctor"
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-emerald-100 text-emerald-700"
-                    }`}
-                  >
-                    {s.role === "doctor" ? "Dr" : "Nr"}
-                  </span>
-                  <span>{s.full_name}</span>
-                  <span className="text-[10px] text-stone-500 tabular-nums">{hours}</span>
-                </span>
-              );
-            })}
-          </div>
-        )}
-      </div>
+        );
+      })()}
 
       <div className="text-[11px] text-stone-500 mb-2">
         Calendar below shows <strong>only exceptions</strong> — custom shift changes (amber) and approved leaves (red). Empty cells = everyone on default duty.
@@ -399,6 +392,57 @@ export default function DutyCalendar({ includeNurses = true }: { includeNurses?:
         <div className="flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded bg-red-50 border border-red-200" /> Approved leave
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Roster section — one row per role with a small heading + person tiles in
+// a responsive grid. Each tile stacks name (top, 13px) and hours (bottom,
+// 10px tabular). Doctor + nurse get distinct accent colors on the heading.
+function RosterSection({
+  role,
+  people,
+}: {
+  role: "doctor" | "nurse";
+  people: StaffMember[];
+}) {
+  const accent =
+    role === "doctor"
+      ? { dot: "bg-blue-500", label: "Doctors", text: "text-blue-700" }
+      : { dot: "bg-emerald-500", label: "Nurses", text: "text-emerald-700" };
+
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1.5">
+        <span className={`w-1.5 h-1.5 rounded-full ${accent.dot}`} />
+        <span className={`text-[10px] uppercase tracking-wider font-medium ${accent.text}`}>
+          {accent.label}
+        </span>
+        <span className="text-[10px] text-stone-400 tabular-nums">({people.length})</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-1.5">
+        {people.map((s) => {
+          const hours = s.typical_hours || `${DEFAULT_START}–${DEFAULT_END}`;
+          const isDefault = !s.typical_hours; // i.e. falls back to clinic-wide default
+          return (
+            <div
+              key={s.id}
+              className="bg-stone-50 border border-stone-200 rounded-md px-2 py-1.5"
+            >
+              <div className="text-[12px] font-medium leading-tight truncate" title={s.full_name}>
+                {s.full_name}
+              </div>
+              <div
+                className={`text-[10px] tabular-nums mt-0.5 ${
+                  isDefault ? "text-stone-400" : "text-stone-600 font-medium"
+                }`}
+              >
+                {hours}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
