@@ -66,6 +66,7 @@ export default async function PatientsPage({
       role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
       userName={isTerminal ? "Clinic terminal" : profile.full_name}
       nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
+      isTerminal={isTerminal}
     >
       <h2 className="text-base font-medium mb-1">
         {pinHolderName ? `My patients — ${pinHolderName}` : "Patients"}

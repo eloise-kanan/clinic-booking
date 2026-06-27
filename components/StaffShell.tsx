@@ -29,15 +29,36 @@ export function StaffShell({
   userName,
   nav,
   children,
+  isTerminal = false,
 }: {
   role: "owner" | "nurse" | "doctor";
   userName: string;
   nav: Nav;
   children: React.ReactNode;
+  // When true, the sidebar is hidden and a 'Return to console' button is
+  // shown in the header instead. Used for terminal sessions that drill into
+  // a sub-page after a PIN — sidebar nav is useless since they have only
+  // /home to go back to.
+  isTerminal?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // On terminal sessions, surface the PIN holder identity (sessionStorage)
+  // so the header shows e.g. "Jenny Tan · nurse" instead of "Clinic terminal".
+  // This is the same data populated by the PIN modal on /home.
+  const [pinHolder, setPinHolder] = useState<{ full_name: string; role: "nurse" | "doctor" } | null>(null);
+  useEffect(() => {
+    if (!isTerminal) return;
+    try {
+      const raw = sessionStorage.getItem("kanan_pin_session");
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed?.full_name && parsed?.role) {
+        setPinHolder({ full_name: parsed.full_name, role: parsed.role });
+      }
+    } catch {}
+  }, [isTerminal]);
 
   const sections: NavSection[] = isSectioned(nav) ? nav : [{ items: nav as NavItem[] }];
 
@@ -243,32 +264,56 @@ export function StaffShell({
       >
         <div className="max-w-7xl mx-auto px-3 md:px-5 py-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 md:gap-3 min-w-0">
-            <button
-              type="button"
-              className="md:hidden p-1.5 -ml-1.5 text-white/80 hover:bg-white/10 rounded"
-              onClick={() => setMobileNavOpen(true)}
-              aria-label="Open menu"
-            >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <line x1="3" y1="6" x2="21" y2="6" strokeLinecap="round" />
-                <line x1="3" y1="12" x2="21" y2="12" strokeLinecap="round" />
-                <line x1="3" y1="18" x2="21" y2="18" strokeLinecap="round" />
-              </svg>
-            </button>
+            {isTerminal ? (
+              // Terminal session — sidebar is hidden; instead the header has
+              // a prominent "back to console" link so the PIN holder can
+              // return to the lockscreen any time.
+              <Link
+                href="/home"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-white/15 hover:bg-white/25 border border-white/20 hover:border-white/40 text-[12px] font-medium text-white"
+              >
+                <span aria-hidden>←</span> Console
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="md:hidden p-1.5 -ml-1.5 text-white/80 hover:bg-white/10 rounded"
+                onClick={() => setMobileNavOpen(true)}
+                aria-label="Open menu"
+              >
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="3" y1="6" x2="21" y2="6" strokeLinecap="round" />
+                  <line x1="3" y1="12" x2="21" y2="12" strokeLinecap="round" />
+                  <line x1="3" y1="18" x2="21" y2="18" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
             <span className="text-sm font-medium truncate">Clinic Console</span>
-            <span className={`pill ${roleColor} hidden sm:inline-block`}>{roleLabel}</span>
+            {/* On terminal: show the PIN holder's name + role chip with an
+                emerald dot so anyone walking past sees who's signed in. */}
+            {isTerminal && pinHolder ? (
+              <span className="inline-flex items-center gap-1.5 text-[12px] sm:text-[13px] font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                <span className="text-white">{pinHolder.full_name}</span>
+                <span className="text-white/60 lowercase">({pinHolder.role})</span>
+              </span>
+            ) : (
+              <span className={`pill ${roleColor} hidden sm:inline-block`}>{roleLabel}</span>
+            )}
           </div>
           <div className="flex items-center gap-2 md:gap-3 text-xs text-white/80 flex-shrink-0">
-            <span className="hidden sm:inline truncate max-w-[160px]">{userName}</span>
+            {!isTerminal && (
+              <span className="hidden sm:inline truncate max-w-[160px]">{userName}</span>
+            )}
             <button onClick={signOut} className="text-white/70 hover:text-white">
-              Sign out
+              {isTerminal ? "End session" : "Sign out"}
             </button>
           </div>
         </div>
       </header>
 
-      {/* Backdrop for mobile drawer */}
-      {mobileNavOpen && (
+      {/* Backdrop for mobile drawer (not used on terminal sessions) */}
+      {mobileNavOpen && !isTerminal && (
         <button
           type="button"
           aria-label="Close menu"
@@ -278,8 +323,9 @@ export function StaffShell({
       )}
 
       <div className="max-w-7xl mx-auto md:flex md:items-start">
-        <aside
-          className={`
+        {!isTerminal && (
+          <aside
+            className={`
             bg-white py-4 overflow-y-auto
             md:w-56 md:flex-shrink-0 md:border-r md:border-stone-200
             md:sticky md:top-[52px] md:h-[calc(100dvh-52px)]
@@ -290,7 +336,8 @@ export function StaffShell({
           `}
         >
           {navList}
-        </aside>
+          </aside>
+        )}
         <main className="flex-1 p-4 md:p-6 min-w-0">{children}</main>
       </div>
     </div>

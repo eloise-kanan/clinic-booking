@@ -25,6 +25,7 @@ export default async function CalendarPage() {
       role={isTerminal ? "nurse" : (profile.role as "owner" | "nurse")}
       userName={isTerminal ? "Clinic terminal" : profile.full_name}
       nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
+      isTerminal={isTerminal}
     >
       <div className="flex items-center justify-between mb-4 gap-3">
         <h2 className="text-base font-medium">All doctors — calendar view</h2>

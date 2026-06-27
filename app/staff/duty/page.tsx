@@ -26,6 +26,7 @@ export default async function DutyPage() {
         role="nurse"
         userName="Clinic terminal"
         nav={await staffNav("terminal", count || 0)}
+      isTerminal={isTerminal}
       >
         <PinGateChallenge
           allowedRoles={["nurse", "doctor"]}
@@ -40,6 +41,7 @@ export default async function DutyPage() {
       role={isTerminal ? (eff!.role as "owner" | "nurse" | "doctor") : (profile.role as "owner" | "nurse" | "doctor")}
       userName={isTerminal ? `${eff!.full_name} (via terminal)` : profile.full_name}
       nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
+      isTerminal={isTerminal}
     >
       <h2 className="text-base font-medium mb-1">Shift changes</h2>
       <p className="text-xs text-stone-500 mb-4">

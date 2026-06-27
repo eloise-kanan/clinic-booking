@@ -27,6 +27,7 @@ export default async function ProfilePage() {
         role="nurse"
         userName="Clinic terminal"
         nav={await staffNav("terminal", count || 0)}
+      isTerminal={isTerminal}
       >
         <PinGateChallenge
           allowedRoles={["nurse", "doctor"]}
@@ -72,6 +73,7 @@ export default async function ProfilePage() {
       role={isTerminal ? (accountRole as "owner" | "nurse" | "doctor") : (profile.role as "owner" | "nurse" | "doctor")}
       userName={isTerminal ? `${accountFullName} (via terminal)` : profile.full_name}
       nav={await staffNav(isTerminal ? "terminal" : profile.role, count || 0)}
+      isTerminal={isTerminal}
     >
       <h2 className="text-base font-medium mb-1">
         {isTerminal ? `${accountFullName} — account` : "My account"}
