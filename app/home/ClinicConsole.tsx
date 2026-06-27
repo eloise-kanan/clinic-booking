@@ -78,24 +78,22 @@ const NURSE_CATEGORIES: Category[] = [
   },
 ];
 
-// Doctor PIN holders on the shared terminal point to the same booking ops
-// pages as nurses — the actions still attribute correctly to the doctor's
-// PIN. Personal /doctor/* pages (own calendar, breaks) require the doctor
-// to sign in on their personal device with login_id + password.
+// Doctor PIN holders see a doctor-scoped subset — their own bookings + the
+// patients they've seen, plus calendar views + HR. Recall-sending is a
+// nurse front-desk task so it's not surfaced here.
 const DOCTOR_CATEGORIES: Category[] = [
   {
     title: "Today",
     items: [
       { href: "/nurse/calendar", label: "Clinical calendar", countKey: "today" },
       { href: "/staff/duty-calendar", label: "Duty calendar" },
-      { href: "/nurse/all", label: "All bookings" },
+      { href: "/nurse/all?scope=mine", label: "My bookings" },
     ],
   },
   {
     title: "Patients",
     items: [
-      { href: "/nurse/patients", label: "Patient list" },
-      { href: "/staff/recalls", label: "Send recalls", countKey: "recalls" },
+      { href: "/nurse/patients?scope=mine", label: "My patients" },
     ],
   },
   {
@@ -122,6 +120,9 @@ export default function ClinicConsole({
   const [now, setNow] = useState<Date | null>(null);
   const [session, setSession] = useState<PinSession | null>(null);
   const [pinOpen, setPinOpen] = useState(false);
+  // Where to navigate after a successful PIN verify, when the user opened
+  // the modal from a specific count tile. Null = stay on /home.
+  const [pendingNav, setPendingNav] = useState<string | null>(null);
   const [ownerOpen, setOwnerOpen] = useState(false);
 
   // Clock tick
@@ -345,26 +346,48 @@ export default function ClinicConsole({
         </div>
       </div>
 
-      {/* Counts strip — tiles trigger the PIN modal so users can tap a
-          specific concern (e.g. "5 pending") to authenticate. */}
+      {/* Counts strip — each tile remembers its destination, so a tap +
+          PIN takes the user straight to that page without a second click
+          on the identified-state category card. */}
       <div className="px-4 pb-4 sm:px-6 sm:pb-6">
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl shadow-xl">
           <div className="grid grid-cols-4 divide-x divide-white/15">
-            <CountTile label="Pending" value={counts.pending} onClick={() => setPinOpen(true)} />
-            <CountTile label="Recalls due" value={counts.recalls} onClick={() => setPinOpen(true)} />
-            <CountTile label="Today" value={counts.today} onClick={() => setPinOpen(true)} />
-            <CountTile label="Reminders" value={counts.reminders} onClick={() => setPinOpen(true)} />
+            <CountTile
+              label="Pending"
+              value={counts.pending}
+              onClick={() => { setPendingNav("/nurse"); setPinOpen(true); }}
+            />
+            <CountTile
+              label="Recalls due"
+              value={counts.recalls}
+              onClick={() => { setPendingNav("/staff/recalls"); setPinOpen(true); }}
+            />
+            <CountTile
+              label="Today"
+              value={counts.today}
+              onClick={() => { setPendingNav("/nurse/all?day=today"); setPinOpen(true); }}
+            />
+            <CountTile
+              label="Reminders"
+              value={counts.reminders}
+              onClick={() => { setPendingNav("/staff/reminders"); setPinOpen(true); }}
+            />
           </div>
         </div>
         <p className="text-[10px] sm:text-[11px] text-white/55 text-center mt-3">
-          Tap any tile to <strong>sign in</strong> with your staff PIN, then act on it.
+          Tap any tile, enter your PIN, and you&apos;ll land on that page directly.
         </p>
       </div>
 
-      {/* PIN modal — verifies + sets per-page lock-token cookie */}
+      {/* PIN modal — verifies + sets per-page lock-token cookie. If the
+          user tapped a count tile, navigate to that page directly so they
+          don't have to click a category card afterward. */}
       <PinChallenge
         open={pinOpen}
-        onClose={() => setPinOpen(false)}
+        onClose={() => {
+          setPinOpen(false);
+          setPendingNav(null);
+        }}
         onVerified={async ({ profile_id, pin, full_name, role }) => {
           // Cache locally for action-level PIN gates (90s grace).
           writePinSession({ profile_id, pin, full_name, role });
@@ -375,7 +398,13 @@ export default function ClinicConsole({
             body: JSON.stringify({ profile_id, pin }),
           }).catch(() => {});
           setPinOpen(false);
-          setSession(readPinSession());
+          if (pendingNav) {
+            const dest = pendingNav;
+            setPendingNav(null);
+            router.push(dest);
+          } else {
+            setSession(readPinSession());
+          }
         }}
       />
 

@@ -3,6 +3,9 @@ import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
 import { loadTerminalConfig } from "@/lib/terminal-theme";
+import { loadPlan } from "@/lib/branding-server";
+import { hasFeature, type Plan } from "@/lib/plan";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +21,8 @@ function hexToRgbTriplet(hex: string): string {
 
 export default async function UtilizationPage() {
   const { profile } = await requireStaff(["owner"]);
+  const plan = (await loadPlan()) as Plan;
+  if (!hasFeature(plan, "analytics.utilization")) redirect("/home");
   const admin = createAdminClient();
   const { theme } = await loadTerminalConfig();
   const accentRgb = hexToRgbTriplet(theme.staffAccent);

@@ -2,6 +2,9 @@ import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
+import { loadPlan } from "@/lib/branding-server";
+import { hasFeature, type Plan } from "@/lib/plan";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +20,10 @@ function pct(num: number, denom: number): number {
 
 export default async function OwnerHome() {
   const { profile } = await requireStaff(["owner"]);
+  // Analytics overview is Premium-only — Standard tier owners get redirected
+  // to /home (their HomeLauncher dashboard) since there's nothing to show.
+  const plan = (await loadPlan()) as Plan;
+  if (!hasFeature(plan, "analytics.overview")) redirect("/home");
   const admin = createAdminClient();
 
   // Time windows we use repeatedly

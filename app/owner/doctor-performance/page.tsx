@@ -2,6 +2,9 @@ import { requireStaff } from "@/lib/auth";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { StaffShell } from "@/components/StaffShell";
 import { staffNav } from "@/lib/staff-nav";
+import { loadPlan } from "@/lib/branding-server";
+import { hasFeature, type Plan } from "@/lib/plan";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +30,8 @@ export default async function DoctorPerformancePage({
   searchParams: Promise<{ days?: string }>;
 }) {
   const { profile } = await requireStaff(["owner"]);
+  const plan = (await loadPlan()) as Plan;
+  if (!hasFeature(plan, "analytics.doctor_perf")) redirect("/home");
   const params = await searchParams;
   const days = Math.max(1, Math.min(365, parseInt(params?.days || "30", 10) || 30));
   const admin = createAdminClient();

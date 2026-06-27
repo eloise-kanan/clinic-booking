@@ -32,7 +32,10 @@ export default function LoginForm() {
       );
       return;
     }
-    router.push(next);
+    // Replace history (not push) so the back button after sign-in doesn't
+    // take the user back to /login — for a kiosk terminal especially, the
+    // expectation is that back from /home stays on /home (lockscreen).
+    router.replace(next);
   }
 
   return (

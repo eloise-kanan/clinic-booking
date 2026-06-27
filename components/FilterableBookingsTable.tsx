@@ -124,19 +124,23 @@ export default function FilterableBookingsTable({
   enableOverride = false,
   templates,
   isTerminal = false,
+  readOnly = false,
+  initialQuickFilter,
 }: {
   rows: BookingRow[];
   clinicName: string;
   enableOverride?: boolean;
   templates?: Record<string, string>;
   isTerminal?: boolean;
+  readOnly?: boolean;  // hide all action buttons (used for doctor's own bookings view)
+  initialQuickFilter?: QuickFilter;
 }) {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const { guardedFetch, pinModal } = usePinGuardedFetch({ isTerminal });
 
   // Quick filter (high-level)
-  const [quickFilter, setQuickFilter] = useState<QuickFilter>("upcoming");
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>(initialQuickFilter || "upcoming");
 
   // Detailed filters
   const [patientQuery, setPatientQuery] = useState("");
@@ -521,7 +525,10 @@ export default function FilterableBookingsTable({
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-1.5">
-                      {r.status === "confirmed" && !isPast && !r.attended_at && !r.no_show && (
+                      {readOnly && (
+                        <span className="text-[11px] text-stone-400 italic">View only</span>
+                      )}
+                      {!readOnly && r.status === "confirmed" && !isPast && !r.attended_at && !r.no_show && (
                         <button
                           type="button"
                           onClick={() => sendReminder(r)}
@@ -539,7 +546,7 @@ export default function FilterableBookingsTable({
                           {r.reminder_sent_at ? "✓ Reminded — resend" : "Send reminder"}
                         </button>
                       )}
-                      {(r.status === "pending" || r.status === "confirmed") && (
+                      {!readOnly && (r.status === "pending" || r.status === "confirmed") && (
                         <>
                           <Link
                             href={`/staff/new?reschedule=${r.id}`}
@@ -557,7 +564,7 @@ export default function FilterableBookingsTable({
                           </button>
                         </>
                       )}
-                      {canMarkAttendance && !r.attended_at && !r.no_show && (
+                      {!readOnly && canMarkAttendance && !r.attended_at && !r.no_show && (
                         <>
                           <button
                             type="button"
@@ -577,7 +584,7 @@ export default function FilterableBookingsTable({
                           </button>
                         </>
                       )}
-                      {(r.attended_at || r.no_show) && (
+                      {!readOnly && (r.attended_at || r.no_show) && (
                         <button
                           type="button"
                           onClick={() => markAttendance(r.id, "clear")}

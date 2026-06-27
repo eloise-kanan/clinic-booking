@@ -105,9 +105,10 @@ export const FEATURE_REQUIRES: Record<FeatureKey, Plan> = {
   "staff.leave": "standard",
   "backup": "standard",
   "recall": "standard",
-  "analytics.overview": "standard",
 
-  // Premium
+  // Premium — entire analytics surface is Premium-only (Standard tier is
+  // booking-ops focused; no Overview, no Utilization, no per-role perf).
+  "analytics.overview": "premium",
   "calendar.duty.nurse": "premium",
   "analytics.doctor_perf": "premium",
   "analytics.nurse_perf": "premium",

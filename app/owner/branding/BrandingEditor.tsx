@@ -152,6 +152,53 @@ export default function BrandingEditor({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
       {/* Editor controls */}
       <div className="space-y-4">
+        {/* Theme is the umbrella setting — drives lockscreen, staff backend,
+            and the booking-page accent rail in one go. Lives at the top so
+            the owner picks the overall feel first, then fine-tunes the
+            patient-facing booking page below. */}
+        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
+          <h3 className="text-sm font-medium">Overall theme</h3>
+          <p className="text-[11px] text-stone-500 -mt-1">
+            Drives the staff backend (page tint, top header band, active nav highlight, accent rail), the clinic-terminal lockscreen, and the accent rail on the patient booking page — pick one and the whole app restyles. Optionally drop in a photo URL — used only on the terminal lockscreen, auto-blurred so the clock stays readable.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {TERMINAL_THEME_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setTerminalTheme(opt.value)}
+                className={`relative text-left p-3 border rounded-lg transition-colors overflow-hidden ${
+                  terminalTheme === opt.value
+                    ? "border-stone-900 ring-2 ring-stone-900/20"
+                    : "border-stone-200 hover:border-stone-400"
+                }`}
+                style={{ backgroundImage: opt.gradient, backgroundSize: "cover" }}
+              >
+                <div className="absolute top-0 inset-x-0 h-[2px]" style={{ background: opt.accent }} />
+                <div className="text-xs font-medium text-white drop-shadow">{opt.label}</div>
+                <div className="text-[10px] text-white/80 drop-shadow mt-0.5">{opt.description}</div>
+              </button>
+            ))}
+          </div>
+          <div>
+            <label className="label">Custom terminal background (optional)</label>
+            <input
+              type="url"
+              className="input"
+              value={terminalBg}
+              onChange={(e) => setTerminalBg(e.target.value)}
+              placeholder="https://example.com/photo.jpg"
+            />
+            <p className="text-[11px] text-stone-500 mt-1">
+              When set, this photo replaces the theme gradient on the lockscreen — auto-blurred + tinted so the clock stays readable. Wide landscape photos (≥1920×1080) work best.
+            </p>
+          </div>
+        </div>
+
+        <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium px-1 pt-2">
+          Patient booking page
+        </div>
+
         <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
           <h3 className="text-sm font-medium">Primary colour</h3>
           <div className="flex items-center gap-3">
@@ -241,45 +288,6 @@ export default function BrandingEditor({
             Paste a direct link to your logo image. PNG with transparent background, ~200px square works
             best. Leave blank to show the clinic name as text.
           </p>
-        </div>
-
-        <div className="bg-white border border-stone-200 rounded-xl p-4 space-y-3">
-          <h3 className="text-sm font-medium">Theme</h3>
-          <p className="text-[11px] text-stone-500 -mt-1">
-            Drives the staff backend look (page background, active nav highlight, top accent rail) <em>and</em> the terminal lockscreen gradient. Optionally drop in a photo URL — used only on the terminal, auto-blurred so the clock stays readable.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {TERMINAL_THEME_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => setTerminalTheme(opt.value)}
-                className={`relative text-left p-3 border rounded-lg transition-colors overflow-hidden ${
-                  terminalTheme === opt.value
-                    ? "border-stone-900 ring-2 ring-stone-900/20"
-                    : "border-stone-200 hover:border-stone-400"
-                }`}
-                style={{ backgroundImage: opt.gradient, backgroundSize: "cover" }}
-              >
-                <div className="absolute top-0 inset-x-0 h-[2px]" style={{ background: opt.accent }} />
-                <div className="text-xs font-medium text-white drop-shadow">{opt.label}</div>
-                <div className="text-[10px] text-white/80 drop-shadow mt-0.5">{opt.description}</div>
-              </button>
-            ))}
-          </div>
-          <div>
-            <label className="label">Custom background photo URL (optional)</label>
-            <input
-              type="url"
-              className="input"
-              value={terminalBg}
-              onChange={(e) => setTerminalBg(e.target.value)}
-              placeholder="https://example.com/photo.jpg"
-            />
-            <p className="text-[11px] text-stone-500 mt-1">
-              When set, this photo replaces the theme gradient — but is automatically blurred + tinted with the theme&apos;s overlay so the clock + tiles remain readable. Wide landscape photos (≥1920×1080) work best.
-            </p>
-          </div>
         </div>
 
         <div className="flex items-center gap-3">

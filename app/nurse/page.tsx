@@ -17,7 +17,7 @@ export default async function NursePage() {
   const { data: pending } = await supabase
     .from("bookings")
     .select(
-      "id, type, status, slot_start, slot_end, visit_reason, is_first_time, created_at, expires_at, patient:patients(id, full_name, nationality, id_type, id_number, whatsapp_number, visit_count), doctor:doctors(id, display_name)"
+      "id, type, status, slot_start, slot_end, visit_reason, is_first_time, created_at, expires_at, check_sent_at, confirm_sent_at, reject_sent_at, cancel_sent_at, patient:patients(id, full_name, nationality, id_type, id_number, whatsapp_number, visit_count), doctor:doctors(id, display_name)"
     )
     .eq("status", "pending")
     .order("created_at", { ascending: true });

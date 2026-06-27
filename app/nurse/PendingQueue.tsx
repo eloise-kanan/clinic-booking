@@ -38,6 +38,10 @@ type Booking = {
   is_first_time: boolean;
   created_at: string;
   expires_at: string;
+  check_sent_at: string | null;
+  confirm_sent_at: string | null;
+  reject_sent_at: string | null;
+  cancel_sent_at: string | null;
   patient: {
     id: string;
     full_name: string;
@@ -171,56 +175,78 @@ export default function PendingQueue({
               <div>{new Date(b.created_at).toLocaleString("en-MY")}</div>
             </div>
 
-            <div className="mt-3 flex items-center gap-2 flex-wrap">
-              <a
-                href={checkLink}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-wa"
-                onClick={() => logWaSent(b.id, "check")}
-              >
-                <WAIcon /> Check with patient
-              </a>
-              <a
-                href={confirmLink}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-wa"
-                onClick={() =>
-                  logWaSent(b.id, b.type === "cancellation" ? "cancel" : "confirm")
-                }
-              >
-                <WAIcon /> Send confirmation
-              </a>
-              <button
-                onClick={() => act(b.id, "approve")}
-                disabled={busy === b.id}
-                className="btn-approve"
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => {
-                  const reason = prompt("Optional reason for rejection (will be included in WhatsApp template):") || undefined;
-                  if (reason !== undefined) {
-                    setRejectReason((s) => ({ ...s, [b.id]: reason || "" }));
-                  }
-                  act(b.id, "reject", reason);
-                }}
-                disabled={busy === b.id}
-                className="btn-reject"
-              >
-                Reject
-              </button>
-              <a
-                href={rejectLink}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-wa"
-                onClick={() => logWaSent(b.id, "reject")}
-              >
-                <WAIcon /> Send rejection
-              </a>
+            {/* Actions split into two clear groups so they don't read as a
+                wall of buttons: Decision (state change) + WhatsApp (comms). */}
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Group A — Decision */}
+              <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
+                <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium mb-2">
+                  Decision
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => act(b.id, "approve")}
+                    disabled={busy === b.id}
+                    className="btn-approve"
+                  >
+                    ✓ Approve
+                  </button>
+                  <button
+                    onClick={() => {
+                      const reason = prompt("Optional reason for rejection (will be included in WhatsApp template):") || undefined;
+                      if (reason !== undefined) {
+                        setRejectReason((s) => ({ ...s, [b.id]: reason || "" }));
+                      }
+                      act(b.id, "reject", reason);
+                    }}
+                    disabled={busy === b.id}
+                    className="btn-reject"
+                  >
+                    ✕ Reject
+                  </button>
+                </div>
+              </div>
+
+              {/* Group B — WhatsApp comms */}
+              <div className="bg-stone-50 border border-stone-200 rounded-lg p-3">
+                <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium mb-2">
+                  WhatsApp comms
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <a
+                    href={checkLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={b.check_sent_at ? "btn" : "btn-wa"}
+                    onClick={() => logWaSent(b.id, "check")}
+                    title={b.check_sent_at ? `Last sent ${new Date(b.check_sent_at).toLocaleString("en-MY")}` : undefined}
+                  >
+                    <WAIcon /> {b.check_sent_at ? "Resend check" : "Check with patient"}
+                  </a>
+                  <a
+                    href={confirmLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={(b.type === "cancellation" ? b.cancel_sent_at : b.confirm_sent_at) ? "btn" : "btn-wa"}
+                    onClick={() =>
+                      logWaSent(b.id, b.type === "cancellation" ? "cancel" : "confirm")
+                    }
+                    title={(b.type === "cancellation" ? b.cancel_sent_at : b.confirm_sent_at) ? `Last sent ${new Date((b.type === "cancellation" ? b.cancel_sent_at : b.confirm_sent_at)!).toLocaleString("en-MY")}` : undefined}
+                  >
+                    <WAIcon /> {(b.type === "cancellation" ? b.cancel_sent_at : b.confirm_sent_at) ? "Resend confirmation" : "Send confirmation"}
+                  </a>
+                  <a
+                    href={rejectLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={b.reject_sent_at ? "btn" : "btn-wa"}
+                    onClick={() => logWaSent(b.id, "reject")}
+                    title={b.reject_sent_at ? `Last sent ${new Date(b.reject_sent_at).toLocaleString("en-MY")}` : undefined}
+                  >
+                    <WAIcon /> {b.reject_sent_at ? "Resend rejection" : "Send rejection"}
+                  </a>
+                </div>
+              </div>
             </div>
           </div>
         );
