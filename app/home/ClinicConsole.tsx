@@ -330,7 +330,10 @@ export default function ClinicConsole({
     );
   }
 
-  // Fire the attendance API after PIN verify
+  // Fire the attendance API after PIN verify. Attendance marking is a
+  // one-shot action — the staff member shouldn't get "signed in" to the
+  // terminal backend afterwards. Clear the PIN session + cookie when done
+  // so the lockscreen stays in LOCKED state.
   async function markAttendance(booking_id: string, mark: "attended" | "no_show", profile_id: string, pin: string) {
     setLocalMarks((m) => ({ ...m, [booking_id]: mark }));
     try {
@@ -340,12 +343,18 @@ export default function ClinicConsole({
         body: JSON.stringify({ booking_id, mark, pin_profile_id: profile_id, pin }),
       });
     } catch {
-      // Revert optimistic update on error
       setLocalMarks((m) => {
         const next = { ...m };
         delete next[booking_id];
         return next;
       });
+    } finally {
+      // Drop the PIN session so the lockscreen reverts to locked. Otherwise
+      // the 5-second polling tick reads sessionStorage and flips the UI
+      // into the identified-state "backend" view.
+      clearPinSession();
+      fetch("/api/pin/lock-token", { method: "DELETE" }).catch(() => {});
+      setSession(null);
     }
   }
 
@@ -583,6 +592,7 @@ function UpcomingPatientsPanel({
 }) {
   const now = Date.now();
   const ONE_HOUR_MS = 60 * 60 * 1000;
+  const THIRTY_MIN_MS = 30 * 60 * 1000;
   // Group bookings by day for a clear "Today / Tomorrow / <date>" divider.
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const dayLabel = (iso: string) => {
@@ -621,6 +631,11 @@ function UpcomingPatientsPanel({
             // pending). Card is bigger + ringed + label says "Up next".
             const isImminent =
               status === "pending" && slotMs >= now && slotMs - now <= ONE_HOUR_MS;
+            // Action buttons (Attended / No-show) only show for bookings
+            // within 30 minutes of now (either side). Anything further out
+            // is read-only — staff are checking who's coming, not marking.
+            const isActionable =
+              status === "pending" && Math.abs(slotMs - now) <= THIRTY_MIN_MS;
             const thisDay = dayLabel(b.slot_start);
             const showDayHeader = thisDay !== lastDay;
             if (showDayHeader) lastDay = thisDay;
@@ -675,10 +690,14 @@ function UpcomingPatientsPanel({
                   )}
                   {status === "pending" && (
                     <span className="text-[10px] text-white/50">
-                      {isImminent ? "Awaiting check-in — soon" : isPast ? "Past — needs marking" : "Awaiting check-in"}
+                      {isActionable
+                        ? (isPast ? "Past — needs marking" : "Awaiting check-in")
+                        : isPast
+                          ? "Past — needs marking"
+                          : "Scheduled"}
                     </span>
                   )}
-                  {status === "pending" && (
+                  {isActionable && (
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
