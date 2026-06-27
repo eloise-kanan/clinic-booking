@@ -48,7 +48,63 @@ const FEATURE_NAMES: Record<FeatureKey, string> = {
   "multi_branch": "Multi-branch (planned)",
 };
 
+// Group features into sensible categories so the tier card reads as a few
+// labelled lists instead of a long undifferentiated bullet list.
+const FEATURE_CATEGORY: Record<FeatureKey, string> = {
+  "bookings.pending": "Bookings",
+  "bookings.all": "Bookings",
+  "bookings.new": "Bookings",
+  "bookings.reminders": "Bookings",
+  "patients": "Patients",
+  "recall": "Patients",
+  "calendar.clinical": "Calendar",
+  "calendar.duty": "Calendar",
+  "calendar.duty.nurse": "Calendar",
+  "staff.management": "Staff & HR",
+  "staff.working_hours": "Staff & HR",
+  "staff.shift_changes": "Staff & HR",
+  "staff.leave": "Staff & HR",
+  "settings.templates": "Branding & comms",
+  "settings.branding": "Branding & comms",
+  "google_review_prompt": "Branding & comms",
+  "analytics.overview": "Analytics",
+  "analytics.doctor_perf": "Analytics",
+  "analytics.nurse_perf": "Analytics",
+  "analytics.utilization": "Analytics",
+  "backup": "Admin & compliance",
+  "settings.audit_log": "Admin & compliance",
+  "compliance": "Admin & compliance",
+  "review": "Admin & compliance",
+  "payroll": "Admin & compliance",
+  "commission": "Admin & compliance",
+  "multi_branch": "Scale",
+};
+
+// Stable display order for the categories.
+const CATEGORY_ORDER: string[] = [
+  "Bookings",
+  "Patients",
+  "Calendar",
+  "Staff & HR",
+  "Branding & comms",
+  "Analytics",
+  "Admin & compliance",
+  "Scale",
+];
+
 const TIERS: Plan[] = ["standard", "premium", "franchise"];
+
+function groupByCategory(features: FeatureKey[]): { category: string; items: FeatureKey[] }[] {
+  const byCat = new Map<string, FeatureKey[]>();
+  for (const f of features) {
+    const cat = FEATURE_CATEGORY[f] || "Other";
+    if (!byCat.has(cat)) byCat.set(cat, []);
+    byCat.get(cat)!.push(f);
+  }
+  return CATEGORY_ORDER
+    .filter((c) => byCat.has(c))
+    .map((category) => ({ category, items: byCat.get(category)! }));
+}
 
 function featuresForTier(tier: Plan): { newInTier: FeatureKey[] } {
   const all = Object.entries(FEATURE_REQUIRES) as [FeatureKey, Plan][];
@@ -125,18 +181,25 @@ export default function PlanPicker({ current }: { current: Plan }) {
                 {PLAN_DESCRIPTIONS[tier]}
               </p>
               {newInTier.length > 0 && (
-                <div className="border-t border-stone-200 pt-2 mt-2">
-                  <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium mb-1">
+                <div className="border-t border-stone-200 pt-3 mt-3 space-y-2.5">
+                  <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
                     {tier === "standard" ? "Included" : "New in this tier"}
                   </div>
-                  <ul className="space-y-0.5">
-                    {newInTier.map((f) => (
-                      <li key={f} className="text-[11px] text-stone-700 flex items-start gap-1.5">
-                        <span className="text-emerald-600 font-bold mt-0.5">+</span>
-                        <span>{FEATURE_NAMES[f]}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {groupByCategory(newInTier).map(({ category, items }) => (
+                    <div key={category}>
+                      <div className="text-[10px] uppercase tracking-wider text-stone-400 font-medium mb-0.5">
+                        {category}
+                      </div>
+                      <ul className="space-y-0.5">
+                        {items.map((f) => (
+                          <li key={f} className="text-[11px] text-stone-700 flex items-start gap-1.5">
+                            <span className="text-emerald-600 font-bold mt-0.5">+</span>
+                            <span>{FEATURE_NAMES[f]}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
                 </div>
               )}
             </button>
