@@ -1,4 +1,4 @@
-# Kanan Clinic Booking — Sales Deck (14 slides)
+# Kanan Clinic Booking — Sales Deck (18 slides)
 
 Source of truth for the slide content. Edit here, then re-run `build_kanan_sales_deck.py` to regenerate the PPTX. Brand follows Kanan guidelines (navy `#1B2A4A` + gold `#C9A227` + warm-white `#F4F1EA`, 60/30/10).
 
@@ -82,7 +82,7 @@ Audience: dental clinic owners in Malaysia (Klang Valley first). Tone: plain Eng
 - Every action audit-logged with the nurse's name + timestamp — so the owner can see who did what
 
 **Visual:** Screenshot of /nurse with the Pending queue + a wa.me preview overlay
-**Speaker note:** Highlight the audit log angle — owners love that they can verify.
+**Speaker note:** Highlight the audit log angle — owners love that they can verify. Also note the new "Communications" column on All Bookings — every WhatsApp action (check / confirm / reminder / open chat) is one click in the same place, no jumping around.
 
 ---
 
@@ -115,7 +115,87 @@ Audience: dental clinic owners in Malaysia (Klang Valley first). Tone: plain Eng
 
 ---
 
-## Slide 9 — Standard tier
+## Slide 9 — The shared kiosk (terminal lockscreen)
+
+**Title:** One tablet at the front desk runs the whole day.
+**Lead:** Plug in a cheap Android or iPad at reception. Stays signed in as the **clinic terminal**. Anyone can use it — protected by a 6-digit PIN per action.
+**Bullets:**
+- Big clock + clinic name + branded background (matches your theme)
+- **Upcoming patients panel** — next 48 hours, time + name + IC + doctor, scrollable
+- Live count tiles: Pending · Recalls · Today · Reminders — each opens the right worklist behind a nurse PIN
+- "Mark attended" / "No-show" inline on each upcoming row — one PIN, one tap
+- Marked patients **collapse** under a "▸ Marked · 5 attended · 1 no-show" bar so the panel stays focused on who still needs action
+- Doctor can also PIN in to view their own day, check-out patients, submit HR requests
+
+**Visual:** Screenshot of /home (lockscreen) with the clock + upcoming-patients panel
+**Speaker note:** "This is what reception looks like. One device. Everyone uses it. Nobody shares passwords." That last line lands hard.
+
+---
+
+## Slide 10 — Premium room flow
+
+**Title:** From "patient is here" to "treatment done" — without a paper sheet.
+**Lead:** Premium adds a 3-stage flow per booking, all driven from the terminal:
+**3-step cards (left → right):**
+1. **Patient arrives** → Nurse taps **Check in** → Room picker → Nurse PIN → ✓ patient is now "In Room 2"
+2. **Doctor's turn** → Doctor PIN at the lockscreen → sees "In Room 2" badge on their booking
+3. **After the visit** → Doctor taps **Check out** → picks treatment done (Scaling / RCT / Crown / Filling / Whitening / free text) → Doctor PIN → ✓ Done · Crown fitting
+
+**Bullets below cards:**
+- Rooms list editable by owner — "Surgery", "Hygiene bay 2", whatever your clinic uses
+- Treatment-done text lives on the booking — appears in the patient's visit history + Audit log
+- Auto-marks attended on check-out + bumps visit_count + clears the recall timer
+
+**Visual:** 3 screenshots side-by-side: Room picker · "In Room 2" badge on lockscreen · Treatment picker
+**Speaker note:** Walk through the three steps with your finger on screen. "Nurse — doctor — done." Sell the visibility: owner can see at a glance which rooms are busy.
+
+---
+
+## Slide 11 — Manage your team from one place
+
+**Title:** Doctors and nurses — one card each.
+**Lead:** Click a card to expand. Edit working hours, leave entitlement, doctor expertise, payroll (Premium roadmap) — all without leaving the page.
+**Sections on each card:**
+- **Working hours** — per-weekday editor for both doctors AND nurses (split shifts OK)
+- **Leave entitlement** — Annual / MC / Emergency days, owner sets per person
+- **Doctor profile** (Premium) — expertise tags + bio + ★ rating for patient-facing cards
+- **Recent activity** — last 5 leave + shift events with status pills
+- **Account actions** — set/reset/clear PIN, reset password, deactivate
+
+**Bullets below:**
+- Cards collapsed by default — header shows hours summary at a glance (e.g. "5 days/wk · custom")
+- Save changes inline — no separate "settings" page
+- For Premium clinics: edit room list + each doctor's expertise from the same page
+
+**Visual:** Screenshot of /owner/staff with one card expanded, one collapsed
+**Speaker note:** Before this redesign, owners had to click "Working hours", "My account", "Doctors & nurses" — three pages. Now it's one card per person. Show the collapse/expand on screen.
+
+---
+
+## Slide 12 — Approvals + Audit log
+
+**Title:** Compliance without the paperwork.
+**Lead:** Two screens, one promise: every HR decision and every booking action is on the record.
+**Two-column layout:**
+
+**Approvals**
+- Single page: pending leave + pending shift changes side-by-side
+- One-tap Approve / Reject with optional reviewer note
+- Approved leave auto-blocks the doctor calendar
+- Permanent shift changes auto-update working hours on approval — no manual sync
+
+**Audit log**
+- Last 500 actions across the clinic — actor, time, action, patient name, "X → Y" transition
+- Filter by action / actor / entity — search free-text
+- "Show raw JSON" expander when you need the full payload
+- Captures everything: bookings, PINs, leave decisions, theme changes, room check-ins, WhatsApp sends
+
+**Visual:** Screenshot grid: /owner/hr-approvals (top) + /owner/audit (bottom)
+**Speaker note:** PDPA + SSM both ask "who did this and when?" — your answer is one filter + a screenshot. Use this slide if the prospect is a multi-doctor clinic worried about discipline / disputes.
+
+---
+
+## Slide 13 — Standard tier
 
 **Title:** Standard — RM 150 / month
 **Seat caps headline (large):** 1 owner · 2 doctors · 3 nurses
@@ -134,17 +214,20 @@ Audience: dental clinic owners in Malaysia (Klang Valley first). Tone: plain Eng
 
 ---
 
-## Slide 10 — Premium tier
+## Slide 14 — Premium tier
 
 **Title:** Premium — RM 280 / month
 **Seat caps headline (large):** 1 owner · 4 doctors · 6 nurses
 **Lead:** Everything in Standard, plus the visibility you stop being able to live without:
 **What's new (checklist):**
-- ✨ Doctor performance dashboard (per-doctor attendance + no-show metrics)
-- ✨ Nurse performance dashboard (per-nurse activity from the audit log)
-- ✨ Chair utilization heatmap
-- ✨ Duty calendar — **nurses included**, not just doctors
-- ✨ Audit log access
+- ✨ **Room flow** — nurse check-in to a room, doctor check-out with treatment-done
+- ✨ **Patient-facing doctor cards** on /book — expertise + ★ rating
+- ✨ **Rooms editor** — owner names the operatories your clinic uses
+- ✨ **Doctor performance dashboard** — per-doctor attendance + no-show metrics
+- ✨ **Nurse performance dashboard** — per-nurse activity from the audit log
+- ✨ **Chair utilization heatmap**
+- ✨ **Duty calendar — nurses included**, not just doctors
+- ✨ **Audit log access** with patient name + status transitions
 - 🔜 Internal review system (post-visit star rating + Google review prompt) — *roadmap*
 - 🔜 Payroll handoff (PayrollPanda integration) — *roadmap*
 
@@ -152,7 +235,7 @@ Audience: dental clinic owners in Malaysia (Klang Valley first). Tone: plain Eng
 
 ---
 
-## Slide 11 — Side-by-side
+## Slide 15 — Side-by-side
 
 **Title:** Standard vs Premium at a glance
 
@@ -162,20 +245,23 @@ Audience: dental clinic owners in Malaysia (Klang Valley first). Tone: plain Eng
 | **Owner / Doctor / Nurse seats** | 1 / 2 / 3 | 1 / 4 / 6 |
 | **Booking + WhatsApp templates** | ✅ | ✅ |
 | **Recall reminders** | ✅ | ✅ |
-| **Duty calendar — doctors** | ✅ | ✅ |
+| **Terminal lockscreen + nurse PIN flow** | ✅ | ✅ |
+| **Staff cards (collapsible per-person editor)** | ✅ | ✅ |
+| **Approvals (leave + shift in one place)** | ✅ | ✅ |
+| **Daily CSV backup (folder + auto-email)** | ✅ | ✅ |
+| **Room flow (check-in / check-out / treatment)** | — | ✅ |
+| **Patient-facing doctor cards on /book** | — | ✅ |
 | **Duty calendar — nurses** | — | ✅ |
-| **Doctor performance analytics** | — | ✅ |
-| **Nurse performance analytics** | — | ✅ |
-| **Chair utilization** | — | ✅ |
-| **Audit log** | — | ✅ |
-| **CSV backup** | ✅ | ✅ |
-| **Mobile** | ✅ | ✅ |
+| **Doctor + nurse performance analytics** | — | ✅ |
+| **Chair utilization heatmap** | — | ✅ |
+| **Audit log (full PII + transitions)** | — | ✅ |
+| **Mobile + iPad** | ✅ | ✅ |
 
 **Speaker note:** Let them stare at this for 10 seconds. Don't talk through it line by line.
 
 ---
 
-## Slide 12 — How we work (8 steps)
+## Slide 16 — How we work (8 steps)
 
 **Title:** Start to finish — no surprises
 **Grid 4×2:**
@@ -192,7 +278,7 @@ Audience: dental clinic owners in Malaysia (Klang Valley first). Tone: plain Eng
 
 ---
 
-## Slide 13 — Data + trust
+## Slide 17 — Data + trust
 
 **Title:** Your data stays yours
 **Bullets:**
@@ -207,7 +293,7 @@ Audience: dental clinic owners in Malaysia (Klang Valley first). Tone: plain Eng
 
 ---
 
-## Slide 14 — Try it / Get in touch
+## Slide 18 — Try it / Get in touch
 
 **Title:** Try the demos. We'll get you set up in 4 weeks.
 **Two demo cards (large):**

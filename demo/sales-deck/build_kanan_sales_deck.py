@@ -1,8 +1,13 @@
 """Generate the Kanan clinic-booking sales deck.
 
-Outputs ./demo/sales-deck/Kanan_Clinic_Booking_Sales_Deck.pptx — 14 slides,
+Outputs ./demo/sales-deck/Kanan_Clinic_Booking_Sales_Deck.pptx — 18 slides,
 Kanan brand styling (navy + gold + warm-white per the brand guidelines memory).
 Content mirrors ./kanan-sales-deck.md — edit the .md for copy, then re-run.
+
+Slides 9–12 are NEW (v2): shared-kiosk lockscreen, Premium room flow,
+staff cards on /owner/staff, and Approvals + Audit log. All screenshot
+boxes are LABELLED PLACEHOLDERS — capture from clinic-booking-kanan-team.vercel.app
+and drop your real PNGs into the corresponding rectangles in PowerPoint.
 
 Run:  python3 demo/sales-deck/build_kanan_sales_deck.py
 """
@@ -313,8 +318,132 @@ def tier_card(slide, left, top, width, height, tier, price, seats, features, acc
                 bullet_color=GREEN)
 
 
-def s9_standard(prs, total):
-    s = slide_title_only(prs, 9, total, "Standard — RM 150 / month",
+def s9_terminal(prs, total):
+    s = slide_title_only(prs, 9, total,
+                         "One tablet at the front desk runs the whole day.",
+                         "Plug in a cheap Android or iPad at reception — anyone uses it, every action is PIN-locked.")
+    add_bullets(s, MARGIN, Inches(2.4), Inches(7), Inches(4.5), [
+        "Big clock + branded background (matches your theme)",
+        "Upcoming patients panel — next 48 hours, time + name + IC + doctor",
+        "Live count tiles: Pending · Recalls · Today · Reminders",
+        "Mark attended / no-show inline — one PIN, one tap",
+        "Marked patients collapse under a 'Marked · 5 attended · 1 no-show' bar",
+        "Doctors can also PIN in to view their own day + check-out + submit HR",
+    ], size=14, line_gap_pt=8)
+    add_screenshot_placeholder(s, Inches(7.9), Inches(2.3), Inches(4.8), Inches(4.4),
+                               "/home — lockscreen with upcoming-patients panel")
+    add_speaker_note(s,
+        "Reception runs on one device. Nobody shares passwords — the kiosk is signed in as 'terminal' "
+        "and every booking-changing action requires a 6-digit PIN from a real nurse or doctor. "
+        "Capture: open /home on a touchscreen and tap Pending to show the PIN modal.")
+
+
+def s10_room_flow(prs, total):
+    s = slide_title_only(prs, 10, total,
+                         "Premium room flow — patient arrives → treatment done.",
+                         "Three taps, two PINs, zero paper. Every step audit-logged.")
+    # Three-step card row
+    card_w = Inches(3.95)
+    card_h = Inches(2.6)
+    card_top = Inches(2.4)
+    gap = Inches(0.15)
+    total_w = card_w * 3 + gap * 2
+    left_start = (SLIDE_W - total_w) // 2
+    steps = [
+        ("1", "Patient arrives", "Nurse taps Check in → picks room → Nurse PIN → ✓ In Room 2", NAVY_LIGHT),
+        ("2", "Doctor's turn", "Doctor PIN at lockscreen → sees 'In Room 2' badge on their booking row", GOLD),
+        ("3", "After the visit", "Doctor taps Check out → picks treatment done → Doctor PIN → ✓ Done · Crown fitting", GREEN),
+    ]
+    for i, (n, title, body, accent) in enumerate(steps):
+        x = left_start + i * (card_w + gap)
+        add_rect(s, x, card_top, card_w, card_h, WHITE, line_color=accent)
+        add_rect(s, x, card_top, card_w, Inches(0.15), accent)
+        add_text(s, x + Inches(0.25), card_top + Inches(0.35), card_w - Inches(0.5), Inches(0.5),
+                 n, size=28, bold=True, color=NAVY, font="Georgia")
+        add_text(s, x + Inches(0.25), card_top + Inches(0.95), card_w - Inches(0.5), Inches(0.4),
+                 title, size=14, bold=True, color=NAVY)
+        add_text(s, x + Inches(0.25), card_top + Inches(1.4), card_w - Inches(0.5), Inches(1.1),
+                 body, size=11, color=GREY)
+    # Detail strip below
+    add_bullets(s, MARGIN, Inches(5.3), SLIDE_W - 2 * MARGIN, Inches(1.5), [
+        "Rooms list editable by owner — 'Surgery', 'Hygiene bay 2', whatever your clinic uses",
+        "Treatment-done text travels into the visit history + audit log automatically",
+        "Auto-marks attended + bumps visit_count + resets the recall timer on check-out",
+    ], size=12, line_gap_pt=5)
+    add_screenshot_placeholder(s, Inches(9.5), Inches(5.3), Inches(3.2), Inches(1.5),
+                               "Optional: room picker / treatment picker modal")
+    add_speaker_note(s,
+        "Walk through with finger on screen: 'Nurse — doctor — done.' Sell the visibility: "
+        "owner can see at a glance which rooms are busy. Capture: open the lockscreen + tap "
+        "Check in on a pending row to show the room picker.")
+
+
+def s11_staff_cards(prs, total):
+    s = slide_title_only(prs, 11, total,
+                         "Manage your team from one place.",
+                         "Doctors and nurses — one card each. Expand, edit, save inline.")
+    add_bullets(s, MARGIN, Inches(2.3), Inches(7), Inches(4.5), [
+        "Working hours — per-weekday editor (both doctors AND nurses)",
+        "Leave entitlement — Annual / MC / Emergency days, owner sets per person",
+        "Doctor profile (Premium) — expertise tags + bio + ★ rating for /book cards",
+        "Recent activity — last 5 leave + shift events with status pills",
+        "Account actions — PIN reset / password reset / deactivate",
+        "Cards collapsed by default — header shows '5 days/wk · custom' summary",
+    ], size=13, line_gap_pt=8)
+    add_screenshot_placeholder(s, Inches(7.9), Inches(2.3), Inches(4.8), Inches(4.4),
+                               "/owner/staff — one card expanded, one collapsed")
+    add_speaker_note(s,
+        "Before this redesign, owners had to click 'Working hours', 'My account', 'Doctors & nurses' — "
+        "three pages. Now it's one card per person. Capture: open /owner/staff and click a doctor "
+        "card to expand the Working hours + Leave entitlement sections.")
+
+
+def s12_approvals_audit(prs, total):
+    s = slide_title_only(prs, 12, total,
+                         "Compliance without the paperwork.",
+                         "Every HR decision and every booking action — on the record.")
+    # Two-column layout
+    col_w = (SLIDE_W - 2 * MARGIN - Inches(0.3)) // 2
+    col_top = Inches(2.3)
+    col_h = Inches(4.4)
+    # Left col — Approvals
+    add_rect(s, MARGIN, col_top, col_w, col_h, WHITE, line_color=NAVY_LIGHT)
+    add_rect(s, MARGIN, col_top, col_w, Inches(0.15), NAVY_LIGHT)
+    add_text(s, MARGIN + Inches(0.3), col_top + Inches(0.3), col_w - Inches(0.6), Inches(0.5),
+             "Approvals", size=18, bold=True, color=NAVY)
+    add_bullets(s, MARGIN + Inches(0.3), col_top + Inches(0.9),
+                col_w - Inches(0.6), col_h - Inches(1.2),
+                [
+                    "Pending leave + pending shift changes side-by-side",
+                    "One-tap Approve / Reject with optional reviewer note",
+                    "Approved leave auto-blocks the doctor calendar",
+                    "Permanent shift changes auto-update working hours on approval",
+                ], size=12, line_gap_pt=6)
+    # Right col — Audit log
+    right_left = MARGIN + col_w + Inches(0.3)
+    add_rect(s, right_left, col_top, col_w, col_h, WHITE, line_color=GOLD)
+    add_rect(s, right_left, col_top, col_w, Inches(0.15), GOLD)
+    add_text(s, right_left + Inches(0.3), col_top + Inches(0.3), col_w - Inches(0.6), Inches(0.5),
+             "Audit log (Premium)", size=18, bold=True, color=NAVY)
+    add_bullets(s, right_left + Inches(0.3), col_top + Inches(0.9),
+                col_w - Inches(0.6), col_h - Inches(1.2),
+                [
+                    "Last 500 actions — actor, time, patient, 'X → Y' transition",
+                    "Filter by action / actor / entity + free-text search",
+                    "'Show raw JSON' expander for the full payload",
+                    "Covers: bookings, PINs, leave, theme, rooms, WhatsApp sends",
+                ], size=12, line_gap_pt=6)
+    add_screenshot_placeholder(s, MARGIN, Inches(6.95), SLIDE_W - 2 * MARGIN, Inches(0.3),
+                               "Optional: /owner/hr-approvals + /owner/audit screenshots")
+    add_speaker_note(s,
+        "PDPA + SSM both ask 'who did this and when?' — your answer is one filter + a screenshot. "
+        "Lean on this slide for multi-doctor clinics worried about discipline or disputes. "
+        "Capture: /owner/hr-approvals with at least one pending row visible, and /owner/audit "
+        "showing a few booking rows with patient names + status transitions.")
+
+
+def s13_standard(prs, total):
+    s = slide_title_only(prs, 13, total, "Standard — RM 150 / month",
                          "Everything you need to run a single dental clinic that's drowning in WhatsApp.")
     tier_card(s, MARGIN, Inches(2.4), SLIDE_W - 2 * MARGIN, Inches(4.4),
               "Standard tier", "RM 150 / month",
@@ -334,47 +463,51 @@ def s9_standard(prs, total):
              size=11, italic=True, color=GREY)
 
 
-def s10_premium(prs, total):
-    s = slide_title_only(prs, 10, total, "Premium — RM 280 / month",
+def s14_premium(prs, total):
+    s = slide_title_only(prs, 14, total, "Premium — RM 280 / month",
                          "Everything in Standard, plus the visibility you stop being able to live without.")
     tier_card(s, MARGIN, Inches(2.4), SLIDE_W - 2 * MARGIN, Inches(4.4),
               "Premium tier", "RM 280 / month",
               "1 owner  ·  4 doctors  ·  6 nurses (top-up on WhatsApp)",
               [
-                  "Doctor performance dashboard — per-doctor attendance + no-show metrics",
-                  "Nurse performance dashboard — per-nurse activity from the audit log",
-                  "Chair utilization heatmap — which chair-hours are filled",
+                  "Room flow — nurse check-in to room, doctor check-out + treatment-done",
+                  "Patient-facing doctor cards on /book — expertise + ★ rating",
+                  "Rooms editor — owner names the operatories your clinic uses",
+                  "Doctor + nurse performance dashboards — attendance, no-shows, activity",
+                  "Chair utilization heatmap — which chair-hours are actually filled",
                   "Duty calendar includes nurses, not just doctors",
-                  "Audit log access — full who-did-what timeline",
-                  "Roadmap: internal review system + Google review prompt",
-                  "Roadmap: payroll handoff (PayrollPanda integration)",
-                  "Everything in Standard, plus the larger seat caps",
+                  "Audit log — patient name + 'X → Y' transitions, search + filter",
+                  "Roadmap: review system + payroll handoff (PayrollPanda)",
               ], accent=GOLD)
     add_text(s, MARGIN, Inches(6.95), SLIDE_W - 2 * MARGIN, Inches(0.4),
              "Seat cap reached? WhatsApp us — we top up without forcing a Franchise upgrade.",
              size=11, italic=True, color=GREY)
 
 
-def s11_comparison(prs, total):
-    s = slide_title_only(prs, 11, total, "Standard vs Premium at a glance")
+def s15_comparison(prs, total):
+    s = slide_title_only(prs, 15, total, "Standard vs Premium at a glance")
     headers = ["", "Standard", "Premium"]
     rows = [
         ("Monthly price", "RM 150", "RM 280"),
         ("Owner / Doctor / Nurse seats", "1 / 2 / 3", "1 / 4 / 6"),
         ("Booking + WhatsApp templates", "✓", "✓"),
         ("Recall reminders", "✓", "✓"),
-        ("Duty calendar — doctors", "✓", "✓"),
+        ("Terminal lockscreen + nurse PIN flow", "✓", "✓"),
+        ("Staff cards (collapsible per-person editor)", "✓", "✓"),
+        ("Approvals (leave + shift in one place)", "✓", "✓"),
+        ("CSV backup (folder + auto-email)", "✓", "✓"),
+        ("Room flow — check-in / out / treatment", "—", "✓"),
+        ("Patient-facing doctor cards on /book", "—", "✓"),
         ("Duty calendar — nurses", "—", "✓"),
-        ("Doctor performance analytics", "—", "✓"),
-        ("Nurse performance analytics", "—", "✓"),
+        ("Doctor + nurse performance analytics", "—", "✓"),
         ("Chair utilization heatmap", "—", "✓"),
-        ("Audit log", "—", "✓"),
-        ("CSV backup + mobile", "✓", "✓"),
+        ("Audit log (full PII + transitions)", "—", "✓"),
     ]
     table_left = MARGIN
-    table_top = Inches(2.2)
+    table_top = Inches(2.0)
     col_w = [Inches(5.5), Inches(3.2), Inches(3.2)]
-    row_h = Inches(0.36)
+    # Tighter rows than v1 — table grew from 11 → 14 rows to cover new features.
+    row_h = Inches(0.32)
     # Header
     for i, h in enumerate(headers):
         x = table_left + sum(col_w[:i], Inches(0))
@@ -403,8 +536,8 @@ def s11_comparison(prs, total):
     add_speaker_note(s, "Let them stare at this for 10 seconds. Don't talk through it line by line.")
 
 
-def s12_how_we_work(prs, total):
-    s = slide_title_only(prs, 12, total, "Start to finish — no surprises")
+def s16_how_we_work(prs, total):
+    s = slide_title_only(prs, 16, total, "Start to finish — no surprises")
     steps = [
         ("1", "Talk to our team", "WhatsApp or quick call. Tell us what's slowing you down."),
         ("2", "Schedule a discussion", "Longer working session. No sales deck."),
@@ -434,8 +567,8 @@ def s12_how_we_work(prs, total):
     add_speaker_note(s, "Step 8 is the differentiator. Lead with it: 'We don't ghost you after launch.'")
 
 
-def s13_trust(prs, total):
-    s = slide_title_only(prs, 13, total, "Your data stays yours",
+def s17_trust(prs, total):
+    s = slide_title_only(prs, 17, total, "Your data stays yours",
                          "Trust before technology.")
     add_bullets(s, MARGIN, Inches(2.4), SLIDE_W - 2 * MARGIN, Inches(4), [
         "Hosted in Malaysia wherever possible (Supabase + Vercel)",
@@ -449,8 +582,8 @@ def s13_trust(prs, total):
              size=11, italic=True, color=GREY)
 
 
-def s14_try_it(prs, total):
-    s = slide_title_only(prs, 14, total, "Try the demos. Get set up in 4 weeks.")
+def s18_try_it(prs, total):
+    s = slide_title_only(prs, 18, total, "Try the demos. Get set up in 4 weeks.")
     # Two demo cards
     card_w = Inches(5.5)
     card_h = Inches(2.3)
@@ -513,12 +646,16 @@ def build():
         s6_nurse,
         s7_doctor,
         s8_owner_dash,
-        s9_standard,
-        s10_premium,
-        s11_comparison,
-        s12_how_we_work,
-        s13_trust,
-        s14_try_it,
+        s9_terminal,          # NEW — shared kiosk lockscreen
+        s10_room_flow,        # NEW — Premium check-in / check-out flow
+        s11_staff_cards,      # NEW — staff cards on /owner/staff
+        s12_approvals_audit,  # NEW — Approvals + Audit log
+        s13_standard,
+        s14_premium,
+        s15_comparison,
+        s16_how_we_work,
+        s17_trust,
+        s18_try_it,
     ]
     total = len(builders)
     builders[0](prs)
