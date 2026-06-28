@@ -213,11 +213,6 @@ export default function AuditLogView({ rows }: { rows: Row[] }) {
                   </td>
                   <td className="px-4 py-3 text-xs">
                     <div className="capitalize">{r.entity_type}</div>
-                    {r.entity_label && (
-                      <div className="text-stone-700 mt-0.5 font-medium" title={r.entity_id || ""}>
-                        {r.entity_label}
-                      </div>
-                    )}
                     {!r.entity_label && r.entity_id && (
                       <div className="text-stone-400 text-[10px] font-mono mt-0.5">
                         {r.entity_id.slice(0, 8)}
@@ -225,6 +220,17 @@ export default function AuditLogView({ rows }: { rows: Row[] }) {
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs">
+                    {/* Patient name appears as the lead line of the details
+                        cell so owners read "Tan Ming · Marked attended" left
+                        to right without bouncing between columns. */}
+                    {r.entity_label && (
+                      <div
+                        className="text-stone-900 font-medium mb-0.5"
+                        title={r.entity_id || ""}
+                      >
+                        {r.entity_label}
+                      </div>
+                    )}
                     {/* Friendly summary line — extracted from before/after.
                         Picks out the fields owners actually care about
                         (status, attendance, no_show etc.) and renders them
