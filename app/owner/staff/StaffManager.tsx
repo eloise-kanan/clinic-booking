@@ -326,14 +326,35 @@ function EmployeeCard({
     .join("")
     .toUpperCase();
 
+  // Collapsed by default — the grid would be enormous if every card expanded
+  // its working-hours grid + activity list at once. Owner clicks the header
+  // (or chevron) to expand a single card to edit.
+  const [open, setOpen] = useState(false);
+
+  // Hours summary line for the collapsed view.
+  const hoursSummary = (() => {
+    if (member.role === "doctor" || member.role === "nurse") {
+      if (member.working_hours && member.working_hours.length > 0) {
+        const days = new Set(member.working_hours.map((h) => h.weekday)).size;
+        return `${days} day${days === 1 ? "" : "s"}/wk · custom`;
+      }
+      return "Default 09:00–21:00";
+    }
+    return null;
+  })();
+
   return (
     <div
       className={`bg-white border rounded-xl overflow-hidden ${
         member.active ? "border-stone-200" : "border-stone-200 opacity-60"
       }`}
     >
-      {/* Header band — name + role + status */}
-      <div className="px-4 pt-3 pb-2 border-b border-stone-100 flex items-start gap-3">
+      {/* Header band — name + role + status. Clicking the band toggles open. */}
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="w-full px-4 pt-3 pb-2 border-b border-stone-100 flex items-start gap-3 text-left hover:bg-stone-50 transition-colors"
+      >
         <div
           className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold text-white shrink-0 ${
             member.role === "doctor" ? "bg-blue-500" : "bg-emerald-500"
@@ -351,18 +372,19 @@ function EmployeeCard({
               <span className="text-[10px] text-red-600 font-medium">· Inactive</span>
             )}
           </div>
-          <div className="text-[11px] text-stone-500 mt-0.5">
+          <div className="text-[11px] text-stone-500 mt-0.5 truncate">
             {member.login_id || "—"}
             {member.role === "doctor" && member.doctor && (
               <span> · {member.doctor.default_slot_minutes} min slots</span>
             )}
+            {hoursSummary && <span> · {hoursSummary}</span>}
           </div>
         </div>
-        <div className="shrink-0">
+        <div className="shrink-0 flex items-center gap-2">
           {member.pin_set ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
-              PIN set
+              PIN
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-medium">
@@ -370,105 +392,102 @@ function EmployeeCard({
               No PIN
             </span>
           )}
+          <span className="text-stone-400 text-sm" aria-hidden>
+            {open ? "▾" : "▸"}
+          </span>
         </div>
-      </div>
+      </button>
 
-      {/* Body */}
-      <div className="px-4 py-3 space-y-3">
-        {/* Working hours + default slot length — doctors only.
-            Collapsed view shows a one-line summary per weekday; click Edit
-            to inline-edit blocks (with Add/Remove per day) + change the
-            default slot length. Save POSTs both endpoints together. */}
-        {member.role === "doctor" && member.doctor && (
-          <DoctorScheduleEditor
-            doctor={{
-              id: member.doctor.id,
-              default_slot_minutes: member.doctor.default_slot_minutes,
-              profile_id: member.id,
-            }}
-            initialBlocks={(member.working_hours || []).map((b) => ({
-              weekday: b.weekday,
-              start_time: b.start_time.slice(0, 5),
-              end_time: b.end_time.slice(0, 5),
-            }))}
-          />
-        )}
+      {/* Body — sectioned, only rendered when open to keep the page light */}
+      {open && (
+        <div className="px-4 py-3 space-y-4 text-sm">
+          {/* ── 1. Working hours (doctors AND nurses) ────────────── */}
+          <Section title="Working hours">
+            <ScheduleEditor
+              profileId={member.id}
+              role={member.role as "doctor" | "nurse"}
+              doctor={
+                member.role === "doctor" && member.doctor
+                  ? { id: member.doctor.id, default_slot_minutes: member.doctor.default_slot_minutes }
+                  : null
+              }
+              initialBlocks={(member.working_hours || []).map((b) => ({
+                weekday: b.weekday,
+                start_time: b.start_time.slice(0, 5),
+                end_time: b.end_time.slice(0, 5),
+              }))}
+            />
+          </Section>
 
-        {/* Premium — doctor profile (expertise + bio for patient cards on /book). */}
-        {member.role === "doctor" && doctorProfilesEnabled && member.doctor && (
-          <DoctorProfileEditor doctor={member.doctor} />
-        )}
-
-        {/* Leave balances — inline editor */}
-        <div>
-          <div className="flex items-baseline justify-between mb-1">
-            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
-              Leave balances (days)
-            </div>
-            {balMsg && (
-              <span className="text-[10px] text-emerald-700">{balMsg}</span>
-            )}
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <BalanceField label="Annual" value={bal.annual} onChange={(v) => setBal({ ...bal, annual: v })} />
-            <BalanceField label="MC" value={bal.mc} onChange={(v) => setBal({ ...bal, mc: v })} />
-            <BalanceField label="Emergency" value={bal.emergency} onChange={(v) => setBal({ ...bal, emergency: v })} />
-          </div>
-          {dirty && (
-            <button
-              onClick={saveBalance}
-              disabled={balBusy}
-              className="mt-1.5 text-[11px] text-blue-700 font-medium hover:underline"
-            >
-              {balBusy ? "Saving…" : "Save balances"}
-            </button>
+          {/* ── 2. Doctor profile (Premium, doctors only) ───────────── */}
+          {member.role === "doctor" && doctorProfilesEnabled && member.doctor && (
+            <Section title="Doctor profile (Premium)">
+              <DoctorProfileEditor doctor={member.doctor} />
+            </Section>
           )}
-        </div>
 
-        {/* Recent activity */}
-        {member.history && member.history.length > 0 && (
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium mb-1">
-              Recent activity
+          {/* ── 3. Leave entitlement ─────────────────────────────── */}
+          <Section
+            title="Leave entitlement (days)"
+            rightSlot={balMsg && <span className="text-[10px] text-emerald-700">{balMsg}</span>}
+          >
+            <div className="grid grid-cols-3 gap-2">
+              <BalanceField label="Annual" value={bal.annual} onChange={(v) => setBal({ ...bal, annual: v })} />
+              <BalanceField label="MC" value={bal.mc} onChange={(v) => setBal({ ...bal, mc: v })} />
+              <BalanceField label="Emergency" value={bal.emergency} onChange={(v) => setBal({ ...bal, emergency: v })} />
             </div>
-            <ul className="space-y-1 text-[11px]">
-              {member.history.map((h) => (
-                <li key={`${h.type}:${h.id}`} className="flex items-baseline gap-2">
-                  <span
-                    className={`w-1 h-1 rounded-full shrink-0 ${
-                      h.status === "approved"
-                        ? "bg-emerald-500"
-                        : h.status === "rejected"
-                          ? "bg-red-500"
-                          : "bg-amber-500"
-                    }`}
-                  />
-                  <span className="text-stone-700 truncate flex-1">{h.label}</span>
-                  <span className="text-stone-500 tabular-nums">{h.sub}</span>
-                  <span
-                    className={`text-[9px] uppercase tracking-wider ${
-                      h.status === "approved"
-                        ? "text-emerald-600"
-                        : h.status === "rejected"
-                          ? "text-red-600"
-                          : "text-amber-600"
-                    }`}
-                  >
-                    {h.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+            {dirty && (
+              <button
+                onClick={saveBalance}
+                disabled={balBusy}
+                className="mt-1.5 text-[11px] text-blue-700 font-medium hover:underline"
+              >
+                {balBusy ? "Saving…" : "Save balances"}
+              </button>
+            )}
+          </Section>
 
-        {/* Payroll placeholder — Premium feature stub */}
-        <div className="text-[10px] text-stone-400 italic pt-1 border-t border-stone-100">
-          Payroll settings — coming soon (Premium)
-        </div>
+          {/* ── 4. Recent activity ──────────────────────────────── */}
+          {member.history && member.history.length > 0 && (
+            <Section title="Recent activity">
+              <ul className="space-y-1 text-[11px]">
+                {member.history.map((h) => (
+                  <li key={`${h.type}:${h.id}`} className="flex items-baseline gap-2">
+                    <span
+                      className={`w-1 h-1 rounded-full shrink-0 ${
+                        h.status === "approved"
+                          ? "bg-emerald-500"
+                          : h.status === "rejected"
+                            ? "bg-red-500"
+                            : "bg-amber-500"
+                      }`}
+                    />
+                    <span className="text-stone-700 truncate flex-1">{h.label}</span>
+                    <span className="text-stone-500 tabular-nums">{h.sub}</span>
+                    <span
+                      className={`text-[9px] uppercase tracking-wider ${
+                        h.status === "approved"
+                          ? "text-emerald-600"
+                          : h.status === "rejected"
+                            ? "text-red-600"
+                            : "text-amber-600"
+                      }`}
+                    >
+                      {h.status}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
 
-        {/* Action buttons */}
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-stone-100">
+          {/* ── 5. Payroll placeholder ──────────────────────────── */}
+          <Section title="Payroll (Premium)">
+            <p className="text-[11px] text-stone-400 italic">Coming soon.</p>
+          </Section>
+
+          {/* ── 6. Account actions ─────────────────────────────── */}
+          <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-stone-100">
           <button onClick={onSetPin} className="text-[11px] text-stone-700 hover:text-stone-900 hover:underline">
             {member.pin_set ? "Reset PIN" : "Set PIN"}
           </button>
@@ -483,28 +502,60 @@ function EmployeeCard({
           <button onClick={onToggleActive} className="text-[11px] text-stone-700 hover:text-stone-900 hover:underline ml-auto">
             {member.active ? "Deactivate" : "Reactivate"}
           </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-// Doctor-only inline editor for working hours + default slot length. Lives
-// on the doctor's EmployeeCard so the owner can edit everything without
-// jumping to /owner/working-hours. The standalone editor still exists.
+// Tiny wrapper for a labelled body section. The card body is split into 6
+// of these (Working hours / Doctor profile / Leave entitlement / Recent
+// activity / Payroll / Account actions) — keeps the dense expanded view
+// readable and gives sections their own little header strip.
+function Section({
+  title,
+  children,
+  rightSlot,
+}: {
+  title: string;
+  children: React.ReactNode;
+  rightSlot?: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <h4 className="text-[10px] uppercase tracking-wider text-stone-500 font-semibold">
+          {title}
+        </h4>
+        {rightSlot}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+// Inline working-hours editor used inside the EmployeeCard. Works for both
+// doctors AND nurses — the slot-length picker only renders for doctors
+// (nurses don't generate booking slots so they don't need one). All writes
+// go through /api/staff/[id]/work-hours which routes by role internally.
 type Block = { weekday: number; start_time: string; end_time: string };
 
-function DoctorScheduleEditor({
+function ScheduleEditor({
+  profileId,
+  role,
   doctor,
   initialBlocks,
 }: {
-  doctor: { id: string; default_slot_minutes: number; profile_id?: string };
+  profileId: string;
+  role: "doctor" | "nurse";
+  doctor: { id: string; default_slot_minutes: number } | null;
   initialBlocks: Block[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
-  const [slotMinutes, setSlotMinutes] = useState<number>(doctor.default_slot_minutes || 30);
+  const [slotMinutes, setSlotMinutes] = useState<number>(doctor?.default_slot_minutes || 30);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -553,24 +604,25 @@ function DoctorScheduleEditor({
       const sorted = [...blocks].sort(
         (a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time)
       );
-      // Save working hours.
-      const hoursRes = await fetch("/api/working-hours", {
-        method: "PUT",
+      // Unified endpoint — routes by role server-side (doctors → working_hours
+      // table, nurses → profiles.default_work_hours JSONB).
+      const hoursRes = await fetch(`/api/staff/${profileId}/work-hours`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ doctor_id: doctor.id, blocks: sorted }),
+        body: JSON.stringify({ blocks: sorted }),
       });
       if (!hoursRes.ok) {
         const d = await hoursRes.json().catch(() => ({}));
         setMsg(d.error || "Failed to save hours");
         return;
       }
-      // Save slot length if changed.
-      if (slotMinutes !== doctor.default_slot_minutes && doctor.profile_id) {
+      // Doctor only: save slot length when changed.
+      if (role === "doctor" && doctor && slotMinutes !== doctor.default_slot_minutes) {
         const slotRes = await fetch("/api/staff", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            profile_id: doctor.profile_id,
+            profile_id: profileId,
             default_slot_minutes: slotMinutes,
           }),
         });
@@ -609,8 +661,8 @@ function DoctorScheduleEditor({
   return (
     <div>
       <div className="flex items-baseline justify-between mb-1 gap-2">
-        <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
-          Working hours · {slotMinutes} min slots
+        <div className="text-[10px] text-stone-500">
+          {role === "doctor" && doctor ? `${slotMinutes} min slots` : "Custom shift"}
         </div>
         <button
           type="button"
@@ -632,28 +684,30 @@ function DoctorScheduleEditor({
         )
       ) : (
         <div className="bg-stone-50 border border-stone-200 rounded-lg p-2 space-y-1.5">
-          {/* Slot length picker */}
-          <div className="flex items-center gap-2 px-1">
-            <span className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
-              Slot length
-            </span>
-            <div className="flex items-center gap-1">
-              {[15, 30, 45, 60].map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setSlotMinutes(m)}
-                  className={`text-[11px] px-2 py-0.5 rounded border ${
-                    slotMinutes === m
-                      ? "bg-blue-600 border-blue-600 text-white font-medium"
-                      : "bg-white border-stone-300 text-stone-700 hover:border-blue-400"
-                  }`}
-                >
-                  {m}m
-                </button>
-              ))}
+          {/* Slot length picker — doctors only (drives booking slot generation). */}
+          {role === "doctor" && (
+            <div className="flex items-center gap-2 px-1">
+              <span className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
+                Slot length
+              </span>
+              <div className="flex items-center gap-1">
+                {[15, 30, 45, 60].map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setSlotMinutes(m)}
+                    className={`text-[11px] px-2 py-0.5 rounded border ${
+                      slotMinutes === m
+                        ? "bg-blue-600 border-blue-600 text-white font-medium"
+                        : "bg-white border-stone-300 text-stone-700 hover:border-blue-400"
+                    }`}
+                  >
+                    {m}m
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Per-weekday rows */}
           <div className="divide-y divide-stone-200 border-t border-stone-200">

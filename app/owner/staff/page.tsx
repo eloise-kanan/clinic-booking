@@ -18,7 +18,7 @@ export default async function StaffPage() {
   const [profilesRes, doctorsRes, authUsersRes, hoursRes, recentLeavesRes, recentShiftsRes] = await Promise.all([
     admin
       .from("profiles")
-      .select("id, role, full_name, active, login_id, pin_hash, annual_leave_balance, mc_balance, emergency_balance")
+      .select("id, role, full_name, active, login_id, pin_hash, annual_leave_balance, mc_balance, emergency_balance, default_work_hours")
       .order("role"),
     admin.from("doctors").select("id, profile_id, display_name, default_slot_minutes, active, expertise, bio, rating_average, rating_count"),
     admin.auth.admin.listUsers(),
@@ -96,6 +96,14 @@ export default async function StaffPage() {
 
   const enriched = (profiles || []).map((p) => {
     const doc = doctors?.find((d) => d.profile_id === p.id) || null;
+    // Doctors: hours live in the working_hours table (drives /book slots).
+    // Nurses: hours live in profiles.default_work_hours JSONB (informational).
+    let workingHours: { weekday: number; start_time: string; end_time: string }[] = [];
+    if (doc?.id) {
+      workingHours = hoursByDoctor.get(doc.id) || [];
+    } else if (p.role === "nurse" && Array.isArray(p.default_work_hours)) {
+      workingHours = p.default_work_hours as { weekday: number; start_time: string; end_time: string }[];
+    }
     return {
       id: p.id,
       role: p.role,
@@ -105,7 +113,7 @@ export default async function StaffPage() {
       email: emailById.get(p.id) || "",
       pin_set: !!p.pin_hash,
       doctor: doc,
-      working_hours: doc?.id ? hoursByDoctor.get(doc.id) || [] : [],
+      working_hours: workingHours,
       balances: {
         annual: p.annual_leave_balance ?? 14,
         mc: p.mc_balance ?? 14,
