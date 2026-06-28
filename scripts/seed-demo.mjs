@@ -81,30 +81,42 @@ function authEmail(loginId) { return `${loginId}@${SYNTH_DOMAIN}`; }
 
 // last_visit_days drives the recall worklist: anyone past their 6-month
 // (=183 days) recall_interval shows up as "due" with overdue colour-coding.
+// Mixed nationalities (Malaysian IC + foreign passports) so the
+// nationality filter on /patients has more than one value to show.
 const PATIENTS = [
-  // Recently visited — NOT on recall yet
-  { ic: "950712102245", name: "Lim Hui Ling",              phone: "+60168824471", visits: 2, last_visit_days: 14  },
-  { ic: "010305061129", name: "Muhammad Daniel",           phone: "+60112345689", visits: 1, last_visit_days: 5   },
-  { ic: "030519093344", name: "Aaron Cheong",              phone: "+60184411122", visits: 1, last_visit_days: 2   },
-  { ic: "961122054476", name: "Devi A/P Krishnan",         phone: "+60163309981", visits: 2, last_visit_days: 30  },
-  { ic: "850304079912", name: "Nurul Aini Abdullah",       phone: "+60145528821", visits: 6, last_visit_days: 90  },
+  // ── Malaysian (IC) — recently visited
+  { idType: "ic", id: "950712102245", nat: "Malaysia",   name: "Lim Hui Ling",              phone: "+60168824471", visits: 2, last_visit_days: 14  },
+  { idType: "ic", id: "010305061129", nat: "Malaysia",   name: "Muhammad Daniel",           phone: "+60112345689", visits: 1, last_visit_days: 5   },
+  { idType: "ic", id: "030519093344", nat: "Malaysia",   name: "Aaron Cheong",              phone: "+60184411122", visits: 1, last_visit_days: 2   },
+  { idType: "ic", id: "961122054476", nat: "Malaysia",   name: "Devi A/P Krishnan",         phone: "+60163309981", visits: 2, last_visit_days: 30  },
+  { idType: "ic", id: "850304079912", nat: "Malaysia",   name: "Nurul Aini Abdullah",       phone: "+60145528821", visits: 6, last_visit_days: 90  },
 
-  // Due / overdue for recall (last visit > 183 days = 6 months)
-  { ic: "920311145421", name: "Tan Wei Ming",              phone: "+60122345678", visits: 5, last_visit_days: 195 },
-  { ic: "880425083217", name: "Siti Aisyah Binti Hassan",  phone: "+60174551289", visits: 3, last_visit_days: 215 },
-  { ic: "770618081188", name: "Ng Boon Keat",              phone: "+60128876655", visits: 7, last_visit_days: 240 },
-  { ic: "991108025544", name: "Chong Mei Xuan",            phone: "+60139987765", visits: 4, last_visit_days: 305 },
-  { ic: "780921147765", name: "Rajesh A/L Subramaniam",    phone: "+60196640023", visits: 8, last_visit_days: 395 },
+  // ── Malaysian (IC) — due / overdue for recall (last visit > 6 months)
+  { idType: "ic", id: "920311145421", nat: "Malaysia",   name: "Tan Wei Ming",              phone: "+60122345678", visits: 5, last_visit_days: 195 },
+  { idType: "ic", id: "880425083217", nat: "Malaysia",   name: "Siti Aisyah Binti Hassan",  phone: "+60174551289", visits: 3, last_visit_days: 215 },
+  { idType: "ic", id: "770618081188", nat: "Malaysia",   name: "Ng Boon Keat",              phone: "+60128876655", visits: 7, last_visit_days: 240 },
+  { idType: "ic", id: "991108025544", nat: "Malaysia",   name: "Chong Mei Xuan",            phone: "+60139987765", visits: 4, last_visit_days: 305 },
+  { idType: "ic", id: "780921147765", nat: "Malaysia",   name: "Rajesh A/L Subramaniam",    phone: "+60196640023", visits: 8, last_visit_days: 395 },
 
-  // Extra patients for fuller demo (~15 total)
-  { ic: "871015082266", name: "Goh Choon Lai",             phone: "+60123887766", visits: 3, last_visit_days: 21  },
-  { ic: "940228145533", name: "Wong Su Lin",               phone: "+60176551144", visits: 4, last_visit_days: 7   },
-  { ic: "820507093398", name: "Kuhan A/L Maniam",          phone: "+60195442031", visits: 5, last_visit_days: 250 },
-  { ic: "961204023311", name: "Ahmad Faizal Bin Razak",    phone: "+60133229988", visits: 2, last_visit_days: 18  },
-  { ic: "750822081144", name: "Chong Pei Ling",            phone: "+60128876654", visits: 9, last_visit_days: 280 },
+  // ── Malaysian (IC) — extra
+  { idType: "ic", id: "871015082266", nat: "Malaysia",   name: "Goh Choon Lai",             phone: "+60123887766", visits: 3, last_visit_days: 21  },
+  { idType: "ic", id: "940228145533", nat: "Malaysia",   name: "Wong Su Lin",               phone: "+60176551144", visits: 4, last_visit_days: 7   },
+  { idType: "ic", id: "820507093398", nat: "Malaysia",   name: "Kuhan A/L Maniam",          phone: "+60195442031", visits: 5, last_visit_days: 250 },
+  { idType: "ic", id: "961204023311", nat: "Malaysia",   name: "Ahmad Faizal Bin Razak",    phone: "+60133229988", visits: 2, last_visit_days: 18  },
+  { idType: "ic", id: "750822081144", nat: "Malaysia",   name: "Chong Pei Ling",            phone: "+60128876654", visits: 9, last_visit_days: 280 },
+
+  // ── Foreign nationals (passport) — common in JB / KL clinics
+  { idType: "passport", id: "K1234567A", nat: "Singapore",   name: "Lee Wei Jie",            phone: "+6591234567",  visits: 2, last_visit_days: 11  },
+  { idType: "passport", id: "K7654321B", nat: "Singapore",   name: "Tan Yi Ling",            phone: "+6598765432",  visits: 1, last_visit_days: 200 },
+  { idType: "passport", id: "C8810231",  nat: "Indonesia",   name: "Sari Wulandari",         phone: "+628123456789",visits: 3, last_visit_days: 60  },
+  { idType: "passport", id: "C5523109",  nat: "Indonesia",   name: "Budi Santoso",           phone: "+628567890123",visits: 1, last_visit_days: 8   },
+  { idType: "passport", id: "P1100392A", nat: "Philippines", name: "Maria Cruz Santos",      phone: "+639175552024",visits: 2, last_visit_days: 45  },
+  { idType: "passport", id: "E12345678", nat: "China",       name: "Liu Mei Hua",            phone: "+8613912345678",visits: 1, last_visit_days: 4   },
+  { idType: "passport", id: "Z3478912",  nat: "India",       name: "Arjun Sharma",           phone: "+919812345678", visits: 4, last_visit_days: 220 },
+  { idType: "passport", id: "Y9921144",  nat: "Bangladesh",  name: "Rahman Hossain",         phone: "+8801712345678",visits: 2, last_visit_days: 16  },
 ];
 
-const TREATMENTS = ["Scaling", "Root canal treatment", "Whitening", "Wisdom tooth surgery", "Crown fitting"];
+const TREATMENTS = ["Scaling", "Root canal treatment", "Whitening", "Wisdom tooth surgery", "Crown fitting", "Consultation", "Filling", "Extraction"];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -276,9 +288,9 @@ async function seedWorkingHours(doctors) {
 async function seedPatients() {
   const rows = PATIENTS.map((p) => ({
     full_name: p.name,
-    nationality: "Malaysia",
-    id_type: "ic",
-    id_number: p.ic,
+    nationality: p.nat,
+    id_type: p.idType,
+    id_number: p.id,
     whatsapp_number: p.phone,
     visit_count: p.visits,
     first_seen_at: daysAgo(p.last_visit_days + 30).toISOString(),
@@ -290,7 +302,7 @@ async function seedPatients() {
   // Re-query to get IDs reliably (insert().select() can return null under some RLS configs)
   const { data: fresh, error: rErr } = await admin.from("patients").select("id, full_name");
   if (rErr) throw new Error(`Patients read-back failed: ${rErr.message}`);
-  console.log(`  ✓ seeded ${fresh?.length || 0} patients`);
+  console.log(`  ✓ seeded ${fresh?.length || 0} patients (${new Set(PATIENTS.map((p) => p.nat)).size} nationalities)`);
   return fresh || [];
 }
 
@@ -304,61 +316,97 @@ async function seedBookings(doctors, patients, ownerId, nurses) {
   const nurseIds = nurses.map((n) => n.profileId);
   const pIdx = (name) => patients.find((p) => p.full_name === name)?.id;
 
+  // Programmatic generator — distributes bookings across past 4 weeks
+  // (mostly attended, some no-shows) and next 4 weeks (mix of confirmed
+  // + pending, denser closer to today). Avoids slot collisions by
+  // tracking (doctor, slot_start) keys.
+  const HOURS = [9, 10, 11, 14, 15, 16, 17];
+  const MINUTES = [0, 30];
+  const rng = (() => {
+    // Tiny LCG seeded with a fixed value so seed runs are reproducible
+    // within a single demo session — re-running the script gives the
+    // same data layout, which makes screenshots stable.
+    let s = 1234567;
+    return () => { s = (s * 1103515245 + 12345) & 0x7fffffff; return s / 0x7fffffff; };
+  })();
+  const pick = (arr) => arr[Math.floor(rng() * arr.length)];
+
   const bookings = [];
+  const usedSlots = new Set(); // `${docIndex}|${ISO}`
 
-  // ── PENDING — submitted today, waiting for nurse review
-  bookings.push(
-    { patient: "Lim Hui Ling",         status: "pending", date: daysAhead(1), time: [14, 30], doc: 0, treatment: "Scaling" },
-    { patient: "Muhammad Daniel",      status: "pending", date: daysAhead(1), time: [11, 0],  doc: 1, treatment: "Wisdom tooth surgery" },
-    { patient: "Chong Mei Xuan",       status: "pending", date: daysAhead(1), time: [14, 30], doc: 3, treatment: "Whitening" },
-    { patient: "Aaron Cheong",         status: "pending", date: daysAhead(2), time: [10, 30], doc: 0, treatment: "Scaling" },
-    { patient: "Devi A/P Krishnan",    status: "pending", date: daysAhead(2), time: [16, 0],  doc: 2, treatment: "Root canal treatment" },
-  );
-
-  // ── CONFIRMED — tomorrow, used by Send Reminders
-  bookings.push(
-    { patient: "Tan Wei Ming",             status: "confirmed", date: daysAhead(1), time: [9, 0],  doc: 0, treatment: "Scaling",        reminder: true,  reminder_by: 1 },
-    { patient: "Siti Aisyah Binti Hassan", status: "confirmed", date: daysAhead(1), time: [10, 0], doc: 1, treatment: "Root canal",     reminder: true,  reminder_by: 0 },
-    { patient: "Rajesh A/L Subramaniam",   status: "confirmed", date: daysAhead(1), time: [11, 0], doc: 3, treatment: "Crown fitting" },
-    { patient: "Nurul Aini Abdullah",      status: "confirmed", date: daysAhead(1), time: [14, 0], doc: 2, treatment: "Wisdom tooth surgery" },
-    { patient: "Ng Boon Keat",             status: "confirmed", date: daysAhead(1), time: [15, 30],doc: 1, treatment: "Scaling" },
-  );
-
-  // ── CONFIRMED — spread across next 7 days for "upcoming" view
-  bookings.push(
-    { patient: "Goh Choon Lai",            status: "confirmed", date: daysAhead(2), time: [9, 30], doc: 0, treatment: "Scaling" },
-    { patient: "Wong Su Lin",              status: "confirmed", date: daysAhead(2), time: [11, 0], doc: 2, treatment: "Whitening" },
-    { patient: "Ahmad Faizal Bin Razak",   status: "confirmed", date: daysAhead(2), time: [14, 30],doc: 1, treatment: "Scaling" },
-    { patient: "Devi A/P Krishnan",        status: "confirmed", date: daysAhead(3), time: [10, 0], doc: 3, treatment: "Root canal treatment" },
-    { patient: "Aaron Cheong",             status: "confirmed", date: daysAhead(3), time: [15, 30],doc: 0, treatment: "Scaling" },
-    { patient: "Muhammad Daniel",          status: "confirmed", date: daysAhead(4), time: [9, 0],  doc: 1, treatment: "Wisdom tooth surgery" },
-    { patient: "Tan Wei Ming",             status: "confirmed", date: daysAhead(4), time: [14, 0], doc: 2, treatment: "Crown fitting" },
-    { patient: "Chong Pei Ling",           status: "confirmed", date: daysAhead(5), time: [10, 30],doc: 0, treatment: "Scaling" },
-    { patient: "Nurul Aini Abdullah",      status: "confirmed", date: daysAhead(5), time: [15, 0], doc: 3, treatment: "Whitening" },
-    { patient: "Wong Su Lin",              status: "confirmed", date: daysAhead(6), time: [11, 0], doc: 1, treatment: "Scaling" },
-    { patient: "Goh Choon Lai",            status: "confirmed", date: daysAhead(7), time: [9, 30], doc: 2, treatment: "Root canal treatment" },
-  );
-
-  // ── ATTENDED — last 30 days, drives analytics
-  const past = [
-    { name: "Tan Wei Ming",            d: 3,  h: 10, doc: 0, attended_by: 1, treatment: "Scaling" },
-    { name: "Siti Aisyah Binti Hassan",d: 5,  h: 14, doc: 1, attended_by: 0, treatment: "Root canal treatment" },
-    { name: "Ng Boon Keat",            d: 8,  h: 11, doc: 3, attended_by: 1, treatment: "Crown fitting" },
-    { name: "Chong Mei Xuan",          d: 10, h: 15, doc: 2, attended_by: 2, treatment: "Whitening" },
-    { name: "Aaron Cheong",            d: 14, h: 9,  doc: 0, attended_by: 1, treatment: "Scaling" },
-    { name: "Tan Wei Ming",            d: 20, h: 16, doc: 0, attended_by: 0, treatment: "Scaling" },
-    { name: "Nurul Aini Abdullah",     d: 22, h: 10, doc: 2, attended_by: 3, treatment: "Whitening" },
-    { name: "Devi A/P Krishnan",       d: 25, h: 13, doc: 1, attended_by: 2, treatment: "Scaling" },
-  ];
-  for (const p of past) {
-    bookings.push({ patient: p.name, status: "confirmed", date: daysAgo(p.d), time: [p.h, 0], doc: p.doc, treatment: p.treatment, attended: true, attended_by: p.attended_by });
+  function tryAdd(entry) {
+    const start = atTime(entry.date, entry.time[0], entry.time[1]);
+    const key = `${entry.doc}|${start.toISOString()}`;
+    if (usedSlots.has(key)) return false;
+    usedSlots.add(key);
+    bookings.push(entry);
+    return true;
   }
 
-  // ── NO-SHOWS — for analytics colour-coding
-  bookings.push(
-    { patient: "Lim Hui Ling",         status: "confirmed", date: daysAgo(1),  time: [10, 0], doc: 0, treatment: "Scaling",  no_show: true, no_show_by: 0 },
-    { patient: "Muhammad Daniel",      status: "confirmed", date: daysAgo(12), time: [15, 0], doc: 1, treatment: "Wisdom tooth surgery", no_show: true, no_show_by: 1 },
-  );
+  function generateForDay(dayOffset, isPast, count) {
+    const date = isPast ? daysAgo(dayOffset) : daysAhead(dayOffset);
+    // Skip Sundays — clinic closed.
+    if (date.getDay() === 0) return;
+    let attempts = 0;
+    let placed = 0;
+    while (placed < count && attempts < 50) {
+      attempts++;
+      const doc = Math.floor(rng() * docRows.length);
+      const time = [pick(HOURS), pick(MINUTES)];
+      const patient = pick(patients);
+      const treatment = pick(TREATMENTS);
+
+      let status = "confirmed";
+      let attended = false;
+      let no_show = false;
+      let reminder = false;
+
+      if (isPast) {
+        // 88% attended, 8% no-show, 4% cancelled (skip — keeps the
+        // pending+confirmed unique index happy without status churn).
+        const r = rng();
+        if (r < 0.88) attended = true;
+        else if (r < 0.96) no_show = true;
+        else continue;
+      } else {
+        // Future: ~30% pending if within next 3 days, otherwise confirmed.
+        // Reminders pre-sent on some next-day bookings.
+        if (dayOffset <= 3 && rng() < 0.3) status = "pending";
+        if (status === "confirmed" && dayOffset === 1 && rng() < 0.5) reminder = true;
+      }
+
+      const added = tryAdd({
+        patient: patient.full_name,
+        status,
+        date,
+        time,
+        doc,
+        treatment,
+        attended,
+        attended_by: attended ? Math.floor(rng() * nurses.length) : null,
+        no_show,
+        no_show_by: no_show ? Math.floor(rng() * nurses.length) : null,
+        reminder,
+        reminder_by: reminder ? Math.floor(rng() * nurses.length) : null,
+      });
+      if (added) placed++;
+    }
+  }
+
+  // Past 4 weeks — denser early in the week, lighter on weekends.
+  for (let d = 28; d >= 1; d--) {
+    const date = daysAgo(d);
+    const isWeekend = date.getDay() === 6 || date.getDay() === 0;
+    generateForDay(d, true, isWeekend ? 2 : 5);
+  }
+
+  // Today + next 4 weeks — denser close to today (kiosk needs filled rows).
+  for (let d = 0; d <= 28; d++) {
+    const date = daysAhead(d);
+    const isWeekend = date.getDay() === 6 || date.getDay() === 0;
+    const count = d <= 2 ? 6 : d <= 7 ? 5 : isWeekend ? 1 : 3;
+    generateForDay(d, false, count);
+  }
 
   const inserts = [];
   for (const b of bookings) {
@@ -407,6 +455,195 @@ async function seedBookings(doctors, patients, ownerId, nurses) {
   const { error } = await admin.from("bookings").insert(inserts);
   if (error) throw new Error(`Bookings insert failed: ${error.message}`);
   console.log(`  ✓ seeded ${inserts.length} bookings`);
+}
+
+function ymd(d) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+async function seedLeaveRequests(ownerId, doctors, nurses) {
+  // Mix of statuses + leave types so the HR approvals page and the leave
+  // history widgets both have realistic data to render.
+  const all = [...doctors, ...nurses];
+  const rows = [
+    // ── PENDING — these surface on /owner/hr-approvals
+    {
+      profile_id: doctors[2].profileId,
+      start_date: ymd(daysAhead(10)),
+      end_date: ymd(daysAhead(12)),
+      reason: "Family event in Penang",
+      leave_type: "annual",
+      status: "pending",
+    },
+    {
+      profile_id: nurses[2].profileId,
+      start_date: ymd(daysAhead(4)),
+      end_date: ymd(daysAhead(4)),
+      reason: "Specialist appointment",
+      leave_type: "mc",
+      status: "pending",
+    },
+
+    // ── APPROVED (past)
+    {
+      profile_id: doctors[1].profileId,
+      start_date: ymd(daysAgo(10)),
+      end_date: ymd(daysAgo(8)),
+      reason: "Annual leave",
+      leave_type: "annual",
+      status: "approved",
+      reviewed_at: daysAgo(15).toISOString(),
+      reviewed_by: ownerId,
+    },
+    {
+      profile_id: nurses[0].profileId,
+      start_date: ymd(daysAgo(20)),
+      end_date: ymd(daysAgo(20)),
+      reason: "Fever",
+      leave_type: "mc",
+      status: "approved",
+      reviewed_at: daysAgo(20).toISOString(),
+      reviewed_by: ownerId,
+    },
+
+    // ── APPROVED (future) — blocks the doctor calendar
+    {
+      profile_id: doctors[3].profileId,
+      start_date: ymd(daysAhead(18)),
+      end_date: ymd(daysAhead(18)),
+      reason: "Conference",
+      leave_type: "annual",
+      status: "approved",
+      reviewed_at: daysAgo(3).toISOString(),
+      reviewed_by: ownerId,
+    },
+
+    // ── REJECTED
+    {
+      profile_id: nurses[4].profileId,
+      start_date: ymd(daysAhead(2)),
+      end_date: ymd(daysAhead(2)),
+      reason: "Late notice",
+      leave_type: "annual",
+      status: "rejected",
+      reviewed_at: daysAgo(1).toISOString(),
+      reviewed_by: ownerId,
+      reviewer_notes: "Too short notice. Reschedule if possible.",
+    },
+    // ── EMERGENCY (auto-flagged)
+    {
+      profile_id: nurses[3].profileId,
+      start_date: ymd(daysAgo(2)),
+      end_date: ymd(daysAgo(2)),
+      reason: "Family emergency",
+      leave_type: "emergency",
+      status: "approved",
+      reviewed_at: daysAgo(2).toISOString(),
+      reviewed_by: ownerId,
+    },
+  ];
+  const { data, error } = await admin.from("leave_requests").insert(rows).select("id, profile_id, status, start_date, end_date, reason");
+  if (error) throw new Error(`Leave requests insert failed: ${error.message}`);
+
+  // Mirror the API behaviour: for each APPROVED leave belonging to a doctor,
+  // also insert a breaks row so the doctor calendar correctly greys out
+  // the leave dates (otherwise the doctor's column would still look open).
+  const docMap = new Map();
+  for (const d of doctors) {
+    const { data: dr } = await admin.from("doctors").select("id").eq("profile_id", d.profileId).single();
+    if (dr) docMap.set(d.profileId, dr.id);
+  }
+  const breakRows = [];
+  for (const r of data || []) {
+    if (r.status !== "approved" || !docMap.has(r.profile_id)) continue;
+    breakRows.push({
+      doctor_id: docMap.get(r.profile_id),
+      start_at: new Date(`${r.start_date}T00:00:00+08:00`).toISOString(),
+      end_at: new Date(`${r.end_date}T23:59:59+08:00`).toISOString(),
+      reason: `On leave${r.reason ? ` (${r.reason})` : ""}`,
+      leave_id: r.id,
+    });
+  }
+  if (breakRows.length > 0) {
+    const { error: brErr } = await admin.from("breaks").insert(breakRows);
+    if (brErr) console.warn(`  ! breaks insert failed: ${brErr.message}`);
+  }
+  console.log(`  ✓ seeded ${rows.length} leave requests (${breakRows.length} mirrored to breaks)`);
+}
+
+async function seedShiftRequests(ownerId, doctors, nurses) {
+  // Same pattern — mix of statuses + one permanent for the variety.
+  const rows = [
+    // ── PENDING
+    {
+      profile_id: doctors[0].profileId,
+      shift_date: ymd(daysAhead(5)),
+      start_time: "11:00",
+      end_time: "18:00",
+      notes: "Hospital visit in the morning",
+      is_permanent: false,
+      status: "pending",
+    },
+    {
+      profile_id: nurses[1].profileId,
+      shift_date: ymd(daysAhead(7)),
+      start_time: "09:00",
+      end_time: "13:00",
+      notes: "Half day — school event",
+      is_permanent: false,
+      status: "pending",
+    },
+    {
+      profile_id: doctors[2].profileId,
+      shift_date: ymd(daysAhead(14)),
+      start_time: "10:00",
+      end_time: "17:00",
+      notes: "New default — shifting Tuesdays earlier",
+      is_permanent: true,
+      status: "pending",
+    },
+
+    // ── APPROVED (past)
+    {
+      profile_id: nurses[0].profileId,
+      shift_date: ymd(daysAgo(7)),
+      start_time: "10:00",
+      end_time: "19:00",
+      notes: "School run cover",
+      is_permanent: false,
+      status: "approved",
+      reviewed_at: daysAgo(10).toISOString(),
+      reviewed_by: ownerId,
+    },
+    {
+      profile_id: doctors[1].profileId,
+      shift_date: ymd(daysAhead(3)),
+      start_time: "14:00",
+      end_time: "21:00",
+      notes: "Cover evening clinic",
+      is_permanent: false,
+      status: "approved",
+      reviewed_at: daysAgo(2).toISOString(),
+      reviewed_by: ownerId,
+    },
+
+    // ── REJECTED
+    {
+      profile_id: nurses[5].profileId,
+      shift_date: ymd(daysAhead(2)),
+      start_time: "13:00",
+      end_time: "17:00",
+      notes: "Need shorter day",
+      is_permanent: false,
+      status: "rejected",
+      reviewed_at: daysAgo(1).toISOString(),
+      reviewed_by: ownerId,
+      reviewer_notes: "No cover available.",
+    },
+  ];
+  const { error } = await admin.from("duty_shifts").insert(rows);
+  if (error) throw new Error(`Duty shifts insert failed: ${error.message}`);
+  console.log(`  ✓ seeded ${rows.length} shift change requests`);
 }
 
 async function seedAuditLog(ownerId, nurses) {
@@ -479,7 +716,10 @@ async function main() {
   if (!CONFIRM) {
     console.log("Would wipe + reseed all operational data + non-owner staff.");
     console.log("Would create 4 doctors + 6 nurses with password 'demo1234'.");
-    console.log("Would seed 10 patients + ~22 bookings + ~20 audit entries.");
+    console.log(`Would seed ${PATIENTS.length} patients (${new Set(PATIENTS.map((p) => p.nat)).size} nationalities, IC + passport).`);
+    console.log("Would seed ~150 bookings spanning past 4 weeks → next 4 weeks.");
+    console.log("Would seed 7 leave requests + 6 shift change requests (mix of pending/approved/rejected).");
+    console.log("Would seed ~20 audit entries.");
     console.log("\nRe-run with --confirm to apply.");
     return;
   }
@@ -503,6 +743,14 @@ async function main() {
 
   console.log("Seeding bookings...");
   await seedBookings(doctors, patients, owner.id, nurses);
+  console.log("");
+
+  console.log("Seeding leave requests...");
+  await seedLeaveRequests(owner.id, doctors, nurses);
+  console.log("");
+
+  console.log("Seeding shift change requests...");
+  await seedShiftRequests(owner.id, doctors, nurses);
   console.log("");
 
   console.log("Seeding audit log...");
