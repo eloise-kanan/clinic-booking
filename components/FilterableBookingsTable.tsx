@@ -468,7 +468,7 @@ export default function FilterableBookingsTable({
               <SortHeader label="Slot" k="slot_start" current={sortKey} dir={sortDir} onClick={toggleSort} />
               <SortHeader label="Type" k="type" current={sortKey} dir={sortDir} onClick={toggleSort} />
               <SortHeader label="Status" k="status" current={sortKey} dir={sortDir} onClick={toggleSort} />
-              <th className="px-4 py-2.5 font-medium">WhatsApp</th>
+              <th className="px-4 py-2.5 font-medium">Communications</th>
               <th className="px-4 py-2.5 font-medium">Actions</th>
               {enableOverride && <th className="px-4 py-2.5 font-medium">Override</th>}
             </tr>
@@ -524,6 +524,10 @@ export default function FilterableBookingsTable({
                         doctor={r.doctor}
                         clinicName={clinicName}
                         templates={templates}
+                        isPast={isPast}
+                        attended={!!r.attended_at}
+                        noShow={!!r.no_show}
+                        onSendReminder={() => sendReminder(r)}
                       />
                     )}
                     <SentPills row={r} />
@@ -537,7 +541,6 @@ export default function FilterableBookingsTable({
                         isPast={isPast}
                         canMarkAttendance={canMarkAttendance}
                         busy={busy === r.id}
-                        onSendReminder={() => sendReminder(r)}
                         onCancel={() => cancelBooking(r.id)}
                         onMark={(m) => markAttendance(r.id, m)}
                       />
@@ -630,15 +633,16 @@ function SortHeader({
   );
 }
 
-// Group action buttons for the table row into three labeled clusters
-// (Comms / Status / Attendance) so they don't read as a wall of buttons.
-// Empty groups don't render. Group labels are tiny stone-400 uppercase.
+// Decision actions for a booking row — Status (reschedule / cancel) +
+// Attendance (attended / no-show / undo). Messaging actions live in the
+// Communications column (see WhatsAppActions) so users have one place to
+// look for "things I send to the patient" and one place for "what I'm
+// doing to the booking itself".
 function ActionGroups({
   row,
   isPast,
   canMarkAttendance,
   busy,
-  onSendReminder,
   onCancel,
   onMark,
 }: {
@@ -646,40 +650,14 @@ function ActionGroups({
   isPast: boolean;
   canMarkAttendance: boolean;
   busy: boolean;
-  onSendReminder: () => void;
   onCancel: () => void;
   onMark: (m: "attended" | "no_show" | "clear") => void;
 }) {
-  const canSendReminder = row.status === "confirmed" && !isPast && !row.attended_at && !row.no_show;
   const canResched = row.status === "pending" || row.status === "confirmed";
   const canAttend = canMarkAttendance && !row.attended_at && !row.no_show;
   const canUndo = !!(row.attended_at || row.no_show);
 
   const groups: { label: string; children: React.ReactNode }[] = [];
-
-  if (canSendReminder) {
-    groups.push({
-      label: "Comms",
-      children: (
-        <button
-          type="button"
-          onClick={onSendReminder}
-          className={
-            row.reminder_sent_at
-              ? "px-2 py-1 text-xs rounded-md border border-stone-200 hover:border-stone-400 bg-white"
-              : "btn-wa"
-          }
-          title={
-            row.reminder_sent_at
-              ? `Reminder sent ${new Date(row.reminder_sent_at).toLocaleString("en-MY")}`
-              : "Open WhatsApp with the reminder template"
-          }
-        >
-          {row.reminder_sent_at ? "Resend reminder" : "Send reminder"}
-        </button>
-      ),
-    });
-  }
 
   if (canResched) {
     groups.push({
