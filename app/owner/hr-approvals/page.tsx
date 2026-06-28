@@ -68,7 +68,7 @@ export default async function HrApprovalsPage() {
 
   return (
     <StaffShell role="owner" userName={profile.full_name} nav={await staffNav(profile.role, pendingBookingsRes.count || 0)}>
-      <h2 className="text-base font-medium mb-1">HR approvals</h2>
+      <h2 className="text-base font-medium mb-1">Approvals</h2>
       <p className="text-xs text-stone-500 mb-4">
         All pending leave and shift-change requests in one place. Approve or reject — staff submit
         them via the lockscreen.

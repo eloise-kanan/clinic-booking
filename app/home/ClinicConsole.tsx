@@ -747,20 +747,23 @@ function UpcomingPatientsPanel({
     if (diff === 1) return "Tomorrow";
     return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short" });
   };
+
+  // Once a booking is marked (attended / no-show / checked-out), it's
+  // "settled" — no further action needed from the front desk. Settled rows
+  // get hidden behind a collapsible bar so the list focuses on patients who
+  // still need attention. Premium check-in (in-room) is NOT settled — the
+  // patient is still in the clinic and the doctor hasn't checked them out.
+  function settledStatus(b: TodayBooking): "attended" | "no_show" | null {
+    if (localMarks[b.id] === "attended" || b.attended) return "attended";
+    if (localMarks[b.id] === "no_show" || b.no_show) return "no_show";
+    return null;
+  }
+  const active = bookings.filter((b) => !settledStatus(b));
+  const settled = bookings.filter((b) => settledStatus(b));
+  const [showSettled, setShowSettled] = useState(false);
+
   let lastDay = "";
-  return (
-    <div className="flex flex-col min-h-0 px-4 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4">
-      <h3 className="text-[11px] sm:text-xs uppercase tracking-[0.3em] text-white/60 font-medium mb-3 flex items-baseline gap-2">
-        <span>Upcoming patients</span>
-        <span className="text-[10px] text-white/45 tabular-nums tracking-normal normal-case">
-          · {bookings.length} {bookings.length === 1 ? "person" : "people"}
-        </span>
-      </h3>
-      {bookings.length === 0 ? (
-        <p className="text-xs text-white/60 italic">Nothing in the next 48 hours.</p>
-      ) : (
-        <div className="flex-1 overflow-y-auto scrollbar-thin-dark -mx-2 px-2 space-y-2">
-          {bookings.map((b) => {
+  const renderRow = (b: TodayBooking) => {
             const status =
               localMarks[b.id] === "attended" || b.attended
                 ? "attended"
@@ -772,15 +775,8 @@ function UpcomingPatientsPanel({
             const mm = String(t.getMinutes()).padStart(2, "0");
             const slotMs = t.getTime();
             const isPast = slotMs < now;
-            // Imminent = scheduled within the next 60 minutes (and still
-            // pending). Card is bigger + ringed + label says "Up next".
             const isImminent =
               status === "pending" && slotMs >= now && slotMs - now <= ONE_HOUR_MS;
-            // Action buttons (Attended / No-show) show for any past pending
-            // booking (clinic may have been busy and forgot to mark) AND
-            // for any upcoming booking within 30 min of now. Bookings more
-            // than 30 min in the FUTURE are read-only — staff are just
-            // glancing at who's coming later.
             const isActionable =
               status === "pending" && (slotMs <= now || slotMs - now <= THIRTY_MIN_MS);
             const thisDay = dayLabel(b.slot_start);
@@ -891,7 +887,58 @@ function UpcomingPatientsPanel({
               </div>
               </div>
             );
-          })}
+          };
+
+  return (
+    <div className="flex flex-col min-h-0 px-4 pt-6 pb-3 sm:px-6 sm:pt-8 sm:pb-4">
+      <h3 className="text-[11px] sm:text-xs uppercase tracking-[0.3em] text-white/60 font-medium mb-3 flex items-baseline gap-2">
+        <span>Upcoming patients</span>
+        <span className="text-[10px] text-white/45 tabular-nums tracking-normal normal-case">
+          · {active.length} active
+          {settled.length > 0 && <span className="text-white/35"> · {settled.length} done</span>}
+        </span>
+      </h3>
+      {bookings.length === 0 ? (
+        <p className="text-xs text-white/60 italic">Nothing in the next 48 hours.</p>
+      ) : (
+        <div className="flex-1 overflow-y-auto scrollbar-thin-dark -mx-2 px-2 space-y-2">
+          {active.length === 0 ? (
+            <p className="text-xs text-white/60 italic mt-1">
+              All caught up — every booking has been marked.
+            </p>
+          ) : (
+            active.map(renderRow)
+          )}
+
+          {/* Collapsible settled section — keeps the focus on patients who
+              still need action. Clicking the bar expands the list inline. */}
+          {settled.length > 0 && (
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={() => setShowSettled((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 transition-colors text-left"
+              >
+                <span className="text-[11px] uppercase tracking-[0.2em] text-white/60 font-medium">
+                  {showSettled ? "▾" : "▸"} Marked
+                </span>
+                <span className="text-[10px] text-white/50 tabular-nums">
+                  {settled.filter((b) => settledStatus(b) === "attended").length} attended
+                  {" · "}
+                  {settled.filter((b) => settledStatus(b) === "no_show").length} no-show
+                </span>
+              </button>
+              {showSettled && (() => {
+                // Reset the day divider so the settled list also paginates by day.
+                lastDay = "";
+                return (
+                  <div className="mt-2 space-y-2">
+                    {settled.map(renderRow)}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       )}
       <p className="text-[10px] text-white/40 mt-3">

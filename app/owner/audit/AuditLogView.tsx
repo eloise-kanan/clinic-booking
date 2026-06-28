@@ -8,6 +8,9 @@ type Row = {
   action: string;
   entity_type: string;
   entity_id: string | null;
+  // Pre-resolved human label for the entity (e.g. patient full name for a
+  // booking or patient row). Falls back to the truncated UUID when null.
+  entity_label?: string | null;
   before_data: unknown;
   after_data: unknown;
   created_at: string;
@@ -183,9 +186,11 @@ export default function AuditLogView({ rows }: { rows: Row[] }) {
             {filtered.map((r) => {
               const actor = flat(r.actor);
               const isExpanded = expandedId === r.id;
-              const hasDetails =
+              const hasDetails = Boolean(
                 (r.before_data && Object.keys(r.before_data as object).length > 0) ||
-                (r.after_data && Object.keys(r.after_data as object).length > 0);
+                  (r.after_data && Object.keys(r.after_data as object).length > 0)
+              );
+              const summaryParts: string[] = summarizeChange(r.before_data, r.after_data, r.action);
               return (
                 <tr key={r.id} className="border-b border-stone-100 last:border-b-0 align-top">
                   <td className="px-4 py-3 text-xs text-stone-600 whitespace-nowrap">
@@ -208,21 +213,39 @@ export default function AuditLogView({ rows }: { rows: Row[] }) {
                   </td>
                   <td className="px-4 py-3 text-xs">
                     <div className="capitalize">{r.entity_type}</div>
-                    {r.entity_id && (
+                    {r.entity_label && (
+                      <div className="text-stone-700 mt-0.5 font-medium" title={r.entity_id || ""}>
+                        {r.entity_label}
+                      </div>
+                    )}
+                    {!r.entity_label && r.entity_id && (
                       <div className="text-stone-400 text-[10px] font-mono mt-0.5">
                         {r.entity_id.slice(0, 8)}
                       </div>
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs">
-                    {hasDetails ? (
-                      <div>
+                    {/* Friendly summary line — extracted from before/after.
+                        Picks out the fields owners actually care about
+                        (status, attendance, no_show etc.) and renders them
+                        as "X → Y" rather than making them dig through JSON. */}
+                    {summaryParts.length > 0 && (
+                      <div className="space-y-0.5">
+                        {summaryParts.map((p: string, i: number) => (
+                          <div key={i} className="text-stone-700">
+                            {p}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {hasDetails && (
+                      <div className="mt-1">
                         <button
                           type="button"
                           onClick={() => setExpandedId(isExpanded ? null : r.id)}
-                          className="text-brand-700 hover:underline"
+                          className="text-brand-700 hover:underline text-[11px]"
                         >
-                          {isExpanded ? "Hide" : "Show"} details
+                          {isExpanded ? "Hide" : "Show"} raw JSON
                         </button>
                         {isExpanded && (
                           <pre className="mt-2 text-[11px] bg-stone-50 border border-stone-200 rounded p-2 overflow-x-auto max-w-xl whitespace-pre-wrap">
@@ -234,9 +257,8 @@ export default function AuditLogView({ rows }: { rows: Row[] }) {
                           </pre>
                         )}
                       </div>
-                    ) : (
-                      <span className="text-stone-400">—</span>
                     )}
+                    {!hasDetails && <span className="text-stone-400">—</span>}
                   </td>
                 </tr>
               );
@@ -246,4 +268,98 @@ export default function AuditLogView({ rows }: { rows: Row[] }) {
       </div>
     </div>
   );
+}
+
+// Reads the before/after payloads and emits a short human summary for the
+// fields owners ask about most: status (pending → confirmed), attended_at /
+// no_show transitions, and a few common single-field updates. Falls back to
+// listing any keys whose values actually changed when no specific handler
+// matches, so users get something useful even for novel actions.
+function summarizeChange(
+  before: unknown,
+  after: unknown,
+  action: string
+): string[] {
+  const b: Record<string, unknown> = before && typeof before === "object" ? (before as Record<string, unknown>) : {};
+  const a: Record<string, unknown> = after && typeof after === "object" ? (after as Record<string, unknown>) : {};
+
+  const parts: string[] = [];
+
+  // Status transition: pending → confirmed, etc.
+  if (b.status !== undefined && a.status !== undefined && b.status !== a.status) {
+    parts.push(`Status: ${String(b.status)} → ${String(a.status)}`);
+  } else if (a.status !== undefined && b.status === undefined) {
+    parts.push(`Status set: ${String(a.status)}`);
+  }
+
+  // Attendance markers.
+  if (a.attended_at && !b.attended_at) parts.push("Marked attended");
+  if (b.attended_at && a.attended_at === null) parts.push("Attended cleared");
+  if (a.no_show === true && b.no_show !== true) parts.push("Marked no-show");
+  if (b.no_show === true && (a.no_show === false || a.no_show === null)) parts.push("No-show cleared");
+
+  // Check-in / check-out (Premium room flow).
+  if (a.checked_in_at && !b.checked_in_at) {
+    parts.push(`Checked in${a.room ? ` to ${String(a.room)}` : ""}`);
+  }
+  if (a.checked_out_at && !b.checked_out_at) {
+    parts.push(`Checked out${a.treatment_done ? ` · ${String(a.treatment_done)}` : ""}`);
+  }
+
+  // Reschedule / slot change.
+  if (b.slot_start && a.slot_start && b.slot_start !== a.slot_start) {
+    parts.push(
+      `Slot: ${formatSlot(String(b.slot_start))} → ${formatSlot(String(a.slot_start))}`
+    );
+  }
+
+  // Doctor swap.
+  if (b.doctor_id && a.doctor_id && b.doctor_id !== a.doctor_id) {
+    parts.push("Doctor changed");
+  }
+
+  // Reminder dispatch action specifically.
+  if (action === "reminder_sent" && a.reminder_sent_at) {
+    parts.push("Reminder sent");
+  }
+
+  // Pickup any other obvious fields that changed (cap at 3 for brevity).
+  if (parts.length === 0) {
+    const keys = new Set([...Object.keys(b), ...Object.keys(a)]);
+    let extras = 0;
+    for (const k of keys) {
+      if (extras >= 3) break;
+      if (b[k] === a[k]) continue;
+      if (k === "updated_at" || k === "actor_id" || k === "updated_by") continue;
+      const bv = formatVal(b[k]);
+      const av = formatVal(a[k]);
+      if (bv === "" && av === "") continue;
+      parts.push(`${k.replace(/_/g, " ")}: ${bv || "∅"} → ${av || "∅"}`);
+      extras++;
+    }
+  }
+
+  return parts;
+}
+
+function formatSlot(iso: string): string {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("en-MY", {
+      day: "2-digit",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function formatVal(v: unknown): string {
+  if (v === null || v === undefined) return "";
+  if (typeof v === "boolean") return v ? "yes" : "no";
+  if (typeof v === "string") return v.length > 30 ? v.slice(0, 30) + "…" : v;
+  if (typeof v === "number") return String(v);
+  return JSON.stringify(v).slice(0, 30);
 }

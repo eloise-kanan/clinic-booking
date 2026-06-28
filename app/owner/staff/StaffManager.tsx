@@ -375,30 +375,23 @@ function EmployeeCard({
 
       {/* Body */}
       <div className="px-4 py-3 space-y-3">
-        {/* Working hours — doctors only */}
-        {member.role === "doctor" && (
-          <div>
-            <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium mb-1">
-              Working hours
-            </div>
-            {member.working_hours && member.working_hours.length > 0 ? (
-              <div className="text-[11px] text-stone-600 flex flex-wrap gap-x-3 gap-y-0.5">
-                {member.working_hours
-                  .slice()
-                  .sort((a, b) => a.weekday - b.weekday)
-                  .map((h) => (
-                    <span key={h.weekday} className="tabular-nums">
-                      <span className="text-stone-400">{WEEKDAY_LABEL[h.weekday]}</span>{" "}
-                      {h.start_time.slice(0, 5)}–{h.end_time.slice(0, 5)}
-                    </span>
-                  ))}
-              </div>
-            ) : (
-              <p className="text-[11px] text-stone-400 italic">
-                No custom hours — defaults to 09:00–21:00 clinic-wide.
-              </p>
-            )}
-          </div>
+        {/* Working hours + default slot length — doctors only.
+            Collapsed view shows a one-line summary per weekday; click Edit
+            to inline-edit blocks (with Add/Remove per day) + change the
+            default slot length. Save POSTs both endpoints together. */}
+        {member.role === "doctor" && member.doctor && (
+          <DoctorScheduleEditor
+            doctor={{
+              id: member.doctor.id,
+              default_slot_minutes: member.doctor.default_slot_minutes,
+              profile_id: member.id,
+            }}
+            initialBlocks={(member.working_hours || []).map((b) => ({
+              weekday: b.weekday,
+              start_time: b.start_time.slice(0, 5),
+              end_time: b.end_time.slice(0, 5),
+            }))}
+          />
         )}
 
         {/* Premium — doctor profile (expertise + bio for patient cards on /book). */}
@@ -492,6 +485,247 @@ function EmployeeCard({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Doctor-only inline editor for working hours + default slot length. Lives
+// on the doctor's EmployeeCard so the owner can edit everything without
+// jumping to /owner/working-hours. The standalone editor still exists.
+type Block = { weekday: number; start_time: string; end_time: string };
+
+function DoctorScheduleEditor({
+  doctor,
+  initialBlocks,
+}: {
+  doctor: { id: string; default_slot_minutes: number; profile_id?: string };
+  initialBlocks: Block[];
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [blocks, setBlocks] = useState<Block[]>(initialBlocks);
+  const [slotMinutes, setSlotMinutes] = useState<number>(doctor.default_slot_minutes || 30);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const byDay: Block[][] = Array.from({ length: 7 }, () => []);
+  blocks.forEach((b) => byDay[b.weekday]?.push(b));
+
+  function addBlock(weekday: number) {
+    setBlocks((bs) => [...bs, { weekday, start_time: "09:00", end_time: "21:00" }]);
+  }
+  function updateBlock(weekday: number, idx: number, patch: Partial<Block>) {
+    const localIdx = blocks
+      .map((b, i) => ({ b, i }))
+      .filter((x) => x.b.weekday === weekday)[idx]?.i;
+    if (localIdx === undefined) return;
+    setBlocks((bs) => bs.map((b, i) => (i === localIdx ? { ...b, ...patch } : b)));
+  }
+  function removeBlock(weekday: number, idx: number) {
+    const localIdx = blocks
+      .map((b, i) => ({ b, i }))
+      .filter((x) => x.b.weekday === weekday)[idx]?.i;
+    if (localIdx === undefined) return;
+    setBlocks((bs) => bs.filter((_, i) => i !== localIdx));
+  }
+  function applyMonToWeek() {
+    if (!confirm("Copy Monday's hours to Tue–Fri (overwrites existing)?")) return;
+    const monday = blocks.filter((b) => b.weekday === 1);
+    setBlocks([
+      ...blocks.filter((b) => b.weekday === 0 || b.weekday === 6),
+      ...monday,
+      ...[2, 3, 4, 5].flatMap((wd) =>
+        monday.map((b) => ({ weekday: wd, start_time: b.start_time, end_time: b.end_time }))
+      ),
+    ]);
+  }
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      for (const b of blocks) {
+        if (b.start_time >= b.end_time) {
+          setMsg(`Invalid range on ${WEEKDAY_LABEL[b.weekday]}`);
+          return;
+        }
+      }
+      const sorted = [...blocks].sort(
+        (a, b) => a.weekday - b.weekday || a.start_time.localeCompare(b.start_time)
+      );
+      // Save working hours.
+      const hoursRes = await fetch("/api/working-hours", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ doctor_id: doctor.id, blocks: sorted }),
+      });
+      if (!hoursRes.ok) {
+        const d = await hoursRes.json().catch(() => ({}));
+        setMsg(d.error || "Failed to save hours");
+        return;
+      }
+      // Save slot length if changed.
+      if (slotMinutes !== doctor.default_slot_minutes && doctor.profile_id) {
+        const slotRes = await fetch("/api/staff", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            profile_id: doctor.profile_id,
+            default_slot_minutes: slotMinutes,
+          }),
+        });
+        if (!slotRes.ok) {
+          const d = await slotRes.json().catch(() => ({}));
+          setMsg(d.error || "Hours saved, but slot length update failed");
+          return;
+        }
+      }
+      setMsg("Saved.");
+      router.refresh();
+      setTimeout(() => setOpen(false), 400);
+    } finally {
+      setBusy(false);
+      setTimeout(() => setMsg(null), 2000);
+    }
+  }
+
+  const hasHours = blocks.length > 0;
+  const summaryByDay = byDay.map((dayBlocks, wd) => {
+    if (dayBlocks.length === 0) return null;
+    const sorted = [...dayBlocks].sort((a, b) => a.start_time.localeCompare(b.start_time));
+    return (
+      <span key={wd} className="tabular-nums">
+        <span className="text-stone-400">{WEEKDAY_LABEL[wd]}</span>{" "}
+        {sorted.map((b, i) => (
+          <span key={i}>
+            {i > 0 && ", "}
+            {b.start_time}–{b.end_time}
+          </span>
+        ))}
+      </span>
+    );
+  });
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1 gap-2">
+        <div className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
+          Working hours · {slotMinutes} min slots
+        </div>
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          className="text-[11px] text-blue-700 hover:underline font-medium"
+        >
+          {open ? "Done" : "Edit"}
+        </button>
+      </div>
+      {!open ? (
+        hasHours ? (
+          <div className="text-[11px] text-stone-600 flex flex-wrap gap-x-3 gap-y-0.5">
+            {summaryByDay}
+          </div>
+        ) : (
+          <p className="text-[11px] text-stone-400 italic">
+            No custom hours — defaults to 09:00–21:00 clinic-wide.
+          </p>
+        )
+      ) : (
+        <div className="bg-stone-50 border border-stone-200 rounded-lg p-2 space-y-1.5">
+          {/* Slot length picker */}
+          <div className="flex items-center gap-2 px-1">
+            <span className="text-[10px] uppercase tracking-wider text-stone-500 font-medium">
+              Slot length
+            </span>
+            <div className="flex items-center gap-1">
+              {[15, 30, 45, 60].map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setSlotMinutes(m)}
+                  className={`text-[11px] px-2 py-0.5 rounded border ${
+                    slotMinutes === m
+                      ? "bg-blue-600 border-blue-600 text-white font-medium"
+                      : "bg-white border-stone-300 text-stone-700 hover:border-blue-400"
+                  }`}
+                >
+                  {m}m
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Per-weekday rows */}
+          <div className="divide-y divide-stone-200 border-t border-stone-200">
+            {byDay.map((dayBlocks, wd) => (
+              <div key={wd} className="py-1.5 grid grid-cols-[40px_1fr] gap-2 items-start text-[11px]">
+                <div className="font-medium text-stone-700 pt-1">{WEEKDAY_LABEL[wd]}</div>
+                <div className="space-y-1">
+                  {dayBlocks.length === 0 ? (
+                    <span className="text-stone-400 italic">Off</span>
+                  ) : (
+                    dayBlocks.map((b, i) => (
+                      <div key={i} className="flex items-center gap-1">
+                        <input
+                          type="time"
+                          className="text-[11px] px-1 py-0.5 border border-stone-300 rounded tabular-nums w-[78px]"
+                          value={b.start_time}
+                          onChange={(e) => updateBlock(wd, i, { start_time: e.target.value })}
+                        />
+                        <span className="text-stone-400">–</span>
+                        <input
+                          type="time"
+                          className="text-[11px] px-1 py-0.5 border border-stone-300 rounded tabular-nums w-[78px]"
+                          value={b.end_time}
+                          onChange={(e) => updateBlock(wd, i, { end_time: e.target.value })}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeBlock(wd, i)}
+                          className="text-stone-400 hover:text-red-600 text-base leading-none px-1"
+                          aria-label="Remove"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => addBlock(wd)}
+                    className="text-[10px] text-blue-700 hover:underline"
+                  >
+                    + Add
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 pt-1 px-1">
+            <button
+              type="button"
+              onClick={applyMonToWeek}
+              className="text-[10px] text-stone-500 hover:text-stone-700 hover:underline"
+            >
+              Copy Mon → Tue–Fri
+            </button>
+            {msg && (
+              <span className={`text-[10px] ${msg === "Saved." ? "text-emerald-700" : "text-red-600"}`}>
+                {msg}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={save}
+              disabled={busy}
+              className="ml-auto text-[11px] px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-700 text-white font-medium disabled:opacity-50"
+            >
+              {busy ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
