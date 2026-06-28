@@ -124,7 +124,6 @@ function staffNavSync(role: string, pendingCount = 0, plan?: Plan): NavSection[]
         expandable: true,
         items: [
           { href: "/owner/staff", label: "Doctors & nurses", feature: "staff.management" },
-          { href: "/owner/working-hours", label: "Working hours", feature: "staff.working_hours" },
           { href: "/owner/hr-approvals", label: "Approvals", feature: "staff.leave" },
         ],
       },

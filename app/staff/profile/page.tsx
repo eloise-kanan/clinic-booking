@@ -5,7 +5,6 @@ import { staffNav } from "@/lib/staff-nav";
 import { effectiveProfile } from "@/lib/pin";
 import PinGateChallenge from "@/components/PinGateChallenge";
 import ProfileForm from "./ProfileForm";
-import DoctorSlotEditor from "./DoctorSlotEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -52,22 +51,6 @@ export default async function ProfilePage() {
     .single();
   const hasPin = !!pinRow?.pin_hash;
 
-  // For owners, load the doctor roster so they can manage default slot lengths
-  // here without jumping over to the Staff page. Terminal sessions skip this.
-  let doctors: { profile_id: string; display_name: string; default_slot_minutes: number }[] = [];
-  if (!isTerminal && profile.role === "owner") {
-    const { data } = await admin
-      .from("doctors")
-      .select("profile_id, display_name, default_slot_minutes, active")
-      .eq("active", true)
-      .order("display_name");
-    doctors = (data || []).map((d) => ({
-      profile_id: d.profile_id,
-      display_name: d.display_name,
-      default_slot_minutes: d.default_slot_minutes,
-    }));
-  }
-
   return (
     <StaffShell
       role={isTerminal ? (accountRole as "owner" | "nurse" | "doctor") : (profile.role as "owner" | "nurse" | "doctor")}
@@ -91,17 +74,6 @@ export default async function ProfilePage() {
         hasPin={hasPin}
         terminalMode={isTerminal}
       />
-
-      {!isTerminal && profile.role === "owner" && doctors.length > 0 && (
-        <div className="mt-8 max-w-md">
-          <h3 className="text-sm font-medium mb-1">Doctor default slot lengths</h3>
-          <p className="text-xs text-stone-500 mb-3">
-            Sets the typical appointment duration for each doctor. Used when nurses or patients
-            book without specifying a custom length.
-          </p>
-          <DoctorSlotEditor initial={doctors} />
-        </div>
-      )}
     </StaffShell>
   );
 }

@@ -212,13 +212,6 @@ function cardsForRole(role: Role, counts: Counts): Section[] {
             feature: "staff.management",
           },
           {
-            href: "/owner/working-hours",
-            icon: "🕘",
-            title: "Working hours",
-            description: "Configure each doctor's weekly schedule.",
-            feature: "staff.working_hours",
-          },
-          {
             href: "/staff/duty",
             icon: "🔁",
             title: "Shift changes",
