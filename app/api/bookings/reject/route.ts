@@ -54,6 +54,7 @@ export async function POST(req: Request) {
     action: `reject_${booking.type}`,
     entity_type: "booking",
     entity_id: booking_id,
+    before_data: { status: booking.status },
     after_data: { status: "rejected", notes, via_terminal: actor.isTerminal },
   });
 

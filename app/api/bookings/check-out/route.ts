@@ -78,7 +78,8 @@ export async function POST(req: Request) {
     action: "patient_check_out",
     entity_type: "booking",
     entity_id: booking_id,
-    after_data: { treatment_done, via_terminal: actor.isTerminal },
+    before_data: { checked_out_at: null, treatment_done: null },
+    after_data: { treatment_done, via_terminal: actor.isTerminal, was_attended: wasAttended },
   });
 
   return NextResponse.json({ ok: true });

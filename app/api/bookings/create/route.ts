@@ -88,17 +88,29 @@ export async function POST(req: Request) {
       .single();
     if (!parent) return NextResponse.json({ error: "Parent booking not found" }, { status: 404 });
 
-    const { error } = await supabase.from("bookings").insert({
-      patient_id: patientId,
-      doctor_id: parent.doctor_id,
-      type: "cancellation",
-      status: "pending",
-      slot_start: parent.slot_start,
-      slot_end: parent.slot_end,
-      parent_booking_id,
-      visit_reason: "Cancellation request",
-    });
+    const { data: cancelRow, error } = await supabase
+      .from("bookings")
+      .insert({
+        patient_id: patientId,
+        doctor_id: parent.doctor_id,
+        type: "cancellation",
+        status: "pending",
+        slot_start: parent.slot_start,
+        slot_end: parent.slot_end,
+        parent_booking_id,
+        visit_reason: "Cancellation request",
+      })
+      .select("id")
+      .single();
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    // Public-form cancellation request — no auth user, so actor_id is null.
+    await supabase.from("audit_log").insert({
+      actor_id: null,
+      action: "public_cancellation_request",
+      entity_type: "booking",
+      entity_id: cancelRow?.id,
+      after_data: { patient_id: patientId, parent_booking_id },
+    });
     return NextResponse.json({ ok: true });
   }
 
@@ -126,17 +138,21 @@ export async function POST(req: Request) {
   const slot_end = new Date(endMs).toISOString();
 
   // Insert booking — DB unique index prevents overlap
-  const { error: bErr } = await supabase.from("bookings").insert({
-    patient_id: patientId,
-    doctor_id: finalDoctorId,
-    type,
-    status: "pending",
-    slot_start,
-    slot_end,
-    visit_reason: visit_reason || null,
-    is_first_time: !!is_first_time,
-    parent_booking_id: parent_booking_id || null,
-  });
+  const { data: bookingRow, error: bErr } = await supabase
+    .from("bookings")
+    .insert({
+      patient_id: patientId,
+      doctor_id: finalDoctorId,
+      type,
+      status: "pending",
+      slot_start,
+      slot_end,
+      visit_reason: visit_reason || null,
+      is_first_time: !!is_first_time,
+      parent_booking_id: parent_booking_id || null,
+    })
+    .select("id")
+    .single();
 
   if (bErr) {
     // Likely a slot collision
@@ -148,6 +164,24 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ error: bErr.message }, { status: 500 });
   }
+
+  // Audit — public booking creation. Actor is the patient themselves (no
+  // auth user, so actor_id stays null). Compliance-critical because PII is
+  // entering the system.
+  await supabase.from("audit_log").insert({
+    actor_id: null,
+    action: type === "reschedule" ? "public_reschedule_request" : "public_booking_create",
+    entity_type: "booking",
+    entity_id: bookingRow?.id,
+    after_data: {
+      patient_id: patientId,
+      doctor_id: finalDoctorId,
+      slot_start,
+      slot_end,
+      type,
+      is_first_time: !!is_first_time,
+    },
+  });
 
   return NextResponse.json({ ok: true });
 }

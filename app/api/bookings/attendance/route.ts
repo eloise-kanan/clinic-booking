@@ -67,10 +67,11 @@ export async function POST(req: Request) {
   // correctly across transitions (mark attended ↔ no_show / clear).
   const { data: prev } = await admin
     .from("bookings")
-    .select("patient_id, attended_at")
+    .select("patient_id, attended_at, no_show")
     .eq("id", booking_id)
     .maybeSingle();
   const wasAttended = !!prev?.attended_at;
+  const wasNoShow = !!prev?.no_show;
 
   const { error } = await admin.from("bookings").update(update).eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -112,6 +113,7 @@ export async function POST(req: Request) {
     action: `booking_${mark}`,
     entity_type: "booking",
     entity_id: booking_id,
+    before_data: { attended: wasAttended, no_show: wasNoShow },
     after_data: { mark, via_terminal: actor.isTerminal },
   });
 

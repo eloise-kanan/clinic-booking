@@ -30,6 +30,12 @@ export async function POST(req: Request) {
   if (!actor.ok) return NextResponse.json({ error: actor.error }, { status: actor.status });
 
   const admin = createAdminClient();
+  const { data: prev } = await admin
+    .from("bookings")
+    .select("room, checked_in_at")
+    .eq("id", booking_id)
+    .maybeSingle();
+
   const { error } = await admin
     .from("bookings")
     .update({
@@ -45,6 +51,7 @@ export async function POST(req: Request) {
     action: "patient_check_in",
     entity_type: "booking",
     entity_id: booking_id,
+    before_data: { room: prev?.room ?? null, checked_in_at: prev?.checked_in_at ?? null },
     after_data: { room, via_terminal: actor.isTerminal },
   });
 

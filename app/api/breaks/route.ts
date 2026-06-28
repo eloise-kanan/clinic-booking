@@ -38,8 +38,21 @@ export async function POST(req: Request) {
     insertable.start_time = body.start_time;
     insertable.end_time = body.end_time;
   }
-  const { error } = await admin.from("breaks").insert(insertable);
+  const { data: created, error } = await admin
+    .from("breaks")
+    .insert(insertable)
+    .select("id")
+    .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await admin.from("audit_log").insert({
+    actor_id: user.id,
+    action: "break_create",
+    entity_type: "break",
+    entity_id: created?.id,
+    after_data: insertable,
+  });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -72,7 +85,21 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
+  const { data: brkBefore } = await admin
+    .from("breaks")
+    .select("doctor_id, weekday, start_time, end_time, start_at, end_at, reason")
+    .eq("id", id)
+    .maybeSingle();
   const { error } = await admin.from("breaks").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await admin.from("audit_log").insert({
+    actor_id: user.id,
+    action: "break_delete",
+    entity_type: "break",
+    entity_id: id,
+    before_data: brkBefore || {},
+  });
+
   return NextResponse.json({ ok: true });
 }

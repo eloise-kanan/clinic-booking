@@ -50,5 +50,14 @@ export async function POST(req: Request) {
     .update({ [cols.at]: new Date().toISOString(), [cols.by]: actor.actorId })
     .eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await admin.from("audit_log").insert({
+    actor_id: actor.actorId,
+    action: `wa_${kind}_sent`,
+    entity_type: "booking",
+    entity_id: booking_id,
+    after_data: { kind, via_terminal: actor.isTerminal },
+  });
+
   return NextResponse.json({ ok: true });
 }

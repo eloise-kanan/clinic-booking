@@ -43,6 +43,12 @@ export async function PATCH(req: Request) {
   }
 
   const admin = createAdminClient();
+  const { data: prevTpl } = await admin
+    .from("message_templates")
+    .select("body")
+    .eq("key", key)
+    .maybeSingle();
+
   const { error } = await admin
     .from("message_templates")
     .update({
@@ -58,7 +64,8 @@ export async function PATCH(req: Request) {
     action: "template_update",
     entity_type: "message_template",
     entity_id: null,
-    after_data: { key },
+    before_data: { key, body: prevTpl?.body ?? null },
+    after_data: { key, body: templateBody },
   });
 
   return NextResponse.json({ ok: true });

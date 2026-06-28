@@ -162,6 +162,11 @@ export async function PATCH(req: Request) {
         }
       }
     }
+    const { data: prevActive } = await admin
+      .from("profiles")
+      .select("active")
+      .eq("id", profile_id)
+      .maybeSingle();
     const { error } = await admin.from("profiles").update({ active }).eq("id", profile_id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
     await admin.from("doctors").update({ active }).eq("profile_id", profile_id);
@@ -170,6 +175,7 @@ export async function PATCH(req: Request) {
       action: active ? "activate_staff" : "deactivate_staff",
       entity_type: "profile",
       entity_id: profile_id,
+      before_data: { active: prevActive?.active ?? null },
       after_data: { active },
     });
   }
@@ -181,6 +187,11 @@ export async function PATCH(req: Request) {
         { status: 400 }
       );
     }
+    const { data: prevDoc } = await admin
+      .from("doctors")
+      .select("default_slot_minutes")
+      .eq("profile_id", profile_id)
+      .maybeSingle();
     const { error } = await admin
       .from("doctors")
       .update({ default_slot_minutes })
@@ -191,6 +202,7 @@ export async function PATCH(req: Request) {
       action: "update_doctor_slot_minutes",
       entity_type: "doctor",
       entity_id: profile_id,
+      before_data: { default_slot_minutes: prevDoc?.default_slot_minutes ?? null },
       after_data: { default_slot_minutes },
     });
   }

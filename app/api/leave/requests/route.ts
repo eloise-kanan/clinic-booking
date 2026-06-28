@@ -99,6 +99,22 @@ export async function POST(req: Request) {
     .select("id")
     .single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await admin.from("audit_log").insert({
+    actor_id: filerProfileId,
+    action: "leave_request_create",
+    entity_type: "leave_request",
+    entity_id: data?.id,
+    after_data: {
+      profile_id: filerProfileId,
+      start_date,
+      end_date,
+      leave_type: resolved,
+      auto_emergency: resolved === "emergency" && requested === "annual",
+      via_terminal: profile.role === "terminal",
+    },
+  });
+
   return NextResponse.json({
     ok: true,
     id: data?.id,

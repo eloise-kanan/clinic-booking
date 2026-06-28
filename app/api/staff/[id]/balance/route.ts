@@ -29,6 +29,11 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   const admin = createAdminClient();
+  const { data: prev } = await admin
+    .from("profiles")
+    .select("annual_leave_balance, mc_balance, emergency_balance")
+    .eq("id", id)
+    .maybeSingle();
   const { error } = await admin.from("profiles").update(update).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -37,6 +42,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     action: "leave_balance_update",
     entity_type: "profile",
     entity_id: id,
+    before_data: prev || {},
     after_data: update,
   });
 

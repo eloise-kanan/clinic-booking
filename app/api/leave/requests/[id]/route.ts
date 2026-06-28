@@ -85,6 +85,21 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     }
   }
 
+  await admin.from("audit_log").insert({
+    actor_id: user.id,
+    action: `leave_request_${status}`,
+    entity_type: "leave_request",
+    entity_id: id,
+    before_data: { status: before.status },
+    after_data: {
+      status,
+      reviewer_notes: notes || null,
+      start_date: before.start_date,
+      end_date: before.end_date,
+      profile_id: before.profile_id,
+    },
+  });
+
   return NextResponse.json({ ok: true });
 }
 
@@ -114,5 +129,14 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   // breaks have on-delete-cascade via leave_id, so they go automatically
   const { error } = await admin.from("leave_requests").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await admin.from("audit_log").insert({
+    actor_id: user.id,
+    action: "leave_request_withdraw",
+    entity_type: "leave_request",
+    entity_id: id,
+    before_data: { status: existing.status, profile_id: existing.profile_id },
+  });
+
   return NextResponse.json({ ok: true });
 }

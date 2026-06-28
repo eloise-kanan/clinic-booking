@@ -71,6 +71,14 @@ export async function PATCH(req: Request) {
   if (terminal_background_url !== undefined) update.terminal_background_url = terminal_background_url || null;
 
   const admin = createAdminClient();
+  // Snapshot the affected fields before mutating so the audit row records
+  // exactly which values were replaced (lets owners see a true diff later).
+  const { data: prevBranding } = await admin
+    .from("clinic_settings")
+    .select("primary_color, font_family, button_radius, logo_url, terminal_theme, terminal_background_url")
+    .eq("id", true)
+    .maybeSingle();
+
   const { error } = await admin.from("clinic_settings").update(update).eq("id", true);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
@@ -78,6 +86,7 @@ export async function PATCH(req: Request) {
     actor_id: user.id,
     action: "branding_update",
     entity_type: "clinic_settings",
+    before_data: prevBranding || {},
     after_data: { primary_color, font_family, button_radius, logo_url, terminal_theme, terminal_background_url },
   });
 

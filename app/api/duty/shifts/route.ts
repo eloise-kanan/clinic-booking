@@ -106,7 +106,35 @@ export async function POST(req: Request) {
   // working_hours immediately (no separate approval step).
   if (isOwnerSubmission && is_permanent) {
     await applyPermanentToWorkingHours(admin, targetProfileId, shift_date, start_time, end_time);
+    await admin.from("audit_log").insert({
+      actor_id: user.id,
+      action: "working_hours_apply_permanent",
+      entity_type: "duty_shift",
+      entity_id: data?.id,
+      after_data: {
+        profile_id: targetProfileId,
+        weekday: new Date(shift_date + "T00:00:00").getDay(),
+        start_time,
+        end_time,
+      },
+    });
   }
+
+  await admin.from("audit_log").insert({
+    actor_id: user.id,
+    action: "duty_shift_create",
+    entity_type: "duty_shift",
+    entity_id: data?.id,
+    after_data: {
+      profile_id: targetProfileId,
+      shift_date,
+      start_time,
+      end_time,
+      is_permanent: !!is_permanent,
+      submitted_by_owner: isOwnerSubmission,
+      via_terminal: profile.role === "terminal",
+    },
+  });
 
   return NextResponse.json({ ok: true, id: data?.id });
 }

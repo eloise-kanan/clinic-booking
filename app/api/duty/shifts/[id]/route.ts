@@ -59,7 +59,34 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
       existing.start_time,
       existing.end_time
     );
+    await admin.from("audit_log").insert({
+      actor_id: user.id,
+      action: "working_hours_apply_permanent",
+      entity_type: "duty_shift",
+      entity_id: id,
+      after_data: {
+        profile_id: existing.profile_id,
+        weekday: new Date(existing.shift_date + "T00:00:00").getDay(),
+        start_time: existing.start_time,
+        end_time: existing.end_time,
+      },
+    });
   }
+
+  await admin.from("audit_log").insert({
+    actor_id: user.id,
+    action: `duty_shift_${status}`,
+    entity_type: "duty_shift",
+    entity_id: id,
+    before_data: { status: existing.status },
+    after_data: {
+      status,
+      reviewer_notes: reviewer_notes ?? notes ?? null,
+      profile_id: existing.profile_id,
+      shift_date: existing.shift_date,
+      is_permanent: existing.is_permanent,
+    },
+  });
 
   return NextResponse.json({ ok: true });
 }
@@ -102,5 +129,14 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
 
   const { error } = await admin.from("duty_shifts").delete().eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await admin.from("audit_log").insert({
+    actor_id: user.id,
+    action: profile.role === "owner" ? "duty_shift_delete" : "duty_shift_withdraw",
+    entity_type: "duty_shift",
+    entity_id: id,
+    before_data: { status: existing.status, profile_id: existing.profile_id },
+  });
+
   return NextResponse.json({ ok: true });
 }

@@ -40,5 +40,14 @@ export async function POST(req: Request) {
     })
     .eq("id", booking_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  await admin.from("audit_log").insert({
+    actor_id: actor.actorId,
+    action: "wa_reminder_sent",
+    entity_type: "booking",
+    entity_id: booking_id,
+    after_data: { via_terminal: actor.isTerminal },
+  });
+
   return NextResponse.json({ ok: true });
 }
