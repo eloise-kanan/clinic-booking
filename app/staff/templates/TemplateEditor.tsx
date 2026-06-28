@@ -30,6 +30,10 @@ const LABELS: Record<string, { title: string; description: string }> = {
     title: "Reminder (day before)",
     description: "Sent the day before an appointment as a friendly reminder.",
   },
+  recall: {
+    title: "Recall (overdue patient)",
+    description: "Sent to patients whose last visit is past their recall interval (default 6 months). Use {months_since_visit} for the gap.",
+  },
 };
 
 const PLACEHOLDERS = [
@@ -39,6 +43,7 @@ const PLACEHOLDERS = [
   { key: "{visit_reason}", desc: "Treatment / reason for visit" },
   { key: "{clinic_name}", desc: "Your clinic name" },
   { key: "{reject_reason}", desc: "(Reject template only) reason for rejection" },
+  { key: "{months_since_visit}", desc: "(Recall template only) months since the patient's last visit" },
 ];
 
 const SAMPLE_VARS = {
@@ -48,6 +53,7 @@ const SAMPLE_VARS = {
   visit_reason: "Normal treatment / scaling",
   clinic_name: "Goodcare Dental PJ",
   reject_reason: "Doctor unavailable",
+  months_since_visit: "7",
 };
 
 export default function TemplateEditor({
@@ -97,6 +103,7 @@ export default function TemplateEditor({
     "confirm_cancellation",
     "reject",
     "reminder",
+    "recall",
   ].filter((k) => k in drafts);
 
   return (

@@ -210,6 +210,16 @@ export default function AuditLogView({ rows }: { rows: Row[] }) {
                     <span className={`pill ${actionPillClass(r.action)}`}>
                       {actionLabel(r.action)}
                     </span>
+                    {/* Patient name surfaced here too — on narrow screens
+                        (iPad portrait, phone) the Details column overflows
+                        right off-screen, so users couldn't see who the row
+                        was about. Keeping it in Details for desktop and
+                        also showing it here is defensive. */}
+                    {r.entity_label && (
+                      <div className="text-[11px] text-stone-700 font-medium mt-1">
+                        {r.entity_label}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-xs">
                     <div className="capitalize">{r.entity_type}</div>
